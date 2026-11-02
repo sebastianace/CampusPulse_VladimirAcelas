@@ -4,6 +4,13 @@ Todos los cambios importantes de Campus Pulse se registran en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y las versiones
 siguen [Versionado Semántico](https://semver.org/lang/es/).
 
+## [Sin publicar]
+
+### Seguridad
+
+- Roles `admin`, `coordinador` y `camper`: la primera cuenta es `admin` y las demás `camper`.
+  Middleware `exigirRol(...roles)` que responde 403 `PERMISO_DENEGADO`.
+
 ## [v1.1.1] — versión de la hackatón
 
 Versión construida en equipo durante la Hackatón de Campuslands (ver "Historia del proyecto" en

@@ -52,7 +52,7 @@ test('sin sesión, la API responde 401 SESION_REQUERIDA', async () => {
 test('registro: crea la cuenta, abre sesión y no guarda la clave en texto plano', async () => {
   const { status, cuerpo, cookie } = await pedir('/api/auth/registro', 'POST', ANA);
   assert.equal(status, 201);
-  assert.deepEqual(cuerpo, { usuario: 'ana.gomez', nombre: 'Ana Gómez' });
+  assert.deepEqual(cuerpo, { usuario: 'ana.gomez', nombre: 'Ana Gómez', rol: 'admin' }); // primera cuenta
   assert.match(cookie, /^sesion=/);
   assert.equal((await pedir('/api/espacios', 'GET', null, cookie)).status, 200);
   assert.ok(!readFileSync(process.env.AUTH_PATH, 'utf8').includes(ANA.clave));
