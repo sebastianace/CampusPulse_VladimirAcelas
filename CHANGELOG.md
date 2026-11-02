@@ -10,6 +10,7 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 
 - Roles `admin`, `coordinador` y `camper`: la primera cuenta es `admin` y las demás `camper`.
   Middleware `exigirRol(...roles)` que responde 403 `PERMISO_DENEGADO`.
+- `POST /api/restaurar` solo lo puede usar un `admin`.
 
 ## [v1.1.1] — versión de la hackatón
 
