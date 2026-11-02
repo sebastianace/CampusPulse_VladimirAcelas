@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10141a">
+  <title>Reportar · Campus Pulse</title>
+  <meta name="description" content="Reporta una incidencia del campus desde el celular.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="movil">
+  <header class="barra">
+    <div class="marca">
+      <span class="marca__pulso" aria-hidden="true"></span>
+      <div>
+        <h1 class="marca__nombre">Campus Pulse</h1>
+        <p class="marca__sub">Reportar una incidencia</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="movil__contenido">
+    <!-- Salas fuera de servicio en este momento -->
+    <section class="panel" aria-labelledby="titulo-estado">
+      <h2 class="panel__titulo" id="titulo-estado">Estado del campus</h2>
+      <p class="movil__estado" id="estado-campus">Cargando…</p>
+    </section>
+
+    <section class="panel" aria-labelledby="titulo-reporte">
+      <h2 class="panel__titulo" id="titulo-reporte">¿Qué está pasando?</h2>
+      <!-- Mismos IDs que el tablero: reutiliza js/incidencias.js -->
+      <form class="formulario" id="form-triaje" novalidate>
+        <label class="campo">
+          <span>Describe el problema y dónde ocurre</span>
+          <textarea name="descripcion" rows="4" required
+            placeholder="Ej.: cortocircuito en el aire acondicionado de Apolo"></textarea>
+        </label>
+        <p class="nota">Puedes dictarlo con el micrófono de tu teclado.</p>
+        <div class="item__acciones">
+          <button class="btn btn--ia" type="submit">Clasificar con IA</button>
+          <button class="btn btn--secundario" type="button" id="btn-manual">Llenar a mano</button>
+        </div>
+      </form>
+      <div id="sugerencia-ia" hidden></div>
+      <div id="incidencia-manual" hidden></div>
+    </section>
+
+    <section class="panel" aria-labelledby="titulo-recientes">
+      <h2 class="panel__titulo" id="titulo-recientes">
+        Incidencias <span class="contador" id="contador-incidencias" hidden></span>
+      </h2>
+      <ul class="lista" id="lista-incidencias">
+        <li class="vacio">Cargando incidencias…</li>
+      </ul>
+    </section>
+
+    <a class="enlace movil__volver" href="./">Ir al tablero completo</a>
+  </main>
+
+  <div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
+
+  <script type="module" src="js/movil.js"></script>
+</body>
+</html>

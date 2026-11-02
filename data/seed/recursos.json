@@ -1,0 +1,14 @@
+[
+  { "id": "rec-01", "nombre": "Video beam Epson Apolo", "tipo": "video_beam", "espacioId": "apolo", "estado": "disponible", "ficticio": true },
+  { "id": "rec-02", "nombre": "Video beam BenQ Cosmos", "tipo": "video_beam", "espacioId": "cosmos", "estado": "disponible", "ficticio": true },
+  { "id": "rec-03", "nombre": "Consola de sonido Auditorio", "tipo": "sonido", "espacioId": "auditorio", "estado": "disponible", "ficticio": true },
+  { "id": "rec-04", "nombre": "Micrófono inalámbrico 1", "tipo": "microfono", "espacioId": "auditorio", "estado": "disponible", "ficticio": true },
+  { "id": "rec-05", "nombre": "Micrófono inalámbrico 2", "tipo": "microfono", "espacioId": "auditorio", "estado": "danado", "ficticio": true },
+  { "id": "rec-06", "nombre": "Televisor 55\" Skilab", "tipo": "televisor", "espacioId": "skilab", "estado": "disponible", "ficticio": true },
+  { "id": "rec-07", "nombre": "Pantalla interactiva Artemis", "tipo": "pantalla", "espacioId": "artemis", "estado": "en_reparacion", "ficticio": true },
+  { "id": "rec-08", "nombre": "Portátil Lenovo 01", "tipo": "portatil", "espacioId": null, "estado": "disponible", "ficticio": true },
+  { "id": "rec-09", "nombre": "Portátil Lenovo 02", "tipo": "portatil", "espacioId": null, "estado": "disponible", "ficticio": true },
+  { "id": "rec-10", "nombre": "Portátil HP 03", "tipo": "portatil", "espacioId": null, "estado": "danado", "ficticio": true },
+  { "id": "rec-11", "nombre": "Cámara web Logitech", "tipo": "camara", "espacioId": null, "estado": "disponible", "ficticio": true },
+  { "id": "rec-12", "nombre": "Parlante Bluetooth JBL", "tipo": "parlante", "espacioId": null, "estado": "disponible", "ficticio": true }
+]
