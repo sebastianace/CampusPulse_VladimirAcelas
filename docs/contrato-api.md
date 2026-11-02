@@ -44,6 +44,7 @@ listo para mostrar en un toast.
 | 404 | ID que no existe |
 | 401 | Sin sesión (`SESION_REQUERIDA`) o usuario/contraseña incorrectos (`CREDENCIALES_INVALIDAS`). Todas las rutas salvo `/api/auth/*` exigen sesión |
 | 403 | Hay sesión, pero el rol no tiene permiso (`PERMISO_DENEGADO`) |
+| 429 | Demasiados intentos de login fallidos (`DEMASIADOS_INTENTOS`): 5 del mismo usuario e IP en 15 minutos. Trae la cabecera `Retry-After` en segundos |
 | 503 | La IA no responde (`codigo: "IA_NO_DISPONIBLE"`) |
 
 ## Roles

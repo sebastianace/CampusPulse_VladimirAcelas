@@ -3,6 +3,7 @@
 // ---------------------------------------------------------------------
 // POST /api/auth/registro {usuario, nombre, clave} -> 201 {usuario, nombre, rol} y abre sesión
 // POST /api/auth/login    {usuario, clave}         -> 200 {usuario, nombre, rol} y abre sesión
+//                                                     (429 tras 5 fallos en 15 min, ver intentos.js)
 // POST /api/auth/logout                            -> 200 y cierra la sesión
 // GET  /api/auth/yo                                -> 200 {usuario, nombre, rol} o 401
 // La sesión viaja en la cookie "sesion" (HttpOnly: el JavaScript de la
@@ -11,7 +12,8 @@
 
 import { Router } from 'express';
 import { HORAS_SESION, NoAutorizadoError, autenticar, cerrarSesion, crearSesion, registrar, usuarioDeSesion } from '../auth/usuarios.js';
-import { ProhibidoError } from '../domain/errors.js';
+import { limpiarFallos, registrarFallo, segundosDeBloqueo } from '../auth/intentos.js';
+import { DemasiadasPeticionesError, ProhibidoError } from '../domain/errors.js';
 
 const COOKIE = 'sesion';
 
@@ -36,7 +38,25 @@ router.post('/registro', (req, res) => {
 });
 
 router.post('/login', (req, res) => {
-  const usuario = autenticar(req.body);
+  // Mismo formato que usa autenticar(): así "ANA" y "ana" cuentan como el mismo usuario
+  const pedido = String(req.body?.usuario ?? '').trim().toLowerCase();
+  const espera = segundosDeBloqueo(pedido, req.ip);
+  if (espera > 0) {
+    res.set('Retry-After', String(espera));
+    throw new DemasiadasPeticionesError(
+      `Demasiados intentos fallidos. Intenta de nuevo en ${Math.ceil(espera / 60)} minuto(s)`,
+      'DEMASIADOS_INTENTOS',
+    );
+  }
+
+  let usuario;
+  try {
+    usuario = autenticar(req.body);
+  } catch (error) {
+    if (error.codigo === 'CREDENCIALES_INVALIDAS') registrarFallo(pedido, req.ip);
+    throw error;
+  }
+  limpiarFallos(pedido, req.ip);
   abrirSesion(res, usuario);
   res.json(usuario);
 });

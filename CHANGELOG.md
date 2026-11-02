@@ -11,6 +11,8 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 - Roles `admin`, `coordinador` y `camper`: la primera cuenta es `admin` y las demás `camper`.
   Middleware `exigirRol(...roles)` que responde 403 `PERMISO_DENEGADO`.
 - `POST /api/restaurar` solo lo puede usar un `admin`.
+- Límite de intentos de login: 5 fallos del mismo usuario e IP en 15 minutos → 429
+  `DEMASIADOS_INTENTOS` con cabecera `Retry-After`.
 
 ## [v1.1.1] — versión de la hackatón
 

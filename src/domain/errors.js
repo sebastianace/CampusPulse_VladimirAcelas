@@ -38,6 +38,13 @@ export class ProhibidoError extends ErrorApi {
   }
 }
 
+// 429: se superó un límite de intentos o de peticiones.
+export class DemasiadasPeticionesError extends ErrorApi {
+  constructor(mensaje, codigo = 'DEMASIADAS_PETICIONES') {
+    super(429, codigo, mensaje);
+  }
+}
+
 // 404: se pidió un ID que no existe.
 export class NoEncontradoError extends ErrorApi {
   constructor(mensaje, codigo = 'NO_ENCONTRADO') {
