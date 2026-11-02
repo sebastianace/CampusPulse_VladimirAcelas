@@ -26,9 +26,12 @@ export function tokenDe(req) {
   return par ? decodeURIComponent(par.slice(COOKIE.length + 1)) : null;
 }
 
+// En producción la cookie es "secure": el navegador solo la envía por HTTPS.
+const opcionesCookie = () => ({ httpOnly: true, sameSite: 'lax', path: '/', secure: process.env.NODE_ENV === 'production' });
+
 function abrirSesion(res, usuario) {
   const token = crearSesion(usuario.usuario);
-  res.cookie(COOKIE, token, { httpOnly: true, sameSite: 'lax', path: '/', maxAge: HORAS_SESION * 3_600_000 });
+  res.cookie(COOKIE, token, { ...opcionesCookie(), maxAge: HORAS_SESION * 3_600_000 });
 }
 
 router.post('/registro', (req, res) => {
@@ -63,7 +66,7 @@ router.post('/login', (req, res) => {
 
 router.post('/logout', (req, res) => {
   cerrarSesion(tokenDe(req));
-  res.clearCookie(COOKIE, { path: '/' });
+  res.clearCookie(COOKIE, opcionesCookie());
   res.json({ mensaje: 'Sesión cerrada' });
 });
 

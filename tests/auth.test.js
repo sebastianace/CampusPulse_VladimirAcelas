@@ -75,6 +75,31 @@ test('login: clave correcta abre sesión; clave o usuario incorrectos -> 401', a
   }
 });
 
+test('la cookie de sesión es Secure solo cuando NODE_ENV=production', async () => {
+  // Devuelve la cabecera set-cookie completa de un login correcto.
+  const cookieDeLogin = async () => (await fetch(`${base}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ usuario: ANA.usuario, clave: ANA.clave }),
+  })).headers.get('set-cookie');
+
+  const anterior = process.env.NODE_ENV;
+  try {
+    delete process.env.NODE_ENV;
+    const desarrollo = await cookieDeLogin();
+    assert.match(desarrollo, /HttpOnly/);
+    assert.doesNotMatch(desarrollo, /Secure/);
+
+    process.env.NODE_ENV = 'production';
+    const produccion = await cookieDeLogin();
+    assert.match(produccion, /HttpOnly/);
+    assert.match(produccion, /Secure/);
+  } finally {
+    if (anterior === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = anterior;
+  }
+});
+
 test('logout: la sesión deja de servir', async () => {
   const { cookie } = await pedir('/api/auth/login', 'POST', { usuario: ANA.usuario, clave: ANA.clave });
   assert.equal((await pedir('/api/auth/logout', 'POST', null, cookie)).status, 200);

@@ -13,6 +13,7 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 - `POST /api/restaurar` solo lo puede usar un `admin`.
 - Límite de intentos de login: 5 fallos del mismo usuario e IP en 15 minutos → 429
   `DEMASIADOS_INTENTOS` con cabecera `Retry-After`.
+- La cookie de sesión es `Secure` cuando `NODE_ENV=production`.
 
 ## [v1.1.1] — versión de la hackatón
 
