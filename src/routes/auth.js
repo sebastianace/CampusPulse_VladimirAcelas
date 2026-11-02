@@ -1,16 +1,17 @@
 // =====================================================================
 // RUTAS DE INICIO DE SESIÓN
 // ---------------------------------------------------------------------
-// POST /api/auth/registro {usuario, nombre, clave} -> 201 {usuario, nombre} y abre sesión
-// POST /api/auth/login    {usuario, clave}         -> 200 {usuario, nombre} y abre sesión
+// POST /api/auth/registro {usuario, nombre, clave} -> 201 {usuario, nombre, rol} y abre sesión
+// POST /api/auth/login    {usuario, clave}         -> 200 {usuario, nombre, rol} y abre sesión
 // POST /api/auth/logout                            -> 200 y cierra la sesión
-// GET  /api/auth/yo                                -> 200 {usuario, nombre} o 401
+// GET  /api/auth/yo                                -> 200 {usuario, nombre, rol} o 401
 // La sesión viaja en la cookie "sesion" (HttpOnly: el JavaScript de la
 // página no la puede leer).
 // =====================================================================
 
 import { Router } from 'express';
 import { HORAS_SESION, NoAutorizadoError, autenticar, cerrarSesion, crearSesion, registrar, usuarioDeSesion } from '../auth/usuarios.js';
+import { ProhibidoError } from '../domain/errors.js';
 
 const COOKIE = 'sesion';
 
@@ -58,6 +59,21 @@ export function exigirSesion(req, res, next) {
   if (!usuario) throw new NoAutorizadoError('Inicia sesión para continuar');
   req.usuario = usuario;
   next();
+}
+
+/**
+ * Middleware: deja pasar solo a los roles indicados (si no, 403).
+ * Va después de exigirSesion, que es quien pone req.usuario.
+ * Uso: router.post('/', exigirRol('admin', 'coordinador'), ...)
+ */
+export function exigirRol(...roles) {
+  return (req, res, next) => {
+    if (!req.usuario) throw new NoAutorizadoError('Inicia sesión para continuar');
+    if (!roles.includes(req.usuario.rol)) {
+      throw new ProhibidoError('Tu rol no tiene permiso para hacer esta acción');
+    }
+    next();
+  };
 }
 
 export default router;
