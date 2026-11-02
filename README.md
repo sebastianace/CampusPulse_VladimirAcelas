@@ -1,6 +1,6 @@
 # Campus Pulse
 
-MVP construido en la Hackatón de Campuslands (5 horas, equipo de 3) que unifica en un solo
+MVP construido en la Hackatón de Campuslands (5 horas, equipo de 5) que unifica en un solo
 panel los **espacios** del campus, los **recursos tecnológicos** y las **incidencias**, con una
 IA que ayuda a clasificar reportes y a recomendar salas.
 
@@ -148,8 +148,8 @@ Además:
 Requisitos: **Node.js 24** o superior.
 
 ```bash
-git clone https://github.com/250930/HAKATON_CAMPSULAND.git
-cd HAKATON_CAMPSULAND
+git clone https://github.com/TU_USUARIO/campus-pulse.git
+cd campus-pulse
 npm install
 cp .env.example .env
 ```
