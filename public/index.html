@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Campus Pulse</title>
+  <meta name="description" content="Centro de mando operativo de Campuslands: espacios, equipos e incidencias en un solo plano.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Barra superior: identidad, presión del campus, conexión y comando IA -->
+  <header class="barra">
+    <div class="marca">
+      <span class="marca__pulso" aria-hidden="true"></span>
+      <div>
+        <h1 class="marca__nombre">Campus Pulse</h1>
+        <p class="marca__sub">Operación en vivo · Campuslands</p>
+      </div>
+    </div>
+
+    <div class="presion" id="presion" hidden>
+      <div class="presion__fila">
+        <span class="presion__etiqueta" id="presion-etiqueta">Presión del campus</span>
+        <span class="presion__valor dato" id="presion-valor">—</span>
+      </div>
+      <div class="presion__barra" role="meter" aria-labelledby="presion-etiqueta" aria-valuemin="0" aria-valuemax="100">
+        <span class="presion__relleno" id="presion-relleno"></span>
+      </div>
+      <div class="presion__desglose dato" id="presion-desglose"></div>
+    </div>
+
+    <div class="barra__acciones">
+      <span class="conexion" id="conexion" data-estado="esperando">
+        <span class="conexion__punto" aria-hidden="true"></span>
+        <span id="conexion-texto">Conectando…</span>
+      </span>
+      <button class="btn btn--ia" id="abrir-comando" type="button">
+        Pedir sala con IA <kbd>Ctrl K</kbd>
+      </button>
+      <span class="sesion" id="sesion" hidden>
+        <span class="sesion__nombre" id="sesion-nombre"></span>
+        <button class="btn btn--secundario btn--chico" id="cerrar-sesion" type="button">Salir</button>
+      </span>
+    </div>
+  </header>
+
+  <main class="tablero">
+    <!-- Columna izquierda: plano y línea de tiempo -->
+    <div class="tablero__vista">
+      <section class="panel" aria-labelledby="titulo-mapa">
+        <div class="panel__cabeza">
+          <div>
+            <h2 class="panel__titulo" id="titulo-mapa">Mapa del campus</h2>
+            <p class="panel__nota">Nivel 6 · Torre Zenith, en vivo. Las salas ocupadas se llenan con su clase.</p>
+          </div>
+          <ul class="leyenda" aria-label="Estados">
+            <li><span class="muestra muestra--disponible"></span>Disponible</li>
+            <li><span class="muestra muestra--ocupada"></span>Ocupada ahora</li>
+            <li><span class="muestra muestra--inhabilitado"></span>Inhabilitada</li>
+            <li><span class="muestra muestra--inconsistente"></span>Dato inconsistente</li>
+            <li><span class="muestra-persona muestra-persona--profe"></span>Profe</li>
+            <li><span class="muestra-persona"></span>Camper</li>
+            <li><span class="muestra-persona muestra-persona--trabajador"></span>Bettermedia</li>
+          </ul>
+        </div>
+        <div class="mapa-juego" id="mapa-juego">
+          <canvas tabindex="0" role="img"
+            aria-label="Mapa en pixel art del Nivel 6 de la Torre Zenith. Arrastra para moverte, usa la rueda o + y − para el zoom, y haz clic en una sala para reservarla. Las mismas salas están en los botones debajo del mapa."></canvas>
+          <p class="mapa-juego__hud dato" id="mapa-hud" aria-hidden="true"></p>
+          <div class="mapa-juego__controles">
+            <button class="mapa-juego__btn" type="button" data-accion="acercar" aria-label="Acercar">+</button>
+            <button class="mapa-juego__btn" type="button" data-accion="alejar" aria-label="Alejar">−</button>
+            <button class="mapa-juego__btn" type="button" data-accion="encuadrar" aria-label="Ver todo el piso">
+              <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+          <p class="mapa-juego__ayuda" aria-hidden="true">Arrastra para moverte · Rueda para zoom · Clic en una sala para reservar</p>
+          <div class="mapa-tooltip" id="mapa-tooltip" hidden></div>
+        </div>
+        <div class="plano-salas" id="mapa" aria-live="polite" aria-label="Salas del mapa">
+          <p class="vacio">Cargando espacios…</p>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="titulo-timeline">
+        <div class="panel__cabeza">
+          <h2 class="panel__titulo" id="titulo-timeline">Reservas del día</h2>
+          <div class="timeline__controles">
+            <label class="campo campo--linea">
+              <span>Día</span>
+              <input type="date" id="fecha-timeline">
+            </label>
+            <button class="btn btn--secundario btn--chico" type="button" id="btn-hoy">Hoy</button>
+          </div>
+        </div>
+        <div class="timeline" id="timeline">
+          <p class="vacio">Cargando reservas…</p>
+        </div>
+      </section>
+    </div>
+
+    <!-- Columna derecha: acciones -->
+    <aside class="panel tablero__acciones">
+      <nav class="pestanas" role="tablist" aria-label="Acciones">
+        <button role="tab" class="pestana" aria-selected="true" aria-controls="tab-reservar" id="p-reservar">Reservar</button>
+        <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-prestar" id="p-prestar">Prestar</button>
+        <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-reportar" id="p-reportar">Reportar</button>
+        <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-incidencias" id="p-incidencias">
+          Incidencias <span class="contador" id="contador-incidencias" hidden></span>
+        </button>
+        <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-datos" id="p-datos">Datos</button>
+      </nav>
+
+      <!-- Reservar un espacio -->
+      <section class="pestana__cuerpo" role="tabpanel" id="tab-reservar" aria-labelledby="p-reservar">
+        <form class="formulario" id="form-reserva" novalidate>
+          <label class="campo">
+            <span>Espacio</span>
+            <select name="espacioId" required></select>
+          </label>
+          <div class="fila">
+            <label class="campo">
+              <span>Responsable</span>
+              <input name="responsable" type="text" list="lista-responsables" autocomplete="off" required
+                placeholder="Elige o escribe un nombre">
+            </label>
+            <label class="campo campo--corto">
+              <span>Asistentes</span>
+              <input name="asistentes" type="number" min="1" inputmode="numeric" required>
+            </label>
+          </div>
+          <label class="campo">
+            <span>Fecha</span>
+            <input name="fecha" type="date" required>
+          </label>
+          <div class="fila">
+            <label class="campo">
+              <span>Desde</span>
+              <input name="horaInicio" type="time" step="900" required>
+            </label>
+            <label class="campo">
+              <span>Hasta</span>
+              <input name="horaFin" type="time" step="900" required>
+            </label>
+          </div>
+          <div class="item__acciones">
+            <button class="btn btn--primario" type="submit">Reservar sala</button>
+            <button class="btn btn--secundario" type="button" id="btn-descartar-edicion" hidden>Descartar cambios</button>
+          </div>
+        </form>
+
+        <h3 class="subtitulo" id="titulo-reservas">Reservas del día</h3>
+        <ul class="lista" id="lista-reservas">
+          <li class="vacio">Cargando reservas…</li>
+        </ul>
+      </section>
+
+      <!-- Prestar y devolver equipos -->
+      <section class="pestana__cuerpo" role="tabpanel" id="tab-prestar" aria-labelledby="p-prestar" hidden>
+        <form class="formulario" id="form-prestamo" novalidate>
+          <label class="campo">
+            <span>Equipo</span>
+            <select name="recursoId" required></select>
+          </label>
+          <label class="campo">
+            <span>Persona</span>
+            <input name="persona" type="text" autocomplete="name" required>
+          </label>
+          <button class="btn btn--primario" type="submit">Prestar equipo</button>
+        </form>
+
+        <h3 class="subtitulo">Préstamos activos</h3>
+        <ul class="lista" id="lista-prestamos">
+          <li class="vacio">Cargando préstamos…</li>
+        </ul>
+      </section>
+
+      <!-- Reportar incidencia: flujo vertical con IA -->
+      <section class="pestana__cuerpo" role="tabpanel" id="tab-reportar" aria-labelledby="p-reportar" hidden>
+        <form class="formulario" id="form-triaje" novalidate>
+          <label class="campo">
+            <span>¿Qué está pasando?</span>
+            <textarea name="descripcion" rows="4" required
+              placeholder="Ej.: el video beam de Apolo no prende y huele a quemado"></textarea>
+          </label>
+          <div class="item__acciones">
+            <button class="btn btn--ia" type="submit">Clasificar con IA</button>
+            <button class="btn btn--secundario" type="button" id="btn-manual">Llenar a mano</button>
+          </div>
+        </form>
+
+        <!-- Se llena con la sugerencia de la IA (editable antes de guardar) -->
+        <div id="sugerencia-ia" hidden></div>
+
+        <!-- Formulario manual: se abre si la IA falla -->
+        <div id="incidencia-manual" hidden></div>
+      </section>
+
+      <!-- Incidencias registradas -->
+      <section class="pestana__cuerpo" role="tabpanel" id="tab-incidencias" aria-labelledby="p-incidencias" hidden>
+        <ul class="lista" id="lista-incidencias">
+          <li class="vacio">Cargando incidencias…</li>
+        </ul>
+      </section>
+
+      <!-- Calidad de los datos oficiales -->
+      <section class="pestana__cuerpo" role="tabpanel" id="tab-datos" aria-labelledby="p-datos" hidden>
+        <div id="calidad-datos">
+          <p class="vacio">Cargando reporte de calidad…</p>
+        </div>
+        <button class="btn btn--peligro" id="btn-restaurar" type="button">Restaurar datos iniciales</button>
+      </section>
+    </aside>
+  </main>
+
+  <!-- Barra de comando Ctrl+K: recomendación de sala con IA -->
+  <dialog class="comando" id="comando" aria-labelledby="titulo-comando">
+    <form class="comando__form" id="form-comando" novalidate>
+      <h2 class="comando__titulo" id="titulo-comando">Pedir sala con IA</h2>
+      <div class="comando__entrada">
+        <input name="texto" type="text" autocomplete="off" required
+          placeholder="Necesito un salón para 30 personas mañana de 2 a 4 pm">
+        <button class="btn btn--ia" type="submit">Buscar sala</button>
+      </div>
+    </form>
+    <div class="comando__resultado" id="resultado-comando"></div>
+    <p class="comando__pie">La IA interpreta el pedido. Las reglas del campus deciden qué salas se pueden usar. <kbd>Esc</kbd> para cerrar.</p>
+  </dialog>
+
+  <!-- Modo Demo Jurado: solo llena formularios con los casos del guion (Alt+D) -->
+  <div class="demo">
+    <div class="panel-demo" id="panel-demo" hidden></div>
+    <button class="btn-demo" id="btn-demo" type="button" aria-expanded="false" aria-controls="panel-demo" title="Modo demo (Alt+D)">
+      <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+      Modo demo
+    </button>
+  </div>
+
+  <!-- Personas que reservan salas: se despliegan al escribir el responsable -->
+  <datalist id="lista-responsables">
+    <option value="Dani Mendoza">Director comercial</option>
+    <option value="Karen Celis">Director Formación</option>
+    <option value="Juliana Caceres">Director Admin y Financiera</option>
+    <option value="Maria Fernanda Cala">Líder de Coordinación</option>
+    <option value="Paola Granados">Coordinadora de procesos Comerciales</option>
+    <option value="Alexandra Villamizar">Coordinador IA Academy</option>
+  </datalist>
+
+  <div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

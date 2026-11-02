@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Iniciar sesión · Campus Pulse</title>
+  <meta name="description" content="Inicia sesión en el centro de mando operativo de Campuslands.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="acceso">
+  <main class="acceso__caja panel">
+    <div class="marca">
+      <span class="marca__pulso" aria-hidden="true"></span>
+      <div>
+        <h1 class="marca__nombre">Campus Pulse</h1>
+        <p class="marca__sub">Operación en vivo · Campuslands</p>
+      </div>
+    </div>
+
+    <!-- Iniciar sesión -->
+    <form class="formulario" id="form-login" novalidate>
+      <h2 class="subtitulo">Iniciar sesión</h2>
+      <label class="campo">
+        <span>Usuario</span>
+        <input name="usuario" type="text" autocomplete="username" autocapitalize="none" required>
+      </label>
+      <label class="campo">
+        <span>Contraseña</span>
+        <input name="clave" type="password" autocomplete="current-password" required>
+      </label>
+      <button class="btn btn--primario" type="submit">Entrar</button>
+      <p class="nota">¿No tienes cuenta? <button class="enlace" type="button" data-ir="registro">Crear una cuenta</button></p>
+    </form>
+
+    <!-- Crear cuenta -->
+    <form class="formulario" id="form-registro" novalidate hidden>
+      <h2 class="subtitulo">Crear cuenta</h2>
+      <label class="campo">
+        <span>Nombre</span>
+        <input name="nombre" type="text" autocomplete="name" required>
+      </label>
+      <label class="campo">
+        <span>Usuario</span>
+        <input name="usuario" type="text" autocomplete="username" autocapitalize="none" required
+          placeholder="ej. ana.gomez">
+      </label>
+      <label class="campo">
+        <span>Contraseña (mínimo 8 caracteres)</span>
+        <input name="clave" type="password" autocomplete="new-password" minlength="8" required>
+      </label>
+      <button class="btn btn--primario" type="submit">Crear cuenta y entrar</button>
+      <p class="nota">¿Ya tienes cuenta? <button class="enlace" type="button" data-ir="login">Iniciar sesión</button></p>
+    </form>
+  </main>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <script type="module" src="js/login.js"></script>
+</body>
+</html>
