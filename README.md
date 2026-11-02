@@ -27,7 +27,12 @@ llegan al área correcta.
 - **Panel de calidad de datos**: muestra los registros del CSV oficial que son inconsistentes,
   sin que rompan la aplicación.
 
-## Integrantes
+## Historia del proyecto
+
+### v1 — Hackatón de Campuslands (trabajo en equipo)
+
+La primera versión se construyó en equipo durante la Hackatón de Campuslands, en 5 horas, con
+el liderazgo de Sebastián Acelas. Cada integrante tuvo un rol definido:
 
 | Rol | Integrante | Responsabilidad |
 |---|---|---|
@@ -36,6 +41,15 @@ llegan al área correcta.
 | P3 | Junior Cuajaro | Frontend y experiencia de usuario |
 | P4 | Thomas Serrano | Datos oficiales y pruebas de datos y fechas |
 | P5 | Sebastian Diaz | Documentación de la demo y del reto en vivo |
+
+El resultado de la hackatón es la versión `v1.1.1` (ver [CHANGELOG.md](CHANGELOG.md)).
+
+### v2 — Desarrollo individual
+
+A partir de la `v1.1.1`, Sebastián Acelas continúa el proyecto de forma individual como proyecto
+final del curso Inteligencia Artificial 2 (Campuslands). La v2 se enfoca en seguridad (roles y
+límites), una base de datos real y más uso de IA, siempre con el mismo principio: la IA sugiere,
+las reglas deciden. Los cambios de la v2 se registran en [CHANGELOG.md](CHANGELOG.md).
 
 ## Stack
 
