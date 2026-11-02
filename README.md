@@ -92,7 +92,7 @@ errores responden `{error: {codigo, mensaje}}` con el mensaje en español: 422 d
   "Crear una cuenta" (usuario de 3 a 30 caracteres y contraseña de al menos 8).
 - Las contraseñas se guardan con hash `scrypt` y sal aleatoria, y las sesiones con el hash de su
   token, en `data/auth.json` (ignorado por Git). La sesión dura 8 horas y viaja en una cookie
-  `HttpOnly`.
+  `HttpOnly`, que además es `Secure` (solo HTTPS) cuando `NODE_ENV=production`.
 - Tras **5 intentos fallidos** del mismo usuario desde la misma IP en 15 minutos, el login
   responde `429` hasta que pase la ventana (`src/auth/intentos.js`). Los contadores viven en
   memoria y se borran al reiniciar el servidor.
