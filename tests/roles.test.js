@@ -71,6 +71,18 @@ test('una cuenta antigua sin rol se trata como camper', async () => {
   assert.equal(cuerpo.rol, 'camper');
 });
 
+test('POST /api/restaurar: camper -> 403, admin -> 200, sin sesión -> 401', async () => {
+  const camper = await pedir('/api/auth/login', 'POST', { usuario: 'luis', clave: 'clave-camper-1' });
+  const prohibido = await pedir('/api/restaurar', 'POST', null, camper.cookie);
+  assert.equal(prohibido.status, 403);
+  assert.equal(prohibido.cuerpo.error.codigo, 'PERMISO_DENEGADO');
+
+  const admin = await pedir('/api/auth/login', 'POST', { usuario: 'jefa', clave: 'clave-admin-1' });
+  assert.equal((await pedir('/api/restaurar', 'POST', null, admin.cookie)).status, 200);
+
+  assert.equal((await pedir('/api/restaurar', 'POST')).status, 401);
+});
+
 test('exigirRol deja pasar a los roles indicados', () => {
   assert.equal(probarMiddleware(exigirRol('admin'), { usuario: 'a', rol: 'admin' }), null);
   assert.equal(probarMiddleware(exigirRol('admin', 'coordinador'), { usuario: 'c', rol: 'coordinador' }), null);
