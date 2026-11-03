@@ -32,11 +32,11 @@ llegan al área correcta.
 ### v1 — Hackatón de Campuslands (trabajo en equipo)
 
 La primera versión se construyó en equipo durante la Hackatón de Campuslands, en 5 horas, con
-el liderazgo de Sebastián Acelas. Cada integrante tuvo un rol definido:
+el liderazgo de Sebastián Vladimir Acelas (P1). Cada integrante tuvo un rol definido:
 
 | Rol | Integrante | Responsabilidad |
 |---|---|---|
-| P1 | Vladimir Acelas | Backend: datos, reglas de negocio y API |
+| P1 | Sebastián Vladimir Acelas (líder) | Backend: datos, reglas de negocio y API |
 | P2 | Jaime Naranjo | IA, integración Git y README |
 | P3 | Junior Cuajaro | Frontend y experiencia de usuario |
 | P4 | Thomas Serrano | Datos oficiales y pruebas de datos y fechas |
@@ -44,9 +44,13 @@ el liderazgo de Sebastián Acelas. Cada integrante tuvo un rol definido:
 
 El resultado de la hackatón es la versión `v1.1.1` (ver [CHANGELOG.md](CHANGELOG.md)).
 
+> El historial de Git de la hackatón quedó en el repositorio del equipo. Este repositorio parte
+> de la `v1.1.1` tal como quedó al terminar (commit `chore(repo): importar el estado actual de la
+> v1.1.1`), y desde ahí registra todo el trabajo de la v2.
+
 ### v2 — Desarrollo individual
 
-A partir de la `v1.1.1`, Sebastián Acelas continúa el proyecto de forma individual como proyecto
+A partir de la `v1.1.1`, Sebastián Vladimir Acelas continúa el proyecto de forma individual como proyecto
 final del curso Inteligencia Artificial 2 (Campuslands). La v2 se enfoca en seguridad (roles y
 límites), una base de datos real y más uso de IA, siempre con el mismo principio: la IA sugiere,
 las reglas deciden. Los cambios de la v2 se registran en [CHANGELOG.md](CHANGELOG.md).
@@ -162,8 +166,8 @@ Además:
 Requisitos: **Node.js 24** o superior.
 
 ```bash
-git clone https://github.com/TU_USUARIO/campus-pulse.git
-cd campus-pulse
+git clone https://github.com/sebastianace/CampusPulse_VladimirAcelas.git
+cd CampusPulse_VladimirAcelas
 npm install
 cp .env.example .env
 ```
