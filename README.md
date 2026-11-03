@@ -1,6 +1,6 @@
 # Campus Pulse
 
-MVP construido en la Hackatón de Campuslands (5 horas, equipo de 3) que unifica en un solo
+MVP construido en la Hackatón de Campuslands (5 horas, equipo de 5) que unifica en un solo
 panel los **espacios** del campus, los **recursos tecnológicos** y las **incidencias**, con una
 IA que ayuda a clasificar reportes y a recomendar salas.
 
@@ -27,15 +27,33 @@ llegan al área correcta.
 - **Panel de calidad de datos**: muestra los registros del CSV oficial que son inconsistentes,
   sin que rompan la aplicación.
 
-## Integrantes
+## Historia del proyecto
+
+### v1 — Hackatón de Campuslands (trabajo en equipo)
+
+La primera versión se construyó en equipo durante la Hackatón de Campuslands, en 5 horas, con
+el liderazgo de Sebastián Vladimir Acelas (P1). Cada integrante tuvo un rol definido:
 
 | Rol | Integrante | Responsabilidad |
 |---|---|---|
-| P1 | Vladimir Acelas | Backend: datos, reglas de negocio y API |
+| P1 | Sebastián Vladimir Acelas (líder) | Backend: datos, reglas de negocio y API |
 | P2 | Jaime Naranjo | IA, integración Git y README |
 | P3 | Junior Cuajaro | Frontend y experiencia de usuario |
 | P4 | Thomas Serrano | Datos oficiales y pruebas de datos y fechas |
 | P5 | Sebastian Diaz | Documentación de la demo y del reto en vivo |
+
+El resultado de la hackatón es la versión `v1.1.1` (ver [CHANGELOG.md](CHANGELOG.md)).
+
+> El historial de Git de la hackatón quedó en el repositorio del equipo. Este repositorio parte
+> de la `v1.1.1` tal como quedó al terminar (commit `chore(repo): importar el estado actual de la
+> v1.1.1`), y desde ahí registra todo el trabajo de la v2.
+
+### v2 — Desarrollo individual
+
+A partir de la `v1.1.1`, Sebastián Vladimir Acelas continúa el proyecto de forma individual como proyecto
+final del curso Inteligencia Artificial 2 (Campuslands). La v2 se enfoca en seguridad (roles y
+límites), una base de datos real y más uso de IA, siempre con el mismo principio: la IA sugiere,
+las reglas deciden. Los cambios de la v2 se registran en [CHANGELOG.md](CHANGELOG.md).
 
 ## Stack
 
@@ -148,8 +166,8 @@ Además:
 Requisitos: **Node.js 24** o superior.
 
 ```bash
-git clone https://github.com/250930/HAKATON_CAMPSULAND.git
-cd HAKATON_CAMPSULAND
+git clone https://github.com/sebastianace/CampusPulse_VladimirAcelas.git
+cd CampusPulse_VladimirAcelas
 npm install
 cp .env.example .env
 ```
@@ -214,10 +232,20 @@ inicial.
 
 ## Flujo de trabajo (Gitflow)
 
-- `main`: versión entregable, con tag `v1.0.0`.
-- `develop`: integración.
-- `feature/backend`, `feature/ia`, `feature/frontend`: el trabajo de cada integrante. Se integran
-  a `develop` por pull request con merge commit (sin squash).
-- `release/1.0.0`: congelamiento antes de la entrega (solo correcciones y README).
+- `main`: versión estable. Cada versión publicada lleva su etiqueta (`v1.1.1`, `v2.0.0`…).
+- `develop`: integración. Todo entra aquí por pull request.
+- `feature/<tema>`: una rama por tarea (por ejemplo `feature/fase-1-seguridad`). Sale de
+  `develop` y vuelve a `develop` por pull request con merge commit (sin squash), aunque el
+  trabajo sea individual: el PR queda como evidencia de la revisión.
+- `release/<versión>`: congelamiento antes de publicar (solo correcciones y documentación);
+  se integra a `main` con su etiqueta y de vuelta a `develop`.
 
-Commits con el formato `tipo(ámbito): descripción en español`.
+Reglas de cada commit:
+
+- Formato `tipo(ámbito): descripción en español`, por ejemplo `feat(auth): agregar roles`.
+  Tipos: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`.
+- `npm test` pasa antes de cada commit.
+- `.env`, `data/db.json` y `data/auth.json` nunca se suben (están en `.gitignore`).
+
+En la hackatón (v1) cada integrante trabajó en su rama (`feature/backend`, `feature/ia`,
+`feature/frontend`) y se integró a `develop` por pull request.
