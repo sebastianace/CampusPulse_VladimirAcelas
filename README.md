@@ -232,10 +232,20 @@ inicial.
 
 ## Flujo de trabajo (Gitflow)
 
-- `main`: versión entregable, con tag `v1.0.0`.
-- `develop`: integración.
-- `feature/backend`, `feature/ia`, `feature/frontend`: el trabajo de cada integrante. Se integran
-  a `develop` por pull request con merge commit (sin squash).
-- `release/1.0.0`: congelamiento antes de la entrega (solo correcciones y README).
+- `main`: versión estable. Cada versión publicada lleva su etiqueta (`v1.1.1`, `v2.0.0`…).
+- `develop`: integración. Todo entra aquí por pull request.
+- `feature/<tema>`: una rama por tarea (por ejemplo `feature/fase-1-seguridad`). Sale de
+  `develop` y vuelve a `develop` por pull request con merge commit (sin squash), aunque el
+  trabajo sea individual: el PR queda como evidencia de la revisión.
+- `release/<versión>`: congelamiento antes de publicar (solo correcciones y documentación);
+  se integra a `main` con su etiqueta y de vuelta a `develop`.
 
-Commits con el formato `tipo(ámbito): descripción en español`.
+Reglas de cada commit:
+
+- Formato `tipo(ámbito): descripción en español`, por ejemplo `feat(auth): agregar roles`.
+  Tipos: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`.
+- `npm test` pasa antes de cada commit.
+- `.env`, `data/db.json` y `data/auth.json` nunca se suben (están en `.gitignore`).
+
+En la hackatón (v1) cada integrante trabajó en su rama (`feature/backend`, `feature/ia`,
+`feature/frontend`) y se integró a `develop` por pull request.
