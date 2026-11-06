@@ -8,8 +8,12 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Seguridad
 
-- Roles `admin`, `coordinador` y `camper`: la primera cuenta es `admin` y las demás `camper`.
-  Middleware `exigirRol(...roles)` que responde 403 `PERMISO_DENEGADO`.
+- Roles `admin`, `profesor` y `soporte_tecnico`. La primera cuenta es `admin`; después el
+  registro público se cierra (403 `REGISTRO_CERRADO`) y el admin crea a los profesores y al
+  soporte técnico con `POST /api/usuarios`. Middleware `exigirRol(...roles)` que responde 403
+  `PERMISO_DENEGADO`.
+- Resolver una incidencia (`PATCH /api/incidencias/:id`, que rehabilita espacios y equipos) solo
+  lo pueden hacer `admin` y `soporte_tecnico`.
 - `POST /api/restaurar` solo lo puede usar un `admin`.
 - Límite de intentos de login: 5 fallos del mismo usuario e IP en 15 minutos → 429
   `DEMASIADOS_INTENTOS` con cabecera `Retry-After`.
