@@ -75,6 +75,7 @@ src/config/        reglas.js: TODAS las constantes de negocio y valores cerrados
 src/data/          loader.js (lee el CSV) y store.js (lee/escribe db.json)
 src/ai/            cliente.js, validar.js, triaje.js, asistente.js, limite.js, cache.js
 src/ai/prompts/    Un archivo por prompt del sistema, con la plantilla de la clase (ver docs/biblioteca-prompts.md)
+evaluacion/        Reportes de prueba del triaje y sus resultados (npm run medir-triaje)
 data/raw/          espacios.csv oficial (nunca se modifica)
 data/seed/         recursos.json con equipos ficticios
 docs/              contrato-api.md, demo.md, reto-en-vivo.md y capturas
@@ -143,6 +144,11 @@ permitido.
 - **Caché del triaje:** un texto idéntico se responde desde la memoria durante 10 minutos
   (`src/ai/cache.js`) y no gasta cuota de Gemini. La recomendación de salas no se cachea porque
   depende de la disponibilidad y de la fecha.
+- **Personalidad:** Pulse tiene una personalidad definida con el modelo Big Five (responsabilidad
+  alta, amabilidad alta, extraversión media, apertura media, neuroticismo bajo), justificada en
+  [docs/personalidad.md](docs/personalidad.md). Solo ajusta el tono; no cambia reglas ni límites.
+- **Few-shot:** el triaje lleva 4 ejemplos resueltos del campus y se mide contra la versión sin
+  ejemplos con 12 reportes distintos (ver [docs/biblioteca-prompts.md](docs/biblioteca-prompts.md)).
 - Cambiar de proveedor de IA solo exige tocar `src/ai/cliente.js`.
 
 ## Uso de IA en el desarrollo
@@ -242,6 +248,7 @@ error claro y el formulario manual, nunca con una respuesta inventada.
 | `npm run dev` | Igual, pero se reinicia solo al guardar un archivo |
 | `npm test` | Ejecuta las pruebas de las reglas |
 | `npm run probar-ia` | Comprueba que la key y el modelo de Gemini responden |
+| `npm run medir-triaje` | Mide el triaje sin ejemplos y con ellos (24 llamadas a Gemini, ~5 min; gasta cuota) |
 
 Abre `http://localhost:3000` y crea una cuenta con **Crear una cuenta** (solo la primera vez).
 
