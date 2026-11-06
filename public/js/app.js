@@ -10,6 +10,8 @@ import { iniciarComando } from './comando.js';
 import { dibujarPresion } from './presion.js';
 import { iniciarDemo } from './demo.js';
 import { cerrarSesion, pedir } from './api.js';
+import { guardarSesion, nombreDeRol } from './sesion.js';
+import { iniciarUsuarios } from './usuarios.js';
 import * as toasts from './toasts.js';
 
 // Pestañas del panel de acciones
@@ -113,9 +115,10 @@ function activarRefrescoAutomatico() {
 // Muestra quién inició sesión y conecta el botón "Salir".
 // Sin sesión, pedir() ya lleva a la pantalla de inicio.
 async function mostrarSesion() {
-  const { nombre, usuario } = await pedir('/api/auth/yo');
-  document.getElementById('sesion-nombre').textContent = nombre;
-  document.getElementById('sesion-nombre').title = `Usuario: ${usuario}`;
+  const datos = await pedir('/api/auth/yo');
+  guardarSesion(datos); // los demás módulos consultan el rol con puede()
+  document.getElementById('sesion-nombre').textContent = datos.nombre;
+  document.getElementById('sesion-nombre').title = `Usuario: ${datos.usuario} · Rol: ${nombreDeRol(datos.rol)}`;
   document.getElementById('sesion').hidden = false;
   document.getElementById('cerrar-sesion').addEventListener('click', cerrarSesion);
 }
@@ -128,6 +131,7 @@ function iniciarTablero() {
   iniciarIncidencias({ refrescar, mostrarPestana });
   iniciarTimeline();
   iniciarCalidad({ refrescar });
+  iniciarUsuarios();
   iniciarComando({ mostrarPestana });
   iniciarDemo({ mostrarPestana });
   suscribir(dibujarMapa);

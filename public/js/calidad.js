@@ -4,13 +4,16 @@
 import { pedir } from './api.js';
 import { el, conCarga } from './dom.js';
 import { obtenerEstado } from './estado.js';
+import { puede } from './sesion.js';
 import * as toasts from './toasts.js';
 
 let refrescar = async () => {};
 
 export function iniciarCalidad(opciones) {
   refrescar = opciones.refrescar;
-  document.getElementById('btn-restaurar').addEventListener('click', pedirConfirmacion);
+  const boton = document.getElementById('btn-restaurar');
+  boton.hidden = !puede('restaurar'); // solo admin; el servidor igual responde 403 a los demás
+  boton.addEventListener('click', pedirConfirmacion);
   // Recargar el reporte cada vez que se abre la pestaña
   document.getElementById('p-datos').addEventListener('click', cargarCalidad);
 }

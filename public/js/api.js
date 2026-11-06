@@ -87,7 +87,9 @@ function mensajePorEstado(status) {
   return `El servidor respondió con un error (${status}).`;
 }
 
-// Atajo para saber si un error viene de la IA caída (503) o de no tener conexión
+// Atajo para saber si hay que ofrecer el formulario manual: IA caída (503),
+// límite de consultas a la IA superado (429 LIMITE_IA) o sin conexión
 export function esFallaDeIA(error) {
-  return error instanceof ErrorApi && (error.status === 503 || error.codigo === 'SIN_CONEXION');
+  return error instanceof ErrorApi
+    && (error.status === 503 || error.codigo === 'LIMITE_IA' || error.codigo === 'SIN_CONEXION');
 }
