@@ -8,6 +8,10 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Seguridad
 
+- Límite de consultas a la IA por usuario: 5 por minuto → 429 `LIMITE_IA` con `Retry-After` y
+  el formulario manual como alternativa en la interfaz.
+- Caché de 10 minutos para el triaje de incidencias con texto idéntico (cabecera
+  `X-Cache: HIT`), para cuidar la cuota gratis de Gemini.
 - Roles `admin`, `profesor` y `soporte_tecnico`. La primera cuenta es `admin`; después el
   registro público se cierra (403 `REGISTRO_CERRADO`) y el admin crea a los profesores y al
   soporte técnico con `POST /api/usuarios`. Middleware `exigirRol(...roles)` que responde 403

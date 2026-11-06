@@ -65,6 +65,15 @@ export const REGLAS = {
     danado: ['en_reparacion'],
     en_reparacion: ['disponible'],
   },
+
+  // Uso de la IA (la capa gratis de Gemini tiene cuota limitada).
+  // Peticiones a /api/ia que puede hacer cada usuario en la ventana indicada.
+  // Al pasarse responde 429 y la interfaz ofrece el formulario manual.
+  LIMITE_IA_PETICIONES: 5,
+  LIMITE_IA_VENTANA_MINUTOS: 1,
+
+  // Minutos que se guarda la respuesta del triaje para un texto idéntico.
+  CACHE_IA_MINUTOS: 10,
 };
 
 // =====================================================================
