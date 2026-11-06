@@ -19,11 +19,20 @@ schema JSON y se vuelve a validar en `src/ai/validar.js`.
 
 | Prompt | Archivo | Lo usa | Versión |
 |---|---|---|---|
-| Triaje de incidencias | `prompts/triaje.js` | `POST /api/ia/triaje` | 1.0 |
+| Triaje de incidencias | `prompts/triaje.js` | `POST /api/ia/triaje` | 1.1 |
 | Extracción de la solicitud de reserva | `prompts/solicitud.js` | `POST /api/ia/recomendar`, paso 1 | 1.0 |
-| Explicación de las salas recomendadas | `prompts/explicacion.js` | `POST /api/ia/recomendar`, paso 3 | 1.0 |
+| Explicación de las salas recomendadas | `prompts/explicacion.js` | `POST /api/ia/recomendar`, paso 3 | 1.1 |
 
 ## Historial de versiones
+
+### 1.1: personalidad de Pulse (triaje y explicación)
+
+- La sección **Tono** de `triaje.js` y `explicacion.js` ahora la arma `tonoDePulse()`
+  (`prompts/personalidad.js`) con los cinco rasgos Big Five: Responsabilidad alta, Amabilidad alta,
+  Extraversión media, Apertura media y Neuroticismo bajo. Justificación en
+  [personalidad.md](personalidad.md).
+- `solicitud.js` sigue en 1.0: solo extrae datos y no lleva personalidad.
+- Políticas, límites y procedimiento no cambiaron.
 
 ### 1.0: reorganización a la plantilla de seis secciones
 
@@ -38,11 +47,12 @@ schema JSON y se vuelve a validar en `src/ai/validar.js`.
 - **Probado** (`tests/prompts.test.js`, sin llamar a Gemini): que cada prompt tenga las seis
   secciones en orden, lleve el catálogo y los valores cerrados, delimite el texto del usuario y
   deje un texto que da órdenes dentro de los delimitadores.
-- **Sin medir:** cómo responde Gemini a la nueva redacción. La reorganización no se comparó contra
+- **Probado también:** que la personalidad esté en el triaje y la explicación, no en la extracción,
+  y que los límites sigan presentes.
+- **Sin medir:** cómo responde Gemini a la nueva redacción y a la personalidad. La reorganización no se comparó contra
   la versión anterior con el modelo real. Pendiente: armar un conjunto de reportes de prueba y
   comparar la clasificación antes y después (ver la medición del few-shot en la Fase 3A del plan).
 
 ## Pendiente de la Fase 3A
 
-- Personalidad de "Pulse" con el modelo Big Five (`docs/personalidad.md`).
 - Ejemplos few-shot en el triaje, medidos contra zero-shot.

@@ -11,6 +11,8 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 - Los prompts salieron del código a `src/ai/prompts/`, uno por archivo, con la plantilla de seis
   secciones vista en clase (rol y objetivo, tono, políticas, límites, procedimiento y entrada).
   Documentados en `docs/biblioteca-prompts.md`.
+- Personalidad de **Pulse** con el modelo Big Five (`src/ai/prompts/personalidad.js`), aplicada al
+  tono del triaje y de la explicación de salas. Justificada en `docs/personalidad.md`.
 
 ### Interfaz
 
