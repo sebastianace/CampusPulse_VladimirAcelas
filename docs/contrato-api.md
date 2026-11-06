@@ -22,6 +22,8 @@ sin esperar a que P1 termine.
 | `GET /api/calidad-datos` | — | `{cargados, validos, inconsistentes: [{fila, motivo}]}` | P1 |
 | `POST /api/restaurar` | — | `200` (recrea `db.json` desde `raw` y `seed`). Solo `admin`; otro rol → `403` | P1 |
 | `POST /api/auth/registro` | `{usuario, nombre, clave}` | `201 {usuario, nombre, rol}` y abre sesión (cookie). Solo crea la primera cuenta (`admin`); después `403 REGISTRO_CERRADO` | P2 |
+| `GET /api/auth/estado` | — | `200 {registroAbierto}`; es público. El login lo usa para ocultar "Crear una cuenta" | P2 |
+| `GET /api/usuarios` | — | `200 [{usuario, nombre, rol}]` (nunca trae las claves). Solo `admin` | P2 |
 | `POST /api/usuarios` | `{usuario, nombre, clave, rol: "profesor" \| "soporte_tecnico"}` | `201 {usuario, nombre, rol}`. Solo `admin`; no abre sesión | P2 |
 | `POST /api/auth/login` | `{usuario, clave}` | `200 {usuario, nombre, rol}` y abre sesión (cookie) | P2 |
 | `POST /api/auth/logout` | — | `200` y cierra la sesión | P2 |
