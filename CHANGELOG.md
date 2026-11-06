@@ -6,6 +6,13 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Base de datos
+
+- PostgreSQL con pgvector en `compose.yaml` (`docker compose up -d db`), esquema SQL en
+  `db/migrations/` con la restricción `EXCLUDE USING gist` que impide reservas solapadas, ejecutor
+  de migraciones (`npm run migrar`) y semilla (`npm run semilla`). La aplicación sigue usando
+  `data/db.json` hasta los siguientes pull requests. Ver `docs/base-de-datos.md`.
+
 ### IA
 
 - Los prompts salieron del código a `src/ai/prompts/`, uno por archivo, con la plantilla de seis

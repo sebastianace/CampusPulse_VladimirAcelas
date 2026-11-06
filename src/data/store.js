@@ -55,8 +55,8 @@ function cargarEspaciosExtra(idsOficiales) {
 }
 
 // Arma la base completa desde raw/ y seed/, con las listas de movimientos vacías.
-// El reporte de calidad es solo del CSV oficial.
-function crearEstadoInicial() {
+// El reporte de calidad es solo del CSV oficial. También la usa src/data/semilla.js (PostgreSQL).
+export function crearEstadoInicial() {
   const { espacios: oficiales, calidad } = cargarEspacios(RUTAS.espaciosCSV);
   const espacios = [...oficiales, ...cargarEspaciosExtra(new Set(oficiales.map((e) => e.id)))];
   const idsEspacios = new Set(espacios.map((e) => e.id));
