@@ -134,6 +134,11 @@ permitido.
 - El texto del usuario va delimitado y se le indica a la IA que es un dato, no instrucciones.
 - **Sin respuestas simuladas**: si la IA falla o no hay key, la API responde
   `503 {error: {codigo: "IA_NO_DISPONIBLE", mensaje}}` y la interfaz ofrece el formulario manual.
+- **Límite por usuario:** 5 consultas a la IA por minuto (`src/ai/limite.js`). Al pasarse responde
+  `429 LIMITE_IA` en español y la interfaz ofrece el formulario manual.
+- **Caché del triaje:** un texto idéntico se responde desde la memoria durante 10 minutos
+  (`src/ai/cache.js`) y no gasta cuota de Gemini. La recomendación de salas no se cachea porque
+  depende de la disponibilidad y de la fecha.
 - Cambiar de proveedor de IA solo exige tocar `src/ai/cliente.js`.
 
 ## Uso de IA en el desarrollo
@@ -188,6 +193,8 @@ editar un valor y guardar (`npm run dev` reinicia el servidor solo).
 | Cambios de estado de un equipo | `TRANSICIONES_RECURSO` | disponible → prestado / en reparación; prestado → disponible / dañado; dañado → en reparación; en reparación → disponible |
 | Salas con computadores (si el pedido los necesita, solo se recomiendan estas) | `ESPACIOS_CON_COMPUTADORES` | apolo, spooki, artemis, skilab |
 | Tipos de espacio que la IA nunca recomienda | `TIPOS_FUERA_DE_RECOMENDACION` | mesa_juego |
+| Consultas a la IA por usuario en la ventana | `LIMITE_IA_PETICIONES` / `LIMITE_IA_VENTANA_MINUTOS` | 5 por minuto |
+| Minutos que se guarda la respuesta del triaje | `CACHE_IA_MINUTOS` | 10 |
 
 Además:
 

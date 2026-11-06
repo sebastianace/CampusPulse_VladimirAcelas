@@ -46,7 +46,17 @@ listo para mostrar en un toast.
 | 401 | Sin sesión (`SESION_REQUERIDA`) o usuario/contraseña incorrectos (`CREDENCIALES_INVALIDAS`). Todas las rutas salvo `/api/auth/*` exigen sesión |
 | 403 | Hay sesión, pero el rol no tiene permiso (`PERMISO_DENEGADO`) |
 | 429 | Demasiados intentos de login fallidos (`DEMASIADOS_INTENTOS`): 5 del mismo usuario e IP en 15 minutos. Trae la cabecera `Retry-After` en segundos |
+| 429 | Demasiadas consultas a la IA (`LIMITE_IA`): 5 por usuario por minuto entre `/api/ia/triaje` y `/api/ia/recomendar`. Trae `Retry-After` y el mensaje sugiere el formulario manual |
 | 503 | La IA no responde (`codigo: "IA_NO_DISPONIBLE"`) |
+
+## Límite y caché de la IA
+
+- Cada usuario puede hacer `LIMITE_IA_PETICIONES` consultas a `/api/ia/*` cada
+  `LIMITE_IA_VENTANA_MINUTOS` (valores en `src/config/reglas.js`). Una petición inválida (422) o
+  respondida desde la caché no gasta cupo.
+- `POST /api/ia/triaje` guarda la respuesta `CACHE_IA_MINUTOS` minutos: un texto idéntico (sin
+  importar mayúsculas ni espacios) se responde desde la caché con la cabecera `X-Cache: HIT`.
+  `POST /api/ia/recomendar` no se cachea porque depende de la disponibilidad y de la fecha.
 
 ## Roles
 
