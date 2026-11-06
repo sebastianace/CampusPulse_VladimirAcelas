@@ -129,6 +129,38 @@ permitido.
   `503 {error: {codigo: "IA_NO_DISPONIBLE", mensaje}}` y la interfaz ofrece el formulario manual.
 - Cambiar de proveedor de IA solo exige tocar `src/ai/cliente.js`.
 
+## Uso de IA en el desarrollo
+
+Campus Pulse usa IA en dos lugares distintos, y conviene no confundirlos:
+
+1. **IA dentro del producto** (Gemini): sugiere en el triaje de incidencias y en el asistente de
+   reservas. Está descrita arriba, en "Rol de la IA y cómo se controla".
+2. **IA como herramienta de desarrollo** (esta sección): desde el 2 de noviembre de 2026, la v2 se
+   desarrolla con ayuda de un asistente de programación (Claude Code, de Anthropic).
+
+### Quién hace qué
+
+- **Sebastián Vladimir Acelas decide y responde por el proyecto.** Define el alcance en el plan de
+  la v2, revisa cada cambio antes de integrarlo y es el único que hace `push` y abre los pull
+  requests. Todo el código publicado es responsabilidad suya y debe poder explicarlo.
+- **El asistente propone y escribe borradores** de código, pruebas y documentación en ramas
+  locales, y explica cada decisión de diseño.
+- Las piezas que hay que defender en la sustentación (reglas de negocio, prompts y RAG) las
+  escribe el autor; el asistente las revisa y las explica.
+
+### Controles
+
+- Una rama por tarea y un pull request a `develop`: ningún cambio llega sin revisión humana.
+- `npm test` debe pasar antes de cada commit; cada función nueva trae sus pruebas.
+- Los commits son del autor. Sin firmas ni coautores automáticos: la trazabilidad está aquí y en
+  el historial de pull requests.
+- Nunca se suben claves: `.env`, `data/db.json` y `data/auth.json` están en `.gitignore`, y el
+  asistente no lee ni imprime claves.
+- Cuando una decisión de diseño es dudosa, el asistente no la toma: la deja anotada como pregunta
+  para que el autor decida.
+- La documentación no afirma nada que no se haya comprobado (por ejemplo, el CHANGELOG solo
+  describe lo que consta en el repositorio).
+
 ## Reglas de negocio
 
 Todas viven en [`src/config/reglas.js`](src/config/reglas.js). Para cambiar una regla basta con
