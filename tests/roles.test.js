@@ -122,6 +122,25 @@ test('resolver una incidencia: admin y soporte técnico sí; profesor -> 403', a
   assert.equal((await pedir(`/api/incidencias/${segunda.cuerpo.id}`, 'PATCH', { estado: 'resuelta' }, (await entrar('jefa')).cookie)).status, 200);
 });
 
+test('GET /api/auth/estado (público): el registro está abierto solo sin cuentas', async () => {
+  // En este punto del archivo ya existe la cuenta admin: el registro está cerrado.
+  const { status, cuerpo } = await pedir('/api/auth/estado');
+  assert.equal(status, 200);
+  assert.deepEqual(cuerpo, { registroAbierto: false });
+});
+
+test('GET /api/usuarios: el admin ve las cuentas sin claves; los demás reciben 403', async () => {
+  const admin = await entrar('jefa');
+  const { status, cuerpo } = await pedir('/api/usuarios', 'GET', null, admin.cookie);
+  assert.equal(status, 200);
+  assert.deepEqual(cuerpo.map((u) => u.usuario).sort(), ['jefa', 'profe', 'tecnico']);
+  assert.ok(cuerpo.every((u) => Object.keys(u).sort().join() === 'nombre,rol,usuario'), 'sin hash de clave');
+
+  for (const usuario of ['profe', 'tecnico']) {
+    assert.equal((await pedir('/api/usuarios', 'GET', null, (await entrar(usuario)).cookie)).status, 403, usuario);
+  }
+});
+
 test('una cuenta antigua con rol camper, coordinador o sin rol se trata como profesor', async () => {
   const auth = JSON.parse(readFileSync(process.env.AUTH_PATH, 'utf8'));
   auth.usuarios.find((u) => u.usuario === 'profe').rol = 'camper';

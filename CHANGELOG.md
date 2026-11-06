@@ -6,6 +6,14 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Interfaz
+
+- Pestaña **Usuarios** (solo admin): crear profesores y soporte técnico y ver las cuentas
+  (`GET` y `POST /api/usuarios`).
+- La interfaz oculta según el rol: "Restaurar" (solo admin), "Marcar como resuelta" (admin y
+  soporte técnico) y la pestaña Usuarios (solo admin).
+- El login oculta "Crear una cuenta" cuando el registro ya está cerrado (`GET /api/auth/estado`).
+
 ### Seguridad
 
 - Límite de consultas a la IA por usuario: 5 por minuto → 429 `LIMITE_IA` con `Retry-After` y

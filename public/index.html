@@ -112,6 +112,7 @@
           Incidencias <span class="contador" id="contador-incidencias" hidden></span>
         </button>
         <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-datos" id="p-datos">Datos</button>
+        <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-usuarios" id="p-usuarios" hidden>Usuarios</button>
       </nav>
 
       <!-- Reservar un espacio -->
@@ -212,6 +213,39 @@
           <p class="vacio">Cargando reporte de calidad…</p>
         </div>
         <button class="btn btn--peligro" id="btn-restaurar" type="button">Restaurar datos iniciales</button>
+      </section>
+
+      <!-- Cuentas (solo admin): crear profesores y soporte técnico -->
+      <section class="pestana__cuerpo" role="tabpanel" id="tab-usuarios" aria-labelledby="p-usuarios" hidden>
+        <form class="formulario" id="form-usuario" novalidate>
+          <label class="campo">
+            <span>Nombre</span>
+            <input name="nombre" type="text" autocomplete="off" required>
+          </label>
+          <div class="fila">
+            <label class="campo">
+              <span>Usuario</span>
+              <input name="usuario" type="text" autocomplete="off" autocapitalize="none" required placeholder="ej. ana.gomez">
+            </label>
+            <label class="campo">
+              <span>Rol</span>
+              <select name="rol" required>
+                <option value="profesor">Profesor</option>
+                <option value="soporte_tecnico">Soporte técnico</option>
+              </select>
+            </label>
+          </div>
+          <label class="campo">
+            <span>Contraseña inicial (mínimo 8 caracteres)</span>
+            <input name="clave" type="password" autocomplete="new-password" minlength="8" required>
+          </label>
+          <button class="btn btn--primario" type="submit">Crear cuenta</button>
+        </form>
+
+        <h3 class="subtitulo">Cuentas</h3>
+        <ul class="lista" id="lista-usuarios">
+          <li class="vacio">Cargando cuentas…</li>
+        </ul>
       </section>
     </aside>
   </main>
