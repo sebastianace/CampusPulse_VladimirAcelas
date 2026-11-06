@@ -89,7 +89,11 @@ errores responden `{error: {codigo, mensaje}}` con el mensaje en español: 422 d
 - Toda la API (salvo `/api/auth/*`) exige una sesión. Sin sesión, la interfaz lleva a
   `login.html` y, al entrar, vuelve a la página que se estaba usando (también `movil.html`).
 - **No hay usuarios ni contraseñas en el repositorio.** La primera vez se crea una cuenta desde
-  "Crear una cuenta" (usuario de 3 a 30 caracteres y contraseña de al menos 8).
+  "Crear una cuenta" (usuario de 3 a 30 caracteres y contraseña de al menos 8): esa cuenta es
+  `admin`. Después el registro se cierra y el admin crea las demás con `POST /api/usuarios`.
+- **Tres roles:** `admin` (crea cuentas y restaura datos), `profesor` (reserva, presta y reporta)
+  y `soporte_tecnico` (además resuelve incidencias, lo que rehabilita espacios y equipos). La
+  tabla de permisos está en [docs/contrato-api.md](docs/contrato-api.md).
 - Las contraseñas se guardan con hash `scrypt` y sal aleatoria, y las sesiones con el hash de su
   token, en `data/auth.json` (ignorado por Git). La sesión dura 8 horas y viaja en una cookie
   `HttpOnly`, que además es `Secure` (solo HTTPS) cuando `NODE_ENV=production`.
