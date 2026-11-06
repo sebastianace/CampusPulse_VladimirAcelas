@@ -1,7 +1,7 @@
 // =====================================================================
 // TESTS DE ROLES Y PERMISOS (node:test)
 // ---------------------------------------------------------------------
-// Roles admin, coordinador y camper; middleware exigirRol(...roles).
+// Roles admin, profesor y soporte_tecnico; middleware exigirRol(...roles).
 // Levanta el servidor con una base y un archivo de usuarios temporales.
 // =====================================================================
 
@@ -42,6 +42,9 @@ async function pedir(ruta, metodo = 'GET', cuerpo, cookie = '') {
   };
 }
 
+const CLAVE = 'clave-de-prueba-1';
+const entrar = (usuario) => pedir('/api/auth/login', 'POST', { usuario, clave: CLAVE });
+
 // Ejecuta el middleware con un usuario falso y devuelve el error lanzado (o null si pasó).
 function probarMiddleware(middleware, usuario) {
   let paso = false;
@@ -54,42 +57,91 @@ function probarMiddleware(middleware, usuario) {
   return null;
 }
 
-test('el primer usuario registrado es admin y los siguientes son camper', async () => {
-  const admin = await pedir('/api/auth/registro', 'POST', { usuario: 'jefa', nombre: 'Jefa', clave: 'clave-admin-1' });
+test('la primera cuenta registrada es admin y después el registro público se cierra', async () => {
+  const admin = await pedir('/api/auth/registro', 'POST', { usuario: 'jefa', nombre: 'Jefa', clave: CLAVE });
+  assert.equal(admin.status, 201);
   assert.equal(admin.cuerpo.rol, 'admin');
-  const camper = await pedir('/api/auth/registro', 'POST', { usuario: 'luis', nombre: 'Luis', clave: 'clave-camper-1' });
-  assert.equal(camper.cuerpo.rol, 'camper');
-  assert.equal((await pedir('/api/auth/yo', 'GET', null, camper.cookie)).cuerpo.rol, 'camper');
+  const segunda = await pedir('/api/auth/registro', 'POST', { usuario: 'intruso', nombre: 'Intruso', clave: CLAVE });
+  assert.equal(segunda.status, 403);
+  assert.equal(segunda.cuerpo.error.codigo, 'REGISTRO_CERRADO');
 });
 
-test('una cuenta antigua sin rol se trata como camper', async () => {
-  await pedir('/api/auth/registro', 'POST', { usuario: 'antigua', nombre: 'Antigua', clave: 'clave-antigua' });
-  const auth = JSON.parse(readFileSync(process.env.AUTH_PATH, 'utf8'));
-  delete auth.usuarios.find((u) => u.usuario === 'antigua').rol;
-  writeFileSync(process.env.AUTH_PATH, JSON.stringify(auth));
-  const { cuerpo } = await pedir('/api/auth/login', 'POST', { usuario: 'antigua', clave: 'clave-antigua' });
-  assert.equal(cuerpo.rol, 'camper');
+test('el admin crea profesores y soporte técnico, y ellos pueden entrar', async () => {
+  const admin = await entrar('jefa');
+  for (const [usuario, rol] of [['profe', 'profesor'], ['tecnico', 'soporte_tecnico']]) {
+    const creada = await pedir('/api/usuarios', 'POST', { usuario, nombre: usuario, clave: CLAVE, rol }, admin.cookie);
+    assert.equal(creada.status, 201);
+    assert.deepEqual(creada.cuerpo, { usuario, nombre: usuario, rol });
+    assert.equal((await entrar(usuario)).cuerpo.rol, rol);
+  }
 });
 
-test('POST /api/restaurar: camper -> 403, admin -> 200, sin sesión -> 401', async () => {
-  const camper = await pedir('/api/auth/login', 'POST', { usuario: 'luis', clave: 'clave-camper-1' });
-  const prohibido = await pedir('/api/restaurar', 'POST', null, camper.cookie);
+test('el admin no puede crear otro admin ni un rol que no existe (422)', async () => {
+  const admin = await entrar('jefa');
+  for (const rol of ['admin', 'camper', undefined]) {
+    const { status } = await pedir('/api/usuarios', 'POST', { usuario: 'nuevo', nombre: 'Nuevo', clave: CLAVE, rol }, admin.cookie);
+    assert.equal(status, 422, `rol ${rol}`);
+  }
+});
+
+test('profesor y soporte técnico no pueden crear cuentas (403) y sin sesión es 401', async () => {
+  for (const usuario of ['profe', 'tecnico']) {
+    const { cookie } = await entrar(usuario);
+    const { status, cuerpo } = await pedir('/api/usuarios', 'POST', { usuario: 'x-nuevo', nombre: 'X', clave: CLAVE, rol: 'profesor' }, cookie);
+    assert.equal(status, 403, usuario);
+    assert.equal(cuerpo.error.codigo, 'PERMISO_DENEGADO');
+  }
+  assert.equal((await pedir('/api/usuarios', 'POST', {})).status, 401);
+});
+
+test('POST /api/restaurar: solo admin (profesor y soporte -> 403, sin sesión -> 401)', async () => {
+  for (const usuario of ['profe', 'tecnico']) {
+    assert.equal((await pedir('/api/restaurar', 'POST', null, (await entrar(usuario)).cookie)).status, 403, usuario);
+  }
+  assert.equal((await pedir('/api/restaurar', 'POST', null, (await entrar('jefa')).cookie)).status, 200);
+  assert.equal((await pedir('/api/restaurar', 'POST')).status, 401);
+});
+
+test('resolver una incidencia: admin y soporte técnico sí; profesor -> 403', async () => {
+  const profe = await entrar('profe');
+  const crear = () => pedir('/api/incidencias', 'POST', {
+    descripcion: 'El proyector no enciende', categoria: 'tecnologia', prioridad: 'media',
+    area: 'Soporte TI', espacioId: 'apolo', inhabilitar: false, origen: 'manual',
+  }, profe.cookie);
+
+  const primera = await crear();
+  assert.equal(primera.status, 201, 'el profesor sí puede reportar');
+  const prohibido = await pedir(`/api/incidencias/${primera.cuerpo.id}`, 'PATCH', { estado: 'resuelta' }, profe.cookie);
   assert.equal(prohibido.status, 403);
   assert.equal(prohibido.cuerpo.error.codigo, 'PERMISO_DENEGADO');
 
-  const admin = await pedir('/api/auth/login', 'POST', { usuario: 'jefa', clave: 'clave-admin-1' });
-  assert.equal((await pedir('/api/restaurar', 'POST', null, admin.cookie)).status, 200);
+  const tecnico = await entrar('tecnico');
+  assert.equal((await pedir(`/api/incidencias/${primera.cuerpo.id}`, 'PATCH', { estado: 'resuelta' }, tecnico.cookie)).status, 200);
 
-  assert.equal((await pedir('/api/restaurar', 'POST')).status, 401);
+  const segunda = await crear();
+  assert.equal((await pedir(`/api/incidencias/${segunda.cuerpo.id}`, 'PATCH', { estado: 'resuelta' }, (await entrar('jefa')).cookie)).status, 200);
+});
+
+test('una cuenta antigua con rol camper, coordinador o sin rol se trata como profesor', async () => {
+  const auth = JSON.parse(readFileSync(process.env.AUTH_PATH, 'utf8'));
+  auth.usuarios.find((u) => u.usuario === 'profe').rol = 'camper';
+  auth.usuarios.find((u) => u.usuario === 'tecnico').rol = 'coordinador';
+  writeFileSync(process.env.AUTH_PATH, JSON.stringify(auth));
+  assert.equal((await entrar('profe')).cuerpo.rol, 'profesor');
+  assert.equal((await entrar('tecnico')).cuerpo.rol, 'profesor');
+
+  delete auth.usuarios.find((u) => u.usuario === 'profe').rol;
+  writeFileSync(process.env.AUTH_PATH, JSON.stringify(auth));
+  assert.equal((await entrar('profe')).cuerpo.rol, 'profesor');
 });
 
 test('exigirRol deja pasar a los roles indicados', () => {
   assert.equal(probarMiddleware(exigirRol('admin'), { usuario: 'a', rol: 'admin' }), null);
-  assert.equal(probarMiddleware(exigirRol('admin', 'coordinador'), { usuario: 'c', rol: 'coordinador' }), null);
+  assert.equal(probarMiddleware(exigirRol('admin', 'soporte_tecnico'), { usuario: 's', rol: 'soporte_tecnico' }), null);
 });
 
 test('exigirRol responde 403 PERMISO_DENEGADO a los demás roles', () => {
-  const error = probarMiddleware(exigirRol('admin', 'coordinador'), { usuario: 'c', rol: 'camper' });
+  const error = probarMiddleware(exigirRol('admin', 'soporte_tecnico'), { usuario: 'p', rol: 'profesor' });
   assert.equal(error.status, 403);
   assert.equal(error.codigo, 'PERMISO_DENEGADO');
 });

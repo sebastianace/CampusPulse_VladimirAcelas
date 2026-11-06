@@ -18,10 +18,11 @@ sin esperar a que P1 termine.
 | `POST /api/prestamos/:id/devolver` | `{estadoFinal: "disponible" \| "danado"}` | `200` + el préstamo | P1 |
 | `GET /api/incidencias` | — | `[{id, descripcion, categoria, prioridad, area, espacioId, recursoId, estado, origen, ia}]` | P1 |
 | `POST /api/incidencias` | `{descripcion, categoria, prioridad, area, espacioId, recursoId, inhabilitar, origen, ia}` | `201` + la incidencia (y cambia el estado del espacio o recurso) | P1 |
-| `PATCH /api/incidencias/:id` | `{estado: "resuelta"}` | `200` (rehabilita el espacio o recurso) | P1 |
+| `PATCH /api/incidencias/:id` | `{estado: "resuelta"}` | `200` (rehabilita el espacio o recurso). Solo `admin` y `soporte_tecnico`; otro rol → `403` | P1 |
 | `GET /api/calidad-datos` | — | `{cargados, validos, inconsistentes: [{fila, motivo}]}` | P1 |
 | `POST /api/restaurar` | — | `200` (recrea `db.json` desde `raw` y `seed`). Solo `admin`; otro rol → `403` | P1 |
-| `POST /api/auth/registro` | `{usuario, nombre, clave}` | `201 {usuario, nombre, rol}` y abre sesión (cookie) | P2 |
+| `POST /api/auth/registro` | `{usuario, nombre, clave}` | `201 {usuario, nombre, rol}` y abre sesión (cookie). Solo crea la primera cuenta (`admin`); después `403 REGISTRO_CERRADO` | P2 |
+| `POST /api/usuarios` | `{usuario, nombre, clave, rol: "profesor" \| "soporte_tecnico"}` | `201 {usuario, nombre, rol}`. Solo `admin`; no abre sesión | P2 |
 | `POST /api/auth/login` | `{usuario, clave}` | `200 {usuario, nombre, rol}` y abre sesión (cookie) | P2 |
 | `POST /api/auth/logout` | — | `200` y cierra la sesión | P2 |
 | `GET /api/auth/yo` | — | `200 {usuario, nombre, rol}` o `401` | P2 |
@@ -49,8 +50,17 @@ listo para mostrar en un toast.
 
 ## Roles
 
-`rol` es `admin`, `coordinador` o `camper`. La primera cuenta registrada es `admin`; las demás
-entran como `camper`. Una cuenta antigua sin rol se trata como `camper`.
+`rol` es `admin`, `profesor` o `soporte_tecnico`. La primera cuenta registrada es `admin`; las
+demás las crea un `admin` con `POST /api/usuarios` (solo `profesor` o `soporte_tecnico`). Una
+cuenta antigua sin rol, o con un rol que ya no existe (`camper`, `coordinador`), se trata como
+`profesor`.
+
+| Acción | admin | profesor | soporte_tecnico |
+|---|---|---|---|
+| Reservar, prestar y reportar incidencias | sí | sí | sí |
+| Resolver incidencias (rehabilita espacios y equipos) | sí | no | sí |
+| Crear cuentas | sí | no | no |
+| Restaurar datos | sí | no | no |
 
 ## Fechas
 
