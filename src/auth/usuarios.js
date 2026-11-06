@@ -91,6 +91,16 @@ export function registrar(datos) {
   return guardarUsuario(datos, 'admin');
 }
 
+/** ¿Está abierto el registro público? Solo mientras no exista ninguna cuenta. */
+export function registroAbierto() {
+  return leer().usuarios.length === 0;
+}
+
+/** Todas las cuentas, sin claves: [{usuario, nombre, rol}]. */
+export function listarUsuarios() {
+  return leer().usuarios.map(publico);
+}
+
 /** Cuenta creada por un admin. El rol debe ser uno de ROLES_CREABLES. Devuelve {usuario, nombre, rol}. */
 export function crearCuenta(datos) {
   if (!ROLES_CREABLES.includes(datos?.rol)) {

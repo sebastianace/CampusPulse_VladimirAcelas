@@ -90,7 +90,10 @@ errores responden `{error: {codigo, mensaje}}` con el mensaje en español: 422 d
   `login.html` y, al entrar, vuelve a la página que se estaba usando (también `movil.html`).
 - **No hay usuarios ni contraseñas en el repositorio.** La primera vez se crea una cuenta desde
   "Crear una cuenta" (usuario de 3 a 30 caracteres y contraseña de al menos 8): esa cuenta es
-  `admin`. Después el registro se cierra y el admin crea las demás con `POST /api/usuarios`.
+  `admin`. Después el registro se cierra (el login oculta "Crear una cuenta") y el admin crea las
+  demás desde la pestaña **Usuarios** (`POST /api/usuarios`).
+- La interfaz oculta lo que el rol no puede hacer (el botón "Restaurar", "Marcar como resuelta" y
+  la pestaña Usuarios); aun así, quien impide las acciones es el servidor, con 403.
 - **Tres roles:** `admin` (crea cuentas y restaura datos), `profesor` (reserva, presta y reporta)
   y `soporte_tecnico` (además resuelve incidencias, lo que rehabilita espacios y equipos). La
   tabla de permisos está en [docs/contrato-api.md](docs/contrato-api.md).
