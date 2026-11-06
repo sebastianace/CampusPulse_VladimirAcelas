@@ -25,6 +25,11 @@ export const HORAS_SESION = 8;          // tiempo que dura una sesión
 const MIN_LARGO_CLAVE = 8;              // largo mínimo de la contraseña
 const FORMATO_USUARIO = /^[a-z0-9._-]{3,30}$/; // minúsculas, números, punto, guion
 
+// Roles: el primer usuario registrado es admin; el admin crea a los demás (profesor o soporte técnico).
+export const ROLES = ['admin', 'profesor', 'soporte_tecnico'];
+export const ROLES_CREABLES = ['profesor', 'soporte_tecnico']; // los que un admin puede crear
+const ROL_POR_DEFECTO = 'profesor'; // cuentas antiguas sin rol o con un rol que ya no existe
+
 // 401: no hay sesión o las credenciales no son válidas.
 export class NoAutorizadoError extends ErrorApi {
   constructor(mensaje, codigo = 'SESION_REQUERIDA') {
@@ -62,7 +67,7 @@ function claveCorrecta(clave, guardada) {
 const hashToken = (token) => createHash('sha256').update(token).digest('hex');
 
 // Lo que se devuelve al cliente: nunca el hash de la clave.
-const publico = ({ usuario, nombre }) => ({ usuario, nombre });
+const publico = ({ usuario, nombre, rol }) => ({ usuario, nombre, rol: ROLES.includes(rol) ? rol : ROL_POR_DEFECTO });
 
 // ---------- validación de datos (422) ----------
 
@@ -75,8 +80,37 @@ function validarCredenciales(datos) {
 
 // ---------- funciones públicas ----------
 
-/** Crea una cuenta nueva. Devuelve {usuario, nombre}. */
+/**
+ * Registro público: solo sirve para crear la primera cuenta, que es admin.
+ * Después el registro se cierra y las cuentas las crea un admin con crearCuenta().
+ */
 export function registrar(datos) {
+  if (leer().usuarios.length > 0) {
+    throw new ErrorApi(403, 'REGISTRO_CERRADO', 'El registro está cerrado: pide a un administrador que cree tu cuenta');
+  }
+  return guardarUsuario(datos, 'admin');
+}
+
+/** ¿Está abierto el registro público? Solo mientras no exista ninguna cuenta. */
+export function registroAbierto() {
+  return leer().usuarios.length === 0;
+}
+
+/** Todas las cuentas, sin claves: [{usuario, nombre, rol}]. */
+export function listarUsuarios() {
+  return leer().usuarios.map(publico);
+}
+
+/** Cuenta creada por un admin. El rol debe ser uno de ROLES_CREABLES. Devuelve {usuario, nombre, rol}. */
+export function crearCuenta(datos) {
+  if (!ROLES_CREABLES.includes(datos?.rol)) {
+    throw new DatosInvalidosError(`El rol debe ser uno de: ${ROLES_CREABLES.join(', ')}`);
+  }
+  return guardarUsuario(datos, datos.rol);
+}
+
+// Valida los datos y guarda el usuario con el rol indicado.
+function guardarUsuario(datos, rol) {
   const { usuario, clave } = validarCredenciales(datos);
   const nombre = String(datos?.nombre ?? '').trim();
   if (!FORMATO_USUARIO.test(usuario)) {
@@ -91,13 +125,13 @@ export function registrar(datos) {
   if (auth.usuarios.some((u) => u.usuario === usuario)) {
     throw new ErrorApi(409, 'USUARIO_EXISTE', `El usuario "${usuario}" ya existe`);
   }
-  const nuevo = { usuario, nombre, clave: hashClave(clave) };
+  const nuevo = { usuario, nombre, rol, clave: hashClave(clave) };
   auth.usuarios.push(nuevo);
   guardar(auth);
   return publico(nuevo);
 }
 
-/** Comprueba usuario y contraseña. Devuelve {usuario, nombre} o lanza 401. */
+/** Comprueba usuario y contraseña. Devuelve {usuario, nombre, rol} o lanza 401. */
 export function autenticar(datos) {
   const { usuario, clave } = validarCredenciales(datos);
   const encontrado = leer().usuarios.find((u) => u.usuario === usuario);

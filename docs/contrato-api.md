@@ -18,13 +18,16 @@ sin esperar a que P1 termine.
 | `POST /api/prestamos/:id/devolver` | `{estadoFinal: "disponible" \| "danado"}` | `200` + el préstamo | P1 |
 | `GET /api/incidencias` | — | `[{id, descripcion, categoria, prioridad, area, espacioId, recursoId, estado, origen, ia}]` | P1 |
 | `POST /api/incidencias` | `{descripcion, categoria, prioridad, area, espacioId, recursoId, inhabilitar, origen, ia}` | `201` + la incidencia (y cambia el estado del espacio o recurso) | P1 |
-| `PATCH /api/incidencias/:id` | `{estado: "resuelta"}` | `200` (rehabilita el espacio o recurso) | P1 |
+| `PATCH /api/incidencias/:id` | `{estado: "resuelta"}` | `200` (rehabilita el espacio o recurso). Solo `admin` y `soporte_tecnico`; otro rol → `403` | P1 |
 | `GET /api/calidad-datos` | — | `{cargados, validos, inconsistentes: [{fila, motivo}]}` | P1 |
-| `POST /api/restaurar` | — | `200` (recrea `db.json` desde `raw` y `seed`) | P1 |
-| `POST /api/auth/registro` | `{usuario, nombre, clave}` | `201 {usuario, nombre}` y abre sesión (cookie) | P2 |
-| `POST /api/auth/login` | `{usuario, clave}` | `200 {usuario, nombre}` y abre sesión (cookie) | P2 |
+| `POST /api/restaurar` | — | `200` (recrea `db.json` desde `raw` y `seed`). Solo `admin`; otro rol → `403` | P1 |
+| `POST /api/auth/registro` | `{usuario, nombre, clave}` | `201 {usuario, nombre, rol}` y abre sesión (cookie). Solo crea la primera cuenta (`admin`); después `403 REGISTRO_CERRADO` | P2 |
+| `GET /api/auth/estado` | — | `200 {registroAbierto}`; es público. El login lo usa para ocultar "Crear una cuenta" | P2 |
+| `GET /api/usuarios` | — | `200 [{usuario, nombre, rol}]` (nunca trae las claves). Solo `admin` | P2 |
+| `POST /api/usuarios` | `{usuario, nombre, clave, rol: "profesor" \| "soporte_tecnico"}` | `201 {usuario, nombre, rol}`. Solo `admin`; no abre sesión | P2 |
+| `POST /api/auth/login` | `{usuario, clave}` | `200 {usuario, nombre, rol}` y abre sesión (cookie) | P2 |
 | `POST /api/auth/logout` | — | `200` y cierra la sesión | P2 |
-| `GET /api/auth/yo` | — | `200 {usuario, nombre}` o `401` | P2 |
+| `GET /api/auth/yo` | — | `200 {usuario, nombre, rol}` o `401` | P2 |
 | `POST /api/ia/triaje` | `{descripcion}` | `{categoria, prioridad, area, espacioId, recursoId, inhabilitar, razon, modelo}` | P2 |
 | `POST /api/ia/recomendar` | `{texto}` | `{solicitud: {asistentes, inicio, fin, necesitaComputadores}, opciones: [{espacioId, motivo}], explicacion, modelo}` | P2 |
 
@@ -43,7 +46,33 @@ listo para mostrar en un toast.
 | 409 | Regla de negocio violada (`ReglaNegocioError`) |
 | 404 | ID que no existe |
 | 401 | Sin sesión (`SESION_REQUERIDA`) o usuario/contraseña incorrectos (`CREDENCIALES_INVALIDAS`). Todas las rutas salvo `/api/auth/*` exigen sesión |
+| 403 | Hay sesión, pero el rol no tiene permiso (`PERMISO_DENEGADO`) |
+| 429 | Demasiados intentos de login fallidos (`DEMASIADOS_INTENTOS`): 5 del mismo usuario e IP en 15 minutos. Trae la cabecera `Retry-After` en segundos |
+| 429 | Demasiadas consultas a la IA (`LIMITE_IA`): 5 por usuario por minuto entre `/api/ia/triaje` y `/api/ia/recomendar`. Trae `Retry-After` y el mensaje sugiere el formulario manual |
 | 503 | La IA no responde (`codigo: "IA_NO_DISPONIBLE"`) |
+
+## Límite y caché de la IA
+
+- Cada usuario puede hacer `LIMITE_IA_PETICIONES` consultas a `/api/ia/*` cada
+  `LIMITE_IA_VENTANA_MINUTOS` (valores en `src/config/reglas.js`). Una petición inválida (422) o
+  respondida desde la caché no gasta cupo.
+- `POST /api/ia/triaje` guarda la respuesta `CACHE_IA_MINUTOS` minutos: un texto idéntico (sin
+  importar mayúsculas ni espacios) se responde desde la caché con la cabecera `X-Cache: HIT`.
+  `POST /api/ia/recomendar` no se cachea porque depende de la disponibilidad y de la fecha.
+
+## Roles
+
+`rol` es `admin`, `profesor` o `soporte_tecnico`. La primera cuenta registrada es `admin`; las
+demás las crea un `admin` con `POST /api/usuarios` (solo `profesor` o `soporte_tecnico`). Una
+cuenta antigua sin rol, o con un rol que ya no existe (`camper`, `coordinador`), se trata como
+`profesor`.
+
+| Acción | admin | profesor | soporte_tecnico |
+|---|---|---|---|
+| Reservar, prestar y reportar incidencias | sí | sí | sí |
+| Resolver incidencias (rehabilita espacios y equipos) | sí | no | sí |
+| Crear cuentas | sí | no | no |
+| Restaurar datos | sí | no | no |
 
 ## Fechas
 

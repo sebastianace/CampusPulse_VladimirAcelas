@@ -73,7 +73,8 @@ src/auth/          usuarios.js: cuentas (clave con hash scrypt) y sesiones
 src/domain/        Reglas de negocio: reservas, préstamos, incidencias, fechas, errores
 src/config/        reglas.js: TODAS las constantes de negocio y valores cerrados
 src/data/          loader.js (lee el CSV) y store.js (lee/escribe db.json)
-src/ai/            cliente.js, validar.js, triaje.js, asistente.js
+src/ai/            cliente.js, validar.js, triaje.js, asistente.js, limite.js, cache.js
+src/ai/prompts/    Un archivo por prompt del sistema, con la plantilla de la clase (ver docs/biblioteca-prompts.md)
 data/raw/          espacios.csv oficial (nunca se modifica)
 data/seed/         recursos.json con equipos ficticios
 docs/              contrato-api.md, demo.md, reto-en-vivo.md y capturas
@@ -89,10 +90,20 @@ errores responden `{error: {codigo, mensaje}}` con el mensaje en español: 422 d
 - Toda la API (salvo `/api/auth/*`) exige una sesión. Sin sesión, la interfaz lleva a
   `login.html` y, al entrar, vuelve a la página que se estaba usando (también `movil.html`).
 - **No hay usuarios ni contraseñas en el repositorio.** La primera vez se crea una cuenta desde
-  "Crear una cuenta" (usuario de 3 a 30 caracteres y contraseña de al menos 8).
+  "Crear una cuenta" (usuario de 3 a 30 caracteres y contraseña de al menos 8): esa cuenta es
+  `admin`. Después el registro se cierra (el login oculta "Crear una cuenta") y el admin crea las
+  demás desde la pestaña **Usuarios** (`POST /api/usuarios`).
+- La interfaz oculta lo que el rol no puede hacer (el botón "Restaurar", "Marcar como resuelta" y
+  la pestaña Usuarios); aun así, quien impide las acciones es el servidor, con 403.
+- **Tres roles:** `admin` (crea cuentas y restaura datos), `profesor` (reserva, presta y reporta)
+  y `soporte_tecnico` (además resuelve incidencias, lo que rehabilita espacios y equipos). La
+  tabla de permisos está en [docs/contrato-api.md](docs/contrato-api.md).
 - Las contraseñas se guardan con hash `scrypt` y sal aleatoria, y las sesiones con el hash de su
   token, en `data/auth.json` (ignorado por Git). La sesión dura 8 horas y viaja en una cookie
-  `HttpOnly`.
+  `HttpOnly`, que además es `Secure` (solo HTTPS) cuando `NODE_ENV=production`.
+- Tras **5 intentos fallidos** del mismo usuario desde la misma IP en 15 minutos, el login
+  responde `429` hasta que pase la ventana (`src/auth/intentos.js`). Los contadores viven en
+  memoria y se borran al reiniciar el servidor.
 - **Restaurar datos** no borra las cuentas, y las sesiones sobreviven a los reinicios de
   `npm run dev` (útil en el reto en vivo).
 
@@ -127,7 +138,47 @@ permitido.
 - El texto del usuario va delimitado y se le indica a la IA que es un dato, no instrucciones.
 - **Sin respuestas simuladas**: si la IA falla o no hay key, la API responde
   `503 {error: {codigo: "IA_NO_DISPONIBLE", mensaje}}` y la interfaz ofrece el formulario manual.
+- **Límite por usuario:** 5 consultas a la IA por minuto (`src/ai/limite.js`). Al pasarse responde
+  `429 LIMITE_IA` en español y la interfaz ofrece el formulario manual.
+- **Caché del triaje:** un texto idéntico se responde desde la memoria durante 10 minutos
+  (`src/ai/cache.js`) y no gasta cuota de Gemini. La recomendación de salas no se cachea porque
+  depende de la disponibilidad y de la fecha.
+- **Personalidad:** Pulse tiene una personalidad definida con el modelo Big Five (responsabilidad
+  alta, amabilidad alta, extraversión media, apertura media, neuroticismo bajo), justificada en
+  [docs/personalidad.md](docs/personalidad.md). Solo ajusta el tono; no cambia reglas ni límites.
 - Cambiar de proveedor de IA solo exige tocar `src/ai/cliente.js`.
+
+## Uso de IA en el desarrollo
+
+Campus Pulse usa IA en dos lugares distintos, y conviene no confundirlos:
+
+1. **IA dentro del producto** (Gemini): sugiere en el triaje de incidencias y en el asistente de
+   reservas. Está descrita arriba, en "Rol de la IA y cómo se controla".
+2. **IA como herramienta de desarrollo** (esta sección): desde el 2 de noviembre de 2026, la v2 se
+   desarrolla con ayuda de un asistente de programación (Claude Code, de Anthropic).
+
+### Quién hace qué
+
+- **Sebastián Vladimir Acelas decide y responde por el proyecto.** Define el alcance en el plan de
+  la v2, revisa cada cambio antes de integrarlo y es el único que hace `push` y abre los pull
+  requests. Todo el código publicado es responsabilidad suya y debe poder explicarlo.
+- **El asistente propone y escribe borradores** de código, pruebas y documentación en ramas
+  locales, y explica cada decisión de diseño.
+- Las piezas que hay que defender en la sustentación (reglas de negocio, prompts y RAG) las
+  escribe el autor; el asistente las revisa y las explica.
+
+### Controles
+
+- Una rama por tarea y un pull request a `develop`: ningún cambio llega sin revisión humana.
+- `npm test` debe pasar antes de cada commit; cada función nueva trae sus pruebas.
+- Los commits son del autor. Sin firmas ni coautores automáticos: la trazabilidad está aquí y en
+  el historial de pull requests.
+- Nunca se suben claves: `.env`, `data/db.json` y `data/auth.json` están en `.gitignore`, y el
+  asistente no lee ni imprime claves.
+- Cuando una decisión de diseño es dudosa, el asistente no la toma: la deja anotada como pregunta
+  para que el autor decida.
+- La documentación no afirma nada que no se haya comprobado (por ejemplo, el CHANGELOG solo
+  describe lo que consta en el repositorio).
 
 ## Reglas de negocio
 
@@ -149,6 +200,8 @@ editar un valor y guardar (`npm run dev` reinicia el servidor solo).
 | Cambios de estado de un equipo | `TRANSICIONES_RECURSO` | disponible → prestado / en reparación; prestado → disponible / dañado; dañado → en reparación; en reparación → disponible |
 | Salas con computadores (si el pedido los necesita, solo se recomiendan estas) | `ESPACIOS_CON_COMPUTADORES` | apolo, spooki, artemis, skilab |
 | Tipos de espacio que la IA nunca recomienda | `TIPOS_FUERA_DE_RECOMENDACION` | mesa_juego |
+| Consultas a la IA por usuario en la ventana | `LIMITE_IA_PETICIONES` / `LIMITE_IA_VENTANA_MINUTOS` | 5 por minuto |
+| Minutos que se guarda la respuesta del triaje | `CACHE_IA_MINUTOS` | 10 |
 
 Además:
 

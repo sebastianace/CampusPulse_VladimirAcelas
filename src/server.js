@@ -17,8 +17,9 @@ import prestamosRouter from './routes/prestamos.js';
 import incidenciasRouter from './routes/incidencias.js';
 import calidadRouter from './routes/calidad.js';
 import restaurarRouter from './routes/restaurar.js';
+import usuariosRouter from './routes/usuarios.js';
 import iaRouter from './routes/ia.js';
-import authRouter, { exigirSesion } from './routes/auth.js';
+import authRouter, { exigirRol, exigirSesion } from './routes/auth.js';
 
 const CARPETA_PUBLICA = fileURLToPath(new URL('../public', import.meta.url));
 
@@ -39,7 +40,8 @@ app.use('/api/reservas', reservasRouter);
 app.use('/api/prestamos', prestamosRouter);
 app.use('/api/incidencias', incidenciasRouter);
 app.use('/api/calidad-datos', calidadRouter);
-app.use('/api/restaurar', restaurarRouter);
+app.use('/api/restaurar', exigirRol('admin'), restaurarRouter); // borra reservas e incidencias: solo admin
+app.use('/api/usuarios', exigirRol('admin'), usuariosRouter); // crear cuentas: solo admin
 app.use('/api/ia', iaRouter); // dueño: P2
 
 // Cualquier otra ruta /api que no exista responde 404 en formato JSON.
