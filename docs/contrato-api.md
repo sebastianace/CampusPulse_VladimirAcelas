@@ -20,11 +20,11 @@ sin esperar a que P1 termine.
 | `POST /api/incidencias` | `{descripcion, categoria, prioridad, area, espacioId, recursoId, inhabilitar, origen, ia}` | `201` + la incidencia (y cambia el estado del espacio o recurso) | P1 |
 | `PATCH /api/incidencias/:id` | `{estado: "resuelta"}` | `200` (rehabilita el espacio o recurso) | P1 |
 | `GET /api/calidad-datos` | — | `{cargados, validos, inconsistentes: [{fila, motivo}]}` | P1 |
-| `POST /api/restaurar` | — | `200` (recrea `db.json` desde `raw` y `seed`) | P1 |
-| `POST /api/auth/registro` | `{usuario, nombre, clave}` | `201 {usuario, nombre}` y abre sesión (cookie) | P2 |
-| `POST /api/auth/login` | `{usuario, clave}` | `200 {usuario, nombre}` y abre sesión (cookie) | P2 |
+| `POST /api/restaurar` | — | `200` (recrea `db.json` desde `raw` y `seed`). Solo `admin`; otro rol → `403` | P1 |
+| `POST /api/auth/registro` | `{usuario, nombre, clave}` | `201 {usuario, nombre, rol}` y abre sesión (cookie) | P2 |
+| `POST /api/auth/login` | `{usuario, clave}` | `200 {usuario, nombre, rol}` y abre sesión (cookie) | P2 |
 | `POST /api/auth/logout` | — | `200` y cierra la sesión | P2 |
-| `GET /api/auth/yo` | — | `200 {usuario, nombre}` o `401` | P2 |
+| `GET /api/auth/yo` | — | `200 {usuario, nombre, rol}` o `401` | P2 |
 | `POST /api/ia/triaje` | `{descripcion}` | `{categoria, prioridad, area, espacioId, recursoId, inhabilitar, razon, modelo}` | P2 |
 | `POST /api/ia/recomendar` | `{texto}` | `{solicitud: {asistentes, inicio, fin, necesitaComputadores}, opciones: [{espacioId, motivo}], explicacion, modelo}` | P2 |
 
@@ -43,7 +43,14 @@ listo para mostrar en un toast.
 | 409 | Regla de negocio violada (`ReglaNegocioError`) |
 | 404 | ID que no existe |
 | 401 | Sin sesión (`SESION_REQUERIDA`) o usuario/contraseña incorrectos (`CREDENCIALES_INVALIDAS`). Todas las rutas salvo `/api/auth/*` exigen sesión |
+| 403 | Hay sesión, pero el rol no tiene permiso (`PERMISO_DENEGADO`) |
+| 429 | Demasiados intentos de login fallidos (`DEMASIADOS_INTENTOS`): 5 del mismo usuario e IP en 15 minutos. Trae la cabecera `Retry-After` en segundos |
 | 503 | La IA no responde (`codigo: "IA_NO_DISPONIBLE"`) |
+
+## Roles
+
+`rol` es `admin`, `coordinador` o `camper`. La primera cuenta registrada es `admin`; las demás
+entran como `camper`. Una cuenta antigua sin rol se trata como `camper`.
 
 ## Fechas
 

@@ -25,6 +25,10 @@ export const HORAS_SESION = 8;          // tiempo que dura una sesión
 const MIN_LARGO_CLAVE = 8;              // largo mínimo de la contraseña
 const FORMATO_USUARIO = /^[a-z0-9._-]{3,30}$/; // minúsculas, números, punto, guion
 
+// Roles: el primer usuario registrado es admin; los demás entran como camper.
+export const ROLES = ['admin', 'coordinador', 'camper'];
+const ROL_POR_DEFECTO = 'camper'; // también para cuentas antiguas que no tienen rol
+
 // 401: no hay sesión o las credenciales no son válidas.
 export class NoAutorizadoError extends ErrorApi {
   constructor(mensaje, codigo = 'SESION_REQUERIDA') {
@@ -62,7 +66,7 @@ function claveCorrecta(clave, guardada) {
 const hashToken = (token) => createHash('sha256').update(token).digest('hex');
 
 // Lo que se devuelve al cliente: nunca el hash de la clave.
-const publico = ({ usuario, nombre }) => ({ usuario, nombre });
+const publico = ({ usuario, nombre, rol }) => ({ usuario, nombre, rol: rol ?? ROL_POR_DEFECTO });
 
 // ---------- validación de datos (422) ----------
 
@@ -75,7 +79,7 @@ function validarCredenciales(datos) {
 
 // ---------- funciones públicas ----------
 
-/** Crea una cuenta nueva. Devuelve {usuario, nombre}. */
+/** Crea una cuenta nueva. Devuelve {usuario, nombre, rol}. */
 export function registrar(datos) {
   const { usuario, clave } = validarCredenciales(datos);
   const nombre = String(datos?.nombre ?? '').trim();
@@ -91,13 +95,14 @@ export function registrar(datos) {
   if (auth.usuarios.some((u) => u.usuario === usuario)) {
     throw new ErrorApi(409, 'USUARIO_EXISTE', `El usuario "${usuario}" ya existe`);
   }
-  const nuevo = { usuario, nombre, clave: hashClave(clave) };
+  const rol = auth.usuarios.length === 0 ? 'admin' : ROL_POR_DEFECTO;
+  const nuevo = { usuario, nombre, rol, clave: hashClave(clave) };
   auth.usuarios.push(nuevo);
   guardar(auth);
   return publico(nuevo);
 }
 
-/** Comprueba usuario y contraseña. Devuelve {usuario, nombre} o lanza 401. */
+/** Comprueba usuario y contraseña. Devuelve {usuario, nombre, rol} o lanza 401. */
 export function autenticar(datos) {
   const { usuario, clave } = validarCredenciales(datos);
   const encontrado = leer().usuarios.find((u) => u.usuario === usuario);
