@@ -52,7 +52,7 @@ test('sin sesión, la API responde 401 SESION_REQUERIDA', async () => {
 test('registro: crea la cuenta, abre sesión y no guarda la clave en texto plano', async () => {
   const { status, cuerpo, cookie } = await pedir('/api/auth/registro', 'POST', ANA);
   assert.equal(status, 201);
-  assert.deepEqual(cuerpo, { usuario: 'ana.gomez', nombre: 'Ana Gómez' });
+  assert.deepEqual(cuerpo, { usuario: 'ana.gomez', nombre: 'Ana Gómez', rol: 'admin' }); // primera cuenta
   assert.match(cookie, /^sesion=/);
   assert.equal((await pedir('/api/espacios', 'GET', null, cookie)).status, 200);
   assert.ok(!readFileSync(process.env.AUTH_PATH, 'utf8').includes(ANA.clave));
@@ -72,6 +72,31 @@ test('login: clave correcta abre sesión; clave o usuario incorrectos -> 401', a
     const { status, cuerpo } = await pedir('/api/auth/login', 'POST', malo);
     assert.equal(status, 401);
     assert.equal(cuerpo.error.codigo, 'CREDENCIALES_INVALIDAS');
+  }
+});
+
+test('la cookie de sesión es Secure solo cuando NODE_ENV=production', async () => {
+  // Devuelve la cabecera set-cookie completa de un login correcto.
+  const cookieDeLogin = async () => (await fetch(`${base}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ usuario: ANA.usuario, clave: ANA.clave }),
+  })).headers.get('set-cookie');
+
+  const anterior = process.env.NODE_ENV;
+  try {
+    delete process.env.NODE_ENV;
+    const desarrollo = await cookieDeLogin();
+    assert.match(desarrollo, /HttpOnly/);
+    assert.doesNotMatch(desarrollo, /Secure/);
+
+    process.env.NODE_ENV = 'production';
+    const produccion = await cookieDeLogin();
+    assert.match(produccion, /HttpOnly/);
+    assert.match(produccion, /Secure/);
+  } finally {
+    if (anterior === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = anterior;
   }
 });
 

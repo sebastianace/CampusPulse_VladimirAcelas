@@ -1,16 +1,19 @@
 // =====================================================================
 // RUTAS DE INICIO DE SESIÓN
 // ---------------------------------------------------------------------
-// POST /api/auth/registro {usuario, nombre, clave} -> 201 {usuario, nombre} y abre sesión
-// POST /api/auth/login    {usuario, clave}         -> 200 {usuario, nombre} y abre sesión
+// POST /api/auth/registro {usuario, nombre, clave} -> 201 {usuario, nombre, rol} y abre sesión
+// POST /api/auth/login    {usuario, clave}         -> 200 {usuario, nombre, rol} y abre sesión
+//                                                     (429 tras 5 fallos en 15 min, ver intentos.js)
 // POST /api/auth/logout                            -> 200 y cierra la sesión
-// GET  /api/auth/yo                                -> 200 {usuario, nombre} o 401
+// GET  /api/auth/yo                                -> 200 {usuario, nombre, rol} o 401
 // La sesión viaja en la cookie "sesion" (HttpOnly: el JavaScript de la
 // página no la puede leer).
 // =====================================================================
 
 import { Router } from 'express';
 import { HORAS_SESION, NoAutorizadoError, autenticar, cerrarSesion, crearSesion, registrar, usuarioDeSesion } from '../auth/usuarios.js';
+import { limpiarFallos, registrarFallo, segundosDeBloqueo } from '../auth/intentos.js';
+import { DemasiadasPeticionesError, ProhibidoError } from '../domain/errors.js';
 
 const COOKIE = 'sesion';
 
@@ -23,9 +26,12 @@ export function tokenDe(req) {
   return par ? decodeURIComponent(par.slice(COOKIE.length + 1)) : null;
 }
 
+// En producción la cookie es "secure": el navegador solo la envía por HTTPS.
+const opcionesCookie = () => ({ httpOnly: true, sameSite: 'lax', path: '/', secure: process.env.NODE_ENV === 'production' });
+
 function abrirSesion(res, usuario) {
   const token = crearSesion(usuario.usuario);
-  res.cookie(COOKIE, token, { httpOnly: true, sameSite: 'lax', path: '/', maxAge: HORAS_SESION * 3_600_000 });
+  res.cookie(COOKIE, token, { ...opcionesCookie(), maxAge: HORAS_SESION * 3_600_000 });
 }
 
 router.post('/registro', (req, res) => {
@@ -35,14 +41,32 @@ router.post('/registro', (req, res) => {
 });
 
 router.post('/login', (req, res) => {
-  const usuario = autenticar(req.body);
+  // Mismo formato que usa autenticar(): así "ANA" y "ana" cuentan como el mismo usuario
+  const pedido = String(req.body?.usuario ?? '').trim().toLowerCase();
+  const espera = segundosDeBloqueo(pedido, req.ip);
+  if (espera > 0) {
+    res.set('Retry-After', String(espera));
+    throw new DemasiadasPeticionesError(
+      `Demasiados intentos fallidos. Intenta de nuevo en ${Math.ceil(espera / 60)} minuto(s)`,
+      'DEMASIADOS_INTENTOS',
+    );
+  }
+
+  let usuario;
+  try {
+    usuario = autenticar(req.body);
+  } catch (error) {
+    if (error.codigo === 'CREDENCIALES_INVALIDAS') registrarFallo(pedido, req.ip);
+    throw error;
+  }
+  limpiarFallos(pedido, req.ip);
   abrirSesion(res, usuario);
   res.json(usuario);
 });
 
 router.post('/logout', (req, res) => {
   cerrarSesion(tokenDe(req));
-  res.clearCookie(COOKIE, { path: '/' });
+  res.clearCookie(COOKIE, opcionesCookie());
   res.json({ mensaje: 'Sesión cerrada' });
 });
 
@@ -58,6 +82,21 @@ export function exigirSesion(req, res, next) {
   if (!usuario) throw new NoAutorizadoError('Inicia sesión para continuar');
   req.usuario = usuario;
   next();
+}
+
+/**
+ * Middleware: deja pasar solo a los roles indicados (si no, 403).
+ * Va después de exigirSesion, que es quien pone req.usuario.
+ * Uso: router.post('/', exigirRol('admin', 'coordinador'), ...)
+ */
+export function exigirRol(...roles) {
+  return (req, res, next) => {
+    if (!req.usuario) throw new NoAutorizadoError('Inicia sesión para continuar');
+    if (!roles.includes(req.usuario.rol)) {
+      throw new ProhibidoError('Tu rol no tiene permiso para hacer esta acción');
+    }
+    next();
+  };
 }
 
 export default router;

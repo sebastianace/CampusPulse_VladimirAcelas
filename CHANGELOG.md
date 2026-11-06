@@ -4,6 +4,17 @@ Todos los cambios importantes de Campus Pulse se registran en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y las versiones
 siguen [Versionado Semántico](https://semver.org/lang/es/).
 
+## [Sin publicar]
+
+### Seguridad
+
+- Roles `admin`, `coordinador` y `camper`: la primera cuenta es `admin` y las demás `camper`.
+  Middleware `exigirRol(...roles)` que responde 403 `PERMISO_DENEGADO`.
+- `POST /api/restaurar` solo lo puede usar un `admin`.
+- Límite de intentos de login: 5 fallos del mismo usuario e IP en 15 minutos → 429
+  `DEMASIADOS_INTENTOS` con cabecera `Retry-After`.
+- La cookie de sesión es `Secure` cuando `NODE_ENV=production`.
+
 ## [v1.1.1] — versión de la hackatón
 
 Versión construida en equipo durante la Hackatón de Campuslands (ver "Historia del proyecto" en
