@@ -73,7 +73,8 @@ src/auth/          usuarios.js: cuentas (clave con hash scrypt) y sesiones
 src/domain/        Reglas de negocio: reservas, préstamos, incidencias, fechas, errores
 src/config/        reglas.js: TODAS las constantes de negocio y valores cerrados
 src/data/          loader.js (lee el CSV) y store.js (lee/escribe db.json)
-src/ai/            cliente.js, validar.js, triaje.js, asistente.js
+src/ai/            cliente.js, validar.js, triaje.js, asistente.js, limite.js, cache.js
+src/ai/prompts/    Un archivo por prompt del sistema, con la plantilla de la clase (ver docs/biblioteca-prompts.md)
 data/raw/          espacios.csv oficial (nunca se modifica)
 data/seed/         recursos.json con equipos ficticios
 docs/              contrato-api.md, demo.md, reto-en-vivo.md y capturas
