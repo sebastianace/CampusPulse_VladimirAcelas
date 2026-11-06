@@ -20,7 +20,7 @@ import { validarTriaje } from './validar.js';
 
 // Obliga a la IA a responder solo con valores de las listas cerradas.
 // Los IDs también van como enum para que no invente espacios ni recursos.
-function crearSchema(catalogo) {
+export function crearSchema(catalogo) {
   const lista = (valores) => ({ type: 'STRING', format: 'enum', enum: valores });
   const idOpcional = (elementos) => ({ ...lista(elementos.map((e) => e.id)), nullable: true });
   return {

@@ -12,6 +12,7 @@ import { construirPrompt } from '../src/ai/prompts/estructura.js';
 import { promptTriaje } from '../src/ai/prompts/triaje.js';
 import { promptSolicitud } from '../src/ai/prompts/solicitud.js';
 import { promptExplicacion } from '../src/ai/prompts/explicacion.js';
+import { PERSONALIDAD_PULSE, tonoDePulse } from '../src/ai/prompts/personalidad.js';
 
 const SECCIONES = ['## Rol y objetivo', '## Tono', '## Políticas', '## Límites', '## Procedimiento', '## Entrada'];
 
@@ -100,5 +101,41 @@ describe('promptExplicacion', () => {
   test('recuerda la solicitud y prohíbe agregar espacios', () => {
     assert.match(prompt, /20 personas, de 2026-11-09T14:00 a 2026-11-09T16:00, con computadores/);
     assert.match(prompt, /No agregues espacios/);
+  });
+});
+
+describe('Personalidad de Pulse (Big Five)', () => {
+  test('los niveles son los definidos y justificados en docs/personalidad.md', () => {
+    const niveles = Object.fromEntries(Object.entries(PERSONALIDAD_PULSE).map(([rasgo, { nivel }]) => [rasgo, nivel]));
+    assert.deepEqual(niveles, {
+      responsabilidad: 'ALTA', amabilidad: 'ALTA', extraversion: 'MEDIA', apertura: 'MEDIA', neuroticismo: 'BAJO',
+    });
+  });
+
+  test('tonoDePulse lista los cinco rasgos con su nivel y agrega el tono de la tarea', () => {
+    const tono = tonoDePulse('Responde en español.');
+    for (const rasgo of ['Responsabilidad ALTA', 'Amabilidad ALTA', 'Extraversión MEDIA', 'Apertura MEDIA', 'Neuroticismo BAJO']) {
+      assert.ok(tono.includes(rasgo), rasgo);
+    }
+    assert.ok(tono.endsWith('Responde en español.'));
+  });
+
+  test('el triaje y la explicación llevan la personalidad; la extracción de datos no', () => {
+    const triaje = promptTriaje('algo', CATALOGO);
+    const explicacion = promptExplicacion('algo', { asistentes: 5, inicio: '2026-11-09T14:00', fin: '2026-11-09T15:00', necesitaComputadores: null }, [CATALOGO.espacios[0]]);
+    const solicitud = promptSolicitud('algo', '2026-11-06T08:00');
+    for (const prompt of [triaje, explicacion]) assert.match(prompt, /Eres Pulse[\s\S]*Neuroticismo BAJO/);
+    assert.doesNotMatch(solicitud, /Pulse/);
+  });
+
+  test('la personalidad va en la sección Tono, antes de los límites', () => {
+    const prompt = promptTriaje('algo', CATALOGO);
+    const tono = prompt.indexOf('## Tono');
+    assert.ok(tono < prompt.indexOf('Neuroticismo BAJO') && prompt.indexOf('Neuroticismo BAJO') < prompt.indexOf('## Políticas'));
+  });
+
+  test('la personalidad no reemplaza las reglas: los límites siguen ahí', () => {
+    assert.match(promptTriaje('algo', CATALOGO), /Nunca inventes IDs/);
+    assert.match(promptExplicacion('algo', { asistentes: 5, inicio: 'a', fin: 'b', necesitaComputadores: null }, [CATALOGO.espacios[0]]), /No agregues espacios/);
   });
 });
