@@ -2,6 +2,7 @@
 // RUTAS DE INICIO DE SESIÓN
 // ---------------------------------------------------------------------
 // POST /api/auth/registro {usuario, nombre, clave} -> 201 {usuario, nombre, rol} y abre sesión
+//                                                     (solo la primera cuenta, que es admin; luego 403)
 // POST /api/auth/login    {usuario, clave}         -> 200 {usuario, nombre, rol} y abre sesión
 //                                                     (429 tras 5 fallos en 15 min, ver intentos.js)
 // POST /api/auth/logout                            -> 200 y cierra la sesión
@@ -87,7 +88,7 @@ export function exigirSesion(req, res, next) {
 /**
  * Middleware: deja pasar solo a los roles indicados (si no, 403).
  * Va después de exigirSesion, que es quien pone req.usuario.
- * Uso: router.post('/', exigirRol('admin', 'coordinador'), ...)
+ * Uso: router.patch('/:id', exigirRol('admin', 'soporte_tecnico'), ...)
  */
 export function exigirRol(...roles) {
   return (req, res, next) => {

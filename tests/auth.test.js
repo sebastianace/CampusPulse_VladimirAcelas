@@ -58,10 +58,19 @@ test('registro: crea la cuenta, abre sesión y no guarda la clave en texto plano
   assert.ok(!readFileSync(process.env.AUTH_PATH, 'utf8').includes(ANA.clave));
 });
 
-test('registro: usuario repetido -> 409 y datos inválidos -> 422', async () => {
-  assert.equal((await pedir('/api/auth/registro', 'POST', ANA)).cuerpo.error.codigo, 'USUARIO_EXISTE');
-  assert.equal((await pedir('/api/auth/registro', 'POST', { ...ANA, usuario: 'otra', clave: 'corta' })).status, 422);
-  assert.equal((await pedir('/api/auth/registro', 'POST', { ...ANA, usuario: 'Con Espacios' })).status, 422);
+test('registro público: después de la primera cuenta queda cerrado (403)', async () => {
+  const { status, cuerpo } = await pedir('/api/auth/registro', 'POST', { ...ANA, usuario: 'otra' });
+  assert.equal(status, 403);
+  assert.equal(cuerpo.error.codigo, 'REGISTRO_CERRADO');
+});
+
+test('crear cuenta (admin): usuario repetido -> 409 y datos inválidos -> 422', async () => {
+  const { cookie } = await pedir('/api/auth/login', 'POST', { usuario: ANA.usuario, clave: ANA.clave });
+  const nueva = { ...ANA, usuario: 'prof.uno', rol: 'profesor' };
+  assert.equal((await pedir('/api/usuarios', 'POST', nueva, cookie)).status, 201);
+  assert.equal((await pedir('/api/usuarios', 'POST', nueva, cookie)).cuerpo.error.codigo, 'USUARIO_EXISTE');
+  assert.equal((await pedir('/api/usuarios', 'POST', { ...nueva, usuario: 'otra', clave: 'corta' }, cookie)).status, 422);
+  assert.equal((await pedir('/api/usuarios', 'POST', { ...nueva, usuario: 'Con Espacios' }, cookie)).status, 422);
 });
 
 test('login: clave correcta abre sesión; clave o usuario incorrectos -> 401', async () => {

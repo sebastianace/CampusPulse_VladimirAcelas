@@ -56,8 +56,19 @@ describe('POST /api/auth/login', () => {
   before(async () => {
     servidor = app.listen(0);
     base = `http://localhost:${servidor.address().port}`;
-    for (const usuario of ['marta', 'pedro', 'sofia']) {
-      await login({ usuario, nombre: usuario, clave: 'clave-correcta' }, '/api/auth/registro');
+    // La primera cuenta (admin) se registra sola; las demás las crea ella.
+    const registro = await fetch(`${base}/api/auth/registro`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ usuario: 'marta', nombre: 'marta', clave: 'clave-correcta' }),
+    });
+    const cookie = registro.headers.get('set-cookie').split(';')[0];
+    for (const usuario of ['pedro', 'sofia']) {
+      await fetch(`${base}/api/usuarios`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie },
+        body: JSON.stringify({ usuario, nombre: usuario, clave: 'clave-correcta', rol: 'profesor' }),
+      });
     }
   });
   after(() => {
