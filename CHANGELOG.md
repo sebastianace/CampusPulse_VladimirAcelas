@@ -6,6 +6,12 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### IA
+
+- Los prompts salieron del código a `src/ai/prompts/`, uno por archivo, con la plantilla de seis
+  secciones vista en clase (rol y objetivo, tono, políticas, límites, procedimiento y entrada).
+  Documentados en `docs/biblioteca-prompts.md`.
+
 ### Interfaz
 
 - Pestaña **Usuarios** (solo admin): crear profesores y soporte técnico y ver las cuentas
