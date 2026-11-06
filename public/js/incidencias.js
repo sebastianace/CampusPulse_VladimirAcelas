@@ -8,6 +8,7 @@ import { pedir } from './api.js';
 import { el, conCarga } from './dom.js';
 import { AREAS, CATEGORIAS, PRIORIDADES, etiqueta } from './catalogos.js';
 import { obtenerEstado } from './estado.js';
+import { puede } from './sesion.js';
 import * as toasts from './toasts.js';
 
 let refrescar = async () => {};
@@ -197,7 +198,7 @@ function crearItemIncidencia(incidencia) {
       resuelta ? el('span', { className: 'etiqueta etiqueta--resuelta' }, 'Resuelta') : null),
     el('span', { className: 'item__meta' }, [incidencia.area, lugar].filter(Boolean).join(' · ')),
     incidencia.inhabilito && !resuelta ? el('span', { className: 'item__alerta' }, `Fuera de servicio: ${lugar}`) : null,
-    resuelta ? null : el('div', { className: 'item__acciones' },
+    resuelta || !puede('resolverIncidencias') ? null : el('div', { className: 'item__acciones' },
       el('button', {
         type: 'button', className: 'btn btn--secundario btn--chico',
         onClick: (e) => resolver(incidencia, e.currentTarget),

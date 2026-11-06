@@ -7,7 +7,7 @@
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -47,6 +47,14 @@ test('sin sesión, la API responde 401 SESION_REQUERIDA', async () => {
   const { status, cuerpo } = await pedir('/api/espacios');
   assert.equal(status, 401);
   assert.equal(cuerpo.error.codigo, 'SESION_REQUERIDA');
+});
+
+test('estado: sin cuentas el registro está abierto; con la primera se cierra', async () => {
+  assert.deepEqual((await pedir('/api/auth/estado')).cuerpo, { registroAbierto: true });
+  await pedir('/api/auth/registro', 'POST', { usuario: 'temporal', nombre: 'Temporal', clave: 'clave-temporal' });
+  assert.deepEqual((await pedir('/api/auth/estado')).cuerpo, { registroAbierto: false });
+  // Se deja el archivo vacío para que el siguiente test cree la primera cuenta
+  writeFileSync(process.env.AUTH_PATH, JSON.stringify({ usuarios: [], sesiones: [] }));
 });
 
 test('registro: crea la cuenta, abre sesión y no guarda la clave en texto plano', async () => {

@@ -51,5 +51,11 @@ async function enviar(evento, ruta, textoCargando) {
 formLogin.addEventListener('submit', (e) => enviar(e, '/api/auth/login', 'Entrando…'));
 formRegistro.addEventListener('submit', (e) => enviar(e, '/api/auth/registro', 'Creando cuenta…'));
 
+// El registro público solo existe para la primera cuenta (admin): después se oculta
+// y las cuentas las crea un admin desde la pestaña "Usuarios".
+pedir('/api/auth/estado').then(({ registroAbierto }) => {
+  if (!registroAbierto) document.querySelectorAll('[data-ir="registro"]').forEach((b) => { b.parentElement.hidden = true; });
+}, () => {});
+
 // Si ya hay una sesión abierta, entrar directo
 pedir('/api/auth/yo').then(() => { location.href = destino(); }, () => mostrar('login'));

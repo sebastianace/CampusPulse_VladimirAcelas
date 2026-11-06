@@ -5,6 +5,7 @@
 //                                                     (solo la primera cuenta, que es admin; luego 403)
 // POST /api/auth/login    {usuario, clave}         -> 200 {usuario, nombre, rol} y abre sesión
 //                                                     (429 tras 5 fallos en 15 min, ver intentos.js)
+// GET  /api/auth/estado                            -> 200 {registroAbierto} (para que el login oculte "Crear una cuenta")
 // POST /api/auth/logout                            -> 200 y cierra la sesión
 // GET  /api/auth/yo                                -> 200 {usuario, nombre, rol} o 401
 // La sesión viaja en la cookie "sesion" (HttpOnly: el JavaScript de la
@@ -12,7 +13,7 @@
 // =====================================================================
 
 import { Router } from 'express';
-import { HORAS_SESION, NoAutorizadoError, autenticar, cerrarSesion, crearSesion, registrar, usuarioDeSesion } from '../auth/usuarios.js';
+import { HORAS_SESION, NoAutorizadoError, autenticar, cerrarSesion, crearSesion, registrar, registroAbierto, usuarioDeSesion } from '../auth/usuarios.js';
 import { limpiarFallos, registrarFallo, segundosDeBloqueo } from '../auth/intentos.js';
 import { DemasiadasPeticionesError, ProhibidoError } from '../domain/errors.js';
 
@@ -34,6 +35,10 @@ function abrirSesion(res, usuario) {
   const token = crearSesion(usuario.usuario);
   res.cookie(COOKIE, token, { ...opcionesCookie(), maxAge: HORAS_SESION * 3_600_000 });
 }
+
+router.get('/estado', (req, res) => {
+  res.json({ registroAbierto: registroAbierto() });
+});
 
 router.post('/registro', (req, res) => {
   const usuario = registrar(req.body);
