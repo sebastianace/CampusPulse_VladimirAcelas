@@ -143,6 +143,9 @@ permitido.
 - **Caché del triaje:** un texto idéntico se responde desde la memoria durante 10 minutos
   (`src/ai/cache.js`) y no gasta cuota de Gemini. La recomendación de salas no se cachea porque
   depende de la disponibilidad y de la fecha.
+- **Personalidad:** Pulse tiene una personalidad definida con el modelo Big Five (responsabilidad
+  alta, amabilidad alta, extraversión media, apertura media, neuroticismo bajo), justificada en
+  [docs/personalidad.md](docs/personalidad.md). Solo ajusta el tono; no cambia reglas ni límites.
 - Cambiar de proveedor de IA solo exige tocar `src/ai/cliente.js`.
 
 ## Uso de IA en el desarrollo

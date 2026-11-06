@@ -1,8 +1,9 @@
-// Prompt del triaje de incidencias (POST /api/ia/triaje). Versión 1.0
+// Prompt del triaje de incidencias (POST /api/ia/triaje). Versión 1.1 (con la personalidad de Pulse)
 // Ver docs/biblioteca-prompts.md.
 
 import { AREAS, CATEGORIAS, PRIORIDADES, REGLAS } from '../../config/reglas.js';
 import { construirPrompt } from './estructura.js';
+import { tonoDePulse } from './personalidad.js';
 
 // Área sugerida para cada categoría (guía para la IA, no una regla).
 const AREA_POR_CATEGORIA = {
@@ -25,7 +26,7 @@ export function promptTriaje(descripcion, catalogo) {
   const guiaAreas = Object.entries(AREA_POR_CATEGORIA).map(([c, a]) => `${c} -> ${a}`).join(', ');
   return construirPrompt({
     rol: 'Eres el asistente de triaje de incidencias del campus Campuslands. Tu objetivo es clasificar el reporte y responder SOLO con el JSON pedido.',
-    tono: 'Neutro y breve. La razón es una frase corta en español.',
+    tono: tonoDePulse('En el JSON, la razón es una frase corta en español.'),
     politicas: [
       `"critica" si hay riesgo para personas (humo, olor a quemado, chispas, cables expuestos, inundación).`,
       `Área responsable: guía ${guiaAreas}; para "otro" elige la más cercana.`,
