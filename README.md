@@ -72,7 +72,8 @@ src/routes/        Rutas HTTP (una por recurso). ia.js -> /api/ia/*, auth.js -> 
 src/auth/          usuarios.js: cuentas (clave con hash scrypt) y sesiones
 src/domain/        Reglas de negocio: reservas, préstamos, incidencias, fechas, errores
 src/config/        reglas.js: TODAS las constantes de negocio y valores cerrados
-src/data/          loader.js (lee el CSV) y store.js (lee/escribe db.json)
+src/data/          loader.js (lee el CSV) y store.js (lee/escribe db.json); pg.js, migrar.js y semilla.js (PostgreSQL, en migración)
+db/migrations/     Esquema SQL de PostgreSQL (ver docs/base-de-datos.md)
 src/ai/            cliente.js, validar.js, triaje.js, asistente.js, limite.js, cache.js
 src/ai/prompts/    Un archivo por prompt del sistema, con la plantilla de la clase (ver docs/biblioteca-prompts.md)
 evaluacion/        Reportes de prueba del triaje y sus resultados (npm run medir-triaje)
@@ -248,6 +249,8 @@ error claro y el formulario manual, nunca con una respuesta inventada.
 | `npm run dev` | Igual, pero se reinicia solo al guardar un archivo |
 | `npm test` | Ejecuta las pruebas de las reglas |
 | `npm run probar-ia` | Comprueba que la key y el modelo de Gemini responden |
+| `npm run migrar` | Aplica las migraciones de `db/migrations/` a PostgreSQL (necesita `docker compose up -d db`) |
+| `npm run semilla` | Carga espacios, recursos y calidad de datos en PostgreSQL |
 | `npm run medir-triaje` | Mide el triaje sin ejemplos y con ellos (24 llamadas a Gemini, ~5 min; gasta cuota) |
 
 Abre `http://localhost:3000` y crea una cuenta con **Crear una cuenta** (solo la primera vez).

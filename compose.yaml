@@ -1,0 +1,23 @@
+# Base de datos de Campus Pulse: PostgreSQL con la extensión pgvector.
+# Uso:  docker compose up -d db     (la contraseña sale de POSTGRES_PASSWORD en .env)
+# La app aún corre con `npm run dev`; entrará a este archivo cuando use PostgreSQL.
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: campus
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env (ver .env.example)}
+      POSTGRES_DB: campus_pulse
+    ports:
+      # Solo accesible desde este computador. 5433 y no 5432 para no chocar con un PostgreSQL local.
+      - "127.0.0.1:${POSTGRES_PUERTO:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campus -d campus_pulse"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
