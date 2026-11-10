@@ -12,7 +12,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { parseEnv } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { migrar } from '../src/data/migrar.js';
-import { crearPool, explicarErrorDeConexion } from '../src/data/pg.js';
+import { cerrarPool, crearPool, explicarErrorDeConexion } from '../src/data/pg.js';
+import { sembrar } from '../src/data/semilla.js';
 
 // Toma del .env SOLO las variables de la base (no se carga la key de Gemini en los tests).
 // Lo que ya esté en el entorno tiene prioridad.
@@ -48,6 +49,23 @@ export async function crearBaseDePrueba({ migrada = true } = {}) {
       await pool.end();
       await admin.query(`DROP DATABASE ${nombre} WITH (FORCE)`);
       await admin.end();
+    },
+  };
+}
+
+/**
+ * Base temporal ya migrada y sembrada, y la deja como la base de la aplicación (POSTGRES_DB):
+ * llámala ANTES de importar src/server.js. cerrar() cierra también el pool de la app y borra la base.
+ */
+export async function crearBaseDeLaApp() {
+  const bd = await crearBaseDePrueba();
+  await sembrar(bd.pool);
+  process.env.POSTGRES_DB = bd.nombre;
+  return {
+    ...bd,
+    async cerrar() {
+      await cerrarPool();
+      await bd.cerrar();
     },
   };
 }

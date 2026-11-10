@@ -6,22 +6,22 @@
 //                             Solo admin y soporte_tecnico: quien arregla es quien rehabilita.
 import { Router } from 'express';
 import { exigirRol } from './auth.js';
-import { actualizarDB, leerDB } from '../data/store.js';
+import { actualizarDB, leerDB } from '../data/almacen.js';
 import { crearIncidencia, resolverIncidencia } from '../domain/incidencias.js';
 
 const router = Router();
 
-router.get('/', (req, res) => {
-  res.json(leerDB().incidencias);
+router.get('/', async (req, res) => {
+  res.json((await leerDB()).incidencias);
 });
 
-router.post('/', (req, res) => {
-  const incidencia = actualizarDB((db) => crearIncidencia(db, req.body));
+router.post('/', async (req, res) => {
+  const incidencia = await actualizarDB((db) => crearIncidencia(db, req.body));
   res.status(201).json(incidencia);
 });
 
-router.patch('/:id', exigirRol('admin', 'soporte_tecnico'), (req, res) => {
-  res.json(actualizarDB((db) => resolverIncidencia(db, req.params.id, req.body)));
+router.patch('/:id', exigirRol('admin', 'soporte_tecnico'), async (req, res) => {
+  res.json(await actualizarDB((db) => resolverIncidencia(db, req.params.id, req.body)));
 });
 
 export default router;

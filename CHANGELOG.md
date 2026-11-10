@@ -10,8 +10,14 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 
 - PostgreSQL con pgvector en `compose.yaml` (`docker compose up -d db`), esquema SQL en
   `db/migrations/` con la restricción `EXCLUDE USING gist` que impide reservas solapadas, ejecutor
-  de migraciones (`npm run migrar`) y semilla (`npm run semilla`). La aplicación sigue usando
-  `data/db.json` hasta los siguientes pull requests. Ver `docs/base-de-datos.md`.
+  de migraciones (`npm run migrar`) y semilla (`npm run semilla`). Ver `docs/base-de-datos.md`.
+- **Espacios, recursos, reservas, préstamos e incidencias pasan de `data/db.json` a PostgreSQL**
+  (`src/data/almacen.js` y `src/data/repos/`), sin cambiar las reglas de `src/domain/`. Cada
+  escritura es una transacción con bloqueo; las reservas simultáneas a la misma franja dejan una
+  sola, y la restricción de la base es la última defensa. Al arrancar, la app aplica las migraciones
+  y carga la semilla la primera vez.
+- **Cambio de requisitos:** ahora hace falta PostgreSQL (`docker compose up -d db`) para arrancar la
+  app y correr `npm test`; las cuentas y sesiones siguen en `data/auth.json` por ahora.
 
 ### IA
 

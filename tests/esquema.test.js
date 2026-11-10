@@ -52,7 +52,7 @@ describe('Migraciones', () => {
   test('volver a migrar no repite nada', async () => {
     assert.deepEqual(await migrar(pool), []);
     const { rows } = await pool.query('SELECT version FROM schema_migrations ORDER BY version');
-    assert.deepEqual(rows.map((f) => f.version), ['001_extensiones.sql', '002_esquema.sql']);
+    assert.deepEqual(rows.map((f) => f.version), ['001_extensiones.sql', '002_esquema.sql', '003_orden.sql']);
   });
 });
 
