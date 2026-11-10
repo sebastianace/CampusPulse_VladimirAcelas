@@ -11,8 +11,10 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { crearBaseDeLaApp } from './ayuda-bd.js';
+
 const CARPETA = mkdtempSync(join(tmpdir(), 'campus-pulse-roles-'));
-process.env.DB_PATH = join(CARPETA, 'db.json');
+const bd = await crearBaseDeLaApp(); // la app corre contra una base PostgreSQL temporal
 process.env.AUTH_PATH = join(CARPETA, 'auth.json');
 const { app } = await import('../src/server.js');
 const { exigirRol } = await import('../src/routes/auth.js');
@@ -23,8 +25,9 @@ before(() => {
   servidor = app.listen(0);
   base = `http://localhost:${servidor.address().port}`;
 });
-after(() => {
+after(async () => {
   servidor.close();
+  await bd.cerrar();
   rmSync(CARPETA, { recursive: true, force: true });
 });
 

@@ -1,8 +1,8 @@
 # Base de datos (PostgreSQL + pgvector)
 
-> **Estado:** migración en curso (Fase 2 del plan). Ya están el servicio, las migraciones, la
-> semilla y las pruebas del esquema. **La aplicación todavía lee y escribe `data/db.json`**; irá
-> pasando a PostgreSQL en los siguientes pull requests.
+> **Estado:** migración en curso (Fase 2 del plan). **Espacios, recursos, reservas, préstamos e
+> incidencias ya viven en PostgreSQL.** Faltan las cuentas y sesiones (siguen en `data/auth.json`) y
+> retirar el viejo `data/db.json`.
 
 ## Cómo levantarla
 
@@ -44,8 +44,8 @@ Ocho tablas, más `schema_migrations` (qué migraciones ya se aplicaron):
 | `sesiones` | Sesiones activas (se guarda el hash del token, no el token) |
 | `calidad_datos` | Reporte de calidad del CSV oficial (una sola fila) |
 
-Las migraciones están en [`db/migrations/`](../db/migrations/): `001_extensiones.sql` y
-`002_esquema.sql`. Cada archivo corre en una transacción; lo aplicado queda en `schema_migrations`.
+Las migraciones están en [`db/migrations/`](../db/migrations/): `001_extensiones.sql`,
+`002_esquema.sql` y `003_orden.sql`. Cada archivo corre en una transacción; lo aplicado queda en `schema_migrations`.
 
 ## Decisiones
 
@@ -65,8 +65,8 @@ EXCLUDE USING gist (espacio_id WITH =, tsrange(inicio, fin, '[)') WITH &&)
   12:00–14:00 no chocan (franjas pegadas), igual que la regla actual.
 - **Por qué `btree_gist`:** un índice gist normal no sabe usar `=` sobre texto; la extensión lo
   permite para combinar "mismo espacio" con "rangos que se cruzan".
-- Esta migración solo **crea** la restricción. Mientras la app use `db.json`, la regla sigue
-  viviendo en JavaScript; la restricción empieza a proteger cuando las reservas pasen a PostgreSQL.
+- La restricción protege desde que las reservas viven en PostgreSQL; la regla 6 de JavaScript se
+  mantiene para dar un mensaje claro antes de llegar a la base.
 
 ### Fechas
 
@@ -92,10 +92,51 @@ ejecutor propio de unas 40 líneas (`src/data/migrar.js`).
 `data/seed/`). Borra y recarga espacios, recursos, reservas, préstamos e incidencias, pero **no
 toca usuarios ni sesiones**, como "Restaurar datos".
 
+### Orden de las filas
+
+`003_orden.sql` agrega a cinco tablas la columna `posicion`, un contador que no cambia con las
+actualizaciones. Con `db.json` las listas conservaban el orden en que se guardaban; en PostgreSQL una
+tabla no garantiza ningún orden y un `UPDATE` puede mover la fila. Se lee con `ORDER BY posicion`.
+
+## Cómo la app usa la base: "foto + diferencias"
+
+Las reglas de `src/domain/` no cambiaron: siguen recibiendo un objeto `db` y modificándolo.
+[`src/data/almacen.js`](../src/data/almacen.js) conserva la interfaz de `store.js`
+(`leerDB`, `actualizarDB`, `restaurarDB`), ahora asíncrona. `actualizarDB(cambio)` hace, en **una
+transacción**:
+
+1. `BEGIN` y un bloqueo de escritura (`pg_advisory_xact_lock`): una escritura a la vez.
+2. **Foto:** lee las tablas y arma el objeto `db`.
+3. Llama a `cambio(db)`: las reglas lo modifican. Si lanzan un error, `ROLLBACK` y no se guarda nada.
+4. **Diferencias:** compara `db` con la foto y ejecuta solo los `INSERT`, `UPDATE` y `DELETE` necesarios.
+5. `COMMIT`.
+
+Cada tabla tiene un repositorio en [`src/data/repos/`](../src/data/repos/) que traduce entre sus filas
+y los objetos del dominio (por ejemplo `espacio_id` ↔ `espacioId`). Los datos son pocos, así que leer
+las tablas completas en cada escritura es barato.
+
+### Peticiones simultáneas: dos defensas
+
+Con `db.json`, Node atendía una escritura a la vez. Con PostgreSQL varias peticiones pueden llegar
+juntas, así que hay dos defensas independientes (`tests/reservas-concurrentes.test.js`):
+
+| Defensa | Qué evita | Se demuestra con |
+|---|---|---|
+| **Bloqueo de escritura** | Que dos escrituras lean el mismo estado viejo. Las reglas siempre ven lo último. Cubre también reglas que la base no puede expresar, como el límite de 3 reservas por persona y día | 10 peticiones simultáneas a la misma franja: una sola gana, las otras 9 reciben `409 RESERVA_SOLAPADA` |
+| **Restricción `EXCLUDE`** | Que, aunque las reglas no lo noten, se guarden dos reservas cruzadas | Dos escrituras con la foto desactualizada: las reglas dejan pasar a ambas y la base rechaza la segunda (`23P01`, traducido a `RESERVA_SOLAPADA`) |
+
+Se comprobó que cada defensa pesa por sí sola: sin restricción ni bloqueo se guardaron **2 reservas
+en la misma franja**; solo con el bloqueo quedó 1.
+
+**Detalle honesto:** si dos escrituras sin bloqueo insertan *exactamente* a la vez, PostgreSQL puede
+rechazar a la perdedora con un *deadlock* (`40P01`, detectado tras ~1 s) en lugar del error de la
+restricción (en una prueba de 60 rondas ocurrió 3 veces). Aun así solo se guarda una reserva. Por eso
+la aplicación mantiene el bloqueo: con él, la respuesta es siempre un `409` limpio e inmediato.
+
 ## Pendiente de la Fase 2
 
-1. ✅ Servicio, migraciones, semilla y pruebas del esquema (este documento).
-2. Espacios, recursos y reservas en PostgreSQL, con una prueba de dos reservas simultáneas.
-3. Préstamos e incidencias, con transacciones.
-4. Usuarios, sesiones, calidad de datos y restaurar; retirar `data/db.json` y sumar la app a
+1. ✅ Servicio, migraciones, semilla y pruebas del esquema.
+2. ✅ Espacios, recursos, reservas, préstamos e incidencias en PostgreSQL, con pruebas de peticiones
+   simultáneas.
+3. Cuentas y sesiones en PostgreSQL; retirar `data/db.json` y `store.js`; sumar la app a
    `compose.yaml`.
