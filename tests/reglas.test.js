@@ -5,7 +5,7 @@
 // partir de los valores de src/config/reglas.js, así que si el jurado
 // cambia una regla (por ejemplo MAX_HORAS_RESERVA: 2) los tests siguen
 // verificando la regla nueva sin tener que reescribirlos.
-// Cada test usa una base en memoria: no se toca data/db.json.
+// Cada test usa una base en memoria: no hay base de datos de por medio.
 // =====================================================================
 
 import { test, describe } from 'node:test';

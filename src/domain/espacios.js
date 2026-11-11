@@ -2,7 +2,7 @@
 // DOMINIO: ESPACIOS
 // ---------------------------------------------------------------------
 // Funciones puras: reciben la base (db) y devuelven datos. No leen ni
-// escriben archivos, así se pueden probar sin tocar db.json.
+// escriben archivos, así se pueden probar sin base de datos.
 // =====================================================================
 
 import { tieneComputadores } from './reservas.js';
