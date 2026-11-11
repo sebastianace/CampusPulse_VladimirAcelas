@@ -1,8 +1,12 @@
 // Flujo vertical de incidencias:
 //   texto libre -> POST /api/ia/triaje -> tarjeta editable "Sugerido por IA"
-//   -> la persona confirma -> POST /api/incidencias -> el plano se actualiza.
+//   -> la persona confirma -> (¿hay una incidencia abierta parecida? -> "¿es la misma?")
+//   -> POST /api/incidencias -> el plano se actualiza.
 // Si la IA falla, se muestra el motivo y se abre el mismo formulario
 // para llenarlo a mano (origen "manual"). La IA nunca guarda nada sola.
+// Si la persona confirma que es la misma de una incidencia que ya existe, su reporte se suma a esa
+// (POST /api/incidencias/:id/reportes) en vez de crear un duplicado. Si buscar parecidas falla, se
+// crea la incidencia normalmente: la sugerencia es opcional.
 
 import { pedir } from './api.js';
 import { el, conCarga } from './dom.js';
@@ -110,7 +114,7 @@ function cerrarFormularios() {
 
 // ---------- 3. Confirmar: POST /api/incidencias ----------
 
-async function registrar(form, sugerencia) {
+async function registrar(form, sugerencia, { omitirParecidas = false } = {}) {
   const datos = Object.fromEntries(new FormData(form));
   const faltantes = ['descripcion', 'categoria', 'prioridad', 'area'].filter((campo) => !String(datos[campo] ?? '').trim());
   if (faltantes.length) {
@@ -143,15 +147,96 @@ async function registrar(form, sugerencia) {
   };
 
   const boton = form.querySelector('button[type="submit"]');
+  const destino = form.parentElement; // donde se muestra el formulario, por si hay que reemplazarlo un momento
+
+  // Antes de crear: ¿ya hay una incidencia abierta que sea la misma?
+  if (!omitirParecidas) {
+    const parecidas = await conCarga(boton, 'Revisando si ya existe…', () => buscarParecidas(cuerpo));
+    if (parecidas.length) {
+      preguntarSiEsLaMisma({ form, destino, cuerpo, sugerencia, parecidas });
+      return;
+    }
+  }
+
   try {
     const incidencia = await conCarga(boton, 'Registrando…', () => pedir('/api/incidencias', { metodo: 'POST', cuerpo }));
     toasts.exito(mensajeRegistro(incidencia));
-    document.getElementById('form-triaje').reset();
-    cerrarFormularios();
+    terminarRegistro();
     await refrescar();
     mostrarPestana('p-incidencias');
   } catch (error) {
     toasts.error(error);
+  }
+}
+
+function terminarRegistro() {
+  document.getElementById('form-triaje').reset();
+  cerrarFormularios();
+}
+
+// ---------- 3b. ¿Es la misma incidencia? ----------
+
+/**
+ * Incidencias abiertas parecidas (POST /api/ia/similares). Si el servicio falla, está caído o se pasó
+ * el límite de consultas a la IA, devuelve [] y la incidencia se crea sin la sugerencia.
+ */
+async function buscarParecidas(cuerpo) {
+  try {
+    const { candidatas } = await pedir('/api/ia/similares', {
+      metodo: 'POST',
+      cuerpo: { descripcion: cuerpo.descripcion, espacioId: cuerpo.espacioId, recursoId: cuerpo.recursoId },
+    });
+    return candidatas;
+  } catch {
+    return [];
+  }
+}
+
+// Reemplaza el formulario por la pregunta. "Volver" lo restaura con lo que la persona ya había editado.
+function preguntarSiEsLaMisma({ form, destino, cuerpo, sugerencia, parecidas }) {
+  const panel = el('div', { className: 'parecidas', role: 'group', 'aria-labelledby': 'parecidas-titulo' },
+    el('p', { className: 'tarjeta-manual__titulo', id: 'parecidas-titulo' }, '¿Es la misma incidencia?'),
+    el('p', { className: 'nota' }, 'Ya hay incidencias abiertas muy parecidas. Si es el mismo problema, suma tu reporte a esa en lugar de crear una nueva.'),
+    el('ul', { className: 'lista' }, parecidas.map((p) => itemParecido(p, cuerpo, destino))),
+    el('div', { className: 'item__acciones' },
+      el('button', {
+        type: 'button', className: 'btn btn--secundario',
+        onClick: () => { destino.replaceChildren(form); },
+      }, 'Volver y editar'),
+      el('button', {
+        type: 'button', className: 'btn btn--secundario',
+        onClick: (e) => conCarga(e.currentTarget, 'Registrando…', () => registrar(form, sugerencia, { omitirParecidas: true })),
+      }, 'No, es distinta: crear una nueva')));
+  destino.replaceChildren(panel);
+  panel.querySelector('button')?.focus();
+}
+
+function itemParecido(parecida, cuerpo) {
+  const lugar = [nombreEspacio(parecida.espacioId), nombreRecurso(parecida.recursoId)].filter(Boolean).join(' · ');
+  const otros = parecida.reportesAdicionales;
+  return el('li', { className: 'item' },
+    el('div', { className: 'item__cabeza' },
+      el('span', { className: 'item__titulo' }, parecida.descripcion),
+      el('span', { className: 'etiqueta', title: 'Qué tan parecido es el significado del texto (similitud coseno)' }, `Parecido ${Math.round(parecida.similitud * 100)} %`)),
+    el('span', { className: 'item__meta' }, [parecida.area, lugar, otros ? `${otros} reporte${otros > 1 ? 's' : ''} más` : null].filter(Boolean).join(' · ')),
+    el('div', { className: 'item__acciones' },
+      el('button', {
+        type: 'button', className: 'btn btn--primario btn--chico',
+        onClick: (e) => sumarAExistente(parecida, cuerpo, e.currentTarget),
+      }, 'Es la misma: sumar mi reporte')));
+}
+
+async function sumarAExistente(parecida, cuerpo, boton) {
+  try {
+    await conCarga(boton, 'Sumando…', () => pedir(`/api/incidencias/${encodeURIComponent(parecida.id)}/reportes`, {
+      metodo: 'POST', cuerpo: { descripcion: cuerpo.descripcion },
+    }));
+    toasts.exito('Tu reporte se sumó a la incidencia que ya existía. No se creó un duplicado.');
+    terminarRegistro();
+    await refrescar();
+    mostrarPestana('p-incidencias');
+  } catch (error) {
+    toasts.error(error); // por ejemplo, si justo la resolvieron (409): puede volver y crear una nueva
   }
 }
 
@@ -195,6 +280,10 @@ function crearItemIncidencia(incidencia) {
       el('span', { className: `etiqueta etiqueta--${incidencia.prioridad}` }, etiqueta(PRIORIDADES, incidencia.prioridad)),
       el('span', { className: 'etiqueta' }, etiqueta(CATEGORIAS, incidencia.categoria)),
       incidencia.origen === 'ia' ? el('span', { className: 'etiqueta etiqueta--ia', title: incidencia.ia?.razon ?? '' }, 'Clasificada por IA') : null,
+      incidencia.reportesAdicionales > 0
+        ? el('span', { className: 'etiqueta', title: 'Personas que confirmaron que era la misma incidencia' },
+          `${incidencia.reportesAdicionales} reporte${incidencia.reportesAdicionales > 1 ? 's' : ''} más`)
+        : null,
       resuelta ? el('span', { className: 'etiqueta etiqueta--resuelta' }, 'Resuelta') : null),
     el('span', { className: 'item__meta' }, [incidencia.area, lugar].filter(Boolean).join(' · ')),
     incidencia.inhabilito && !resuelta ? el('span', { className: 'item__alerta' }, `Fuera de servicio: ${lugar}`) : null,
