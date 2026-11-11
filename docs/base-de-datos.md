@@ -6,6 +6,9 @@
 
 ## Cómo levantarla
 
+`docker compose up -d --build` levanta la app **y** la base (la app en `http://localhost:3000`).
+Para desarrollar con `npm run dev` se levanta solo la base, como se explica a continuación.
+
 1. Agrega a tu `.env` (nunca lo subas al repositorio) una contraseña que elijas:
 
    ```
@@ -157,4 +160,9 @@ pasan a `profesor`; si no queda ningún admin, la primera cuenta importada lo es
    simultáneas.
 3. ✅ Cuentas y sesiones en PostgreSQL, con importador de las cuentas anteriores.
 4. ✅ `store.js` y `data/db.json` retirados; el estado inicial se arma en `src/data/estado-inicial.js`.
-5. La app dentro de `compose.yaml`.
+5. ✅ La app dentro de `compose.yaml` (`Dockerfile`, usuario sin permisos de administrador, sin `.env`
+   dentro de la imagen). Se comprobó que al reiniciar solo el contenedor de la app, la sesión y los
+   datos siguen ahí porque viven en PostgreSQL.
+
+**La Fase 2 está completa:** `docker compose up -d --build` levanta app y base, los tests pasan y dos
+reservas simultáneas en la misma franja dejan solo una.

@@ -23,6 +23,9 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 - **Se retira el almacén en archivo** (`src/data/store.js` y `data/db.json`). La lógica que arma el
   estado inicial desde el CSV y las semillas pasa a `src/data/estado-inicial.js`. Los archivos
   `data/db.json` y `data/auth.json` de versiones anteriores ya no se usan y pueden borrarse.
+- **La app corre en Docker:** `Dockerfile` y servicio `app` en `compose.yaml`, de modo que
+  `docker compose up -d --build` levanta la aplicación y la base. La imagen no incluye `.env` y el
+  proceso corre como usuario sin permisos de administrador.
 - **Cambio de requisitos:** ahora hace falta PostgreSQL (`docker compose up -d db`) para arrancar la
   app y correr `npm test`.
 
