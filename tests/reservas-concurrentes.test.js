@@ -10,14 +10,9 @@
 
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { crearBaseDeLaApp } from './ayuda-bd.js';
 
-const CARPETA = mkdtempSync(join(tmpdir(), 'campus-pulse-concurrencia-'));
 const bd = await crearBaseDeLaApp();
-process.env.AUTH_PATH = join(CARPETA, 'auth.json');
 const { app } = await import('../src/server.js');
 const { actualizarDB, leerDB } = await import('../src/data/almacen.js');
 const { REGLAS } = await import('../src/config/reglas.js');
@@ -39,7 +34,6 @@ before(async () => {
 after(async () => {
   servidor.close();
   await bd.cerrar();
-  rmSync(CARPETA, { recursive: true, force: true });
 });
 
 // Un día hábil futuro distinto para cada test, así no se estorban entre sí.
