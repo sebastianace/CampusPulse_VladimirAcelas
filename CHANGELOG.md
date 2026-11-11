@@ -20,6 +20,9 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
   registro de la primera cuenta usa una transacción con bloqueo para que dos registros simultáneos no
   creen dos admins, y la clave primaria impide usuarios repetidos. `npm run importar-cuentas` copia
   las cuentas del archivo anterior.
+- **Se retira el almacén en archivo** (`src/data/store.js` y `data/db.json`). La lógica que arma el
+  estado inicial desde el CSV y las semillas pasa a `src/data/estado-inicial.js`. Los archivos
+  `data/db.json` y `data/auth.json` de versiones anteriores ya no se usan y pueden borrarse.
 - **Cambio de requisitos:** ahora hace falta PostgreSQL (`docker compose up -d db`) para arrancar la
   app y correr `npm test`.
 

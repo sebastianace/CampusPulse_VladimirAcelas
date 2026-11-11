@@ -4,7 +4,7 @@
 // Recibe la descripción en lenguaje natural y la IA SUGIERE:
 // categoría, prioridad, área responsable, espacio y recurso afectados,
 // si conviene inhabilitar y una razón corta.
-// - El prompt (src/ai/prompts/triaje.js) lleva el catálogo real (db.json) y los valores cerrados.
+// - El prompt (src/ai/prompts/triaje.js) lleva el catálogo real (la base de datos) y los valores cerrados.
 // - La respuesta se valida con validar.js: lo que no existe queda en null.
 // - Nada se guarda aquí: la persona confirma y luego el frontend llama
 //   POST /api/incidencias, donde las reglas de P1 deciden.

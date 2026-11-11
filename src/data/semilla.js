@@ -1,8 +1,8 @@
 // =====================================================================
 // SEMILLA DE LA BASE DE DATOS
 // ---------------------------------------------------------------------
-// Carga espacios, recursos y el reporte de calidad desde los mismos orígenes
-// que usa data/db.json: data/raw/espacios.csv (oficial, nunca se modifica),
+// Carga espacios, recursos y el reporte de calidad desde los orígenes de
+// src/data/estado-inicial.js: data/raw/espacios.csv (oficial, nunca se modifica),
 // data/seed/espacios-extra.json y data/seed/recursos.json.
 // - Borra y vuelve a cargar espacios, recursos, reservas, préstamos e
 //   incidencias, todo en una transacción. NO toca usuarios ni sesiones
@@ -10,7 +10,7 @@
 // Uso:  npm run semilla
 // =====================================================================
 
-import { crearEstadoInicial } from './store.js';
+import { crearEstadoInicial } from './estado-inicial.js';
 import { migrar } from './migrar.js';
 import { crearPool, explicarErrorDeConexion } from './pg.js';
 

@@ -1,7 +1,7 @@
 // =====================================================================
 // ALMACÉN DE DATOS EN POSTGRESQL
 // ---------------------------------------------------------------------
-// Reemplaza a store.js (data/db.json) con la MISMA interfaz, ahora asíncrona:
+// Almacén de datos (reemplazó al viejo data/db.json). Interfaz asíncrona:
 //   leerDB()              -> { espacios, recursos, reservas, prestamos, incidencias, calidadDatos }
 //   actualizarDB(cambio)  -> lee, aplica "cambio(db)" y guarda, todo en una transacción
 //   restaurarDB()         -> deja la base en el estado inicial (semilla)
@@ -13,7 +13,7 @@
 //   3. Se llama a cambio(db): las reglas modifican db. Si lanzan un error, ROLLBACK y no se guarda nada.
 //   4. Diferencias: se compara db con la foto y se hacen solo los INSERT, UPDATE y DELETE necesarios.
 //   5. COMMIT.
-// Con el bloqueo, las reglas ven siempre el estado más reciente, igual que con db.json (donde Node
+// Con el bloqueo, las reglas ven siempre el estado más reciente, igual que con el viejo db.json (donde Node
 // atendía una escritura a la vez). Si por algún motivo dos escrituras se cruzan, la restricción EXCLUDE
 // de la base sigue impidiendo reservas solapadas: es la última defensa.
 // =====================================================================

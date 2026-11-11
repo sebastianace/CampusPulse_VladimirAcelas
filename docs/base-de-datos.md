@@ -1,8 +1,8 @@
 # Base de datos (PostgreSQL + pgvector)
 
-> **Estado:** migración en curso (Fase 2 del plan). **Espacios, recursos, reservas, préstamos,
-> incidencias, cuentas y sesiones ya viven en PostgreSQL.** Falta retirar el viejo `data/db.json` y
-> sumar la app a `compose.yaml`.
+> **Estado:** todos los datos (espacios, recursos, reservas, préstamos, incidencias, cuentas y
+> sesiones) viven en PostgreSQL. Los archivos `data/db.json` y `data/auth.json` de versiones
+> anteriores ya no se usan.
 
 ## Cómo levantarla
 
@@ -156,4 +156,5 @@ pasan a `profesor`; si no queda ningún admin, la primera cuenta importada lo es
 2. ✅ Espacios, recursos, reservas, préstamos e incidencias en PostgreSQL, con pruebas de peticiones
    simultáneas.
 3. ✅ Cuentas y sesiones en PostgreSQL, con importador de las cuentas anteriores.
-4. Retirar `data/db.json` y `store.js`; sumar la app a `compose.yaml`.
+4. ✅ `store.js` y `data/db.json` retirados; el estado inicial se arma en `src/data/estado-inicial.js`.
+5. La app dentro de `compose.yaml`.
