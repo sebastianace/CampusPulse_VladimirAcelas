@@ -15,7 +15,8 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { setTimeout as esperar } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
-import { leerDB } from '../data/store.js';
+import { leerDB } from '../data/almacen.js';
+import { cerrarPool } from '../data/pg.js';
 import { CASOS_TRIAJE } from '../../evaluacion/triaje-casos.js';
 import { generarJSON } from './cliente.js';
 import { promptTriaje } from './prompts/triaje.js';
@@ -71,7 +72,8 @@ async function main() {
     console.error('Falta GEMINI_API_KEY o GEMINI_MODEL en .env. Revisa .env.example.');
     process.exit(1);
   }
-  const { espacios, recursos } = leerDB();
+  const { espacios, recursos } = await leerDB();
+  await cerrarPool(); // el catálogo ya se leyó: no hace falta mantener la conexión abierta
   const catalogo = { espacios, recursos };
   console.log(`Midiendo ${CASOS_TRIAJE.length} reportes en dos modos (${CASOS_TRIAJE.length * 2} llamadas, unos 5 minutos)...`);
 

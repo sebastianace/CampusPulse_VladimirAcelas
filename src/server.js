@@ -9,7 +9,8 @@
 import express from 'express';
 import { fileURLToPath } from 'node:url';
 import { ErrorApi } from './domain/errors.js';
-import { leerDB } from './data/store.js';
+import { prepararBase } from './data/arranque.js';
+import { explicarErrorDeConexion } from './data/pg.js';
 import espaciosRouter from './routes/espacios.js';
 import recursosRouter from './routes/recursos.js';
 import reservasRouter from './routes/reservas.js';
@@ -80,6 +81,12 @@ app.use(manejarErrores);
 // Solo escucha si se ejecuta directamente (npm start / npm run dev), no al importarlo en tests.
 if (import.meta.main) {
   const PUERTO = process.env.PORT ?? 3000;
-  leerDB(); // crea data/db.json al arrancar si no existe
+  // Aplica las migraciones y, la primera vez, carga la semilla. Sin PostgreSQL no tiene sentido arrancar.
+  try {
+    await prepararBase();
+  } catch (error) {
+    console.error(`[server] ${explicarErrorDeConexion(error)}`);
+    process.exit(1);
+  }
   app.listen(PUERTO, () => console.log(`Campus Pulse escuchando en http://localhost:${PUERTO}`));
 }

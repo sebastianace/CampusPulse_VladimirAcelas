@@ -59,7 +59,8 @@ las reglas deciden. Los cambios de la v2 se registran en [CHANGELOG.md](CHANGELO
 
 - **Node.js 24** + **Express 5**, módulos ES (`"type": "module"`).
 - **Frontend** en HTML, CSS y JavaScript nativo, sin frameworks ni build.
-- **Persistencia** en `data/db.json` con escritura atómica (archivo temporal + rename).
+- **Persistencia** en **PostgreSQL 16 con pgvector** (Docker). Las cuentas y sesiones siguen en
+  `data/auth.json` por ahora; ver [docs/base-de-datos.md](docs/base-de-datos.md).
 - **IA**: Google Gemini mediante `@google/genai`.
 - **Tests** con `node:test` (sin dependencias extra).
 
@@ -72,7 +73,8 @@ src/routes/        Rutas HTTP (una por recurso). ia.js -> /api/ia/*, auth.js -> 
 src/auth/          usuarios.js: cuentas (clave con hash scrypt) y sesiones
 src/domain/        Reglas de negocio: reservas, préstamos, incidencias, fechas, errores
 src/config/        reglas.js: TODAS las constantes de negocio y valores cerrados
-src/data/          loader.js (lee el CSV) y store.js (lee/escribe db.json); pg.js, migrar.js y semilla.js (PostgreSQL, en migración)
+src/data/          almacen.js (lee y guarda en PostgreSQL), repos/ (una tabla por archivo), pg.js, migrar.js, semilla.js y arranque.js;
+                   loader.js (lee el CSV) y store.js (el viejo db.json, se retirará)
 db/migrations/     Esquema SQL de PostgreSQL (ver docs/base-de-datos.md)
 src/ai/            cliente.js, validar.js, triaje.js, asistente.js, limite.js, cache.js
 src/ai/prompts/    Un archivo por prompt del sistema, con la plantilla de la clase (ver docs/biblioteca-prompts.md)
@@ -220,7 +222,7 @@ Además:
 
 ## Instalación y ejecución
 
-Requisitos: **Node.js 24** o superior.
+Requisitos: **Node.js 24** o superior y **Docker** (para PostgreSQL).
 
 ```bash
 git clone https://github.com/sebastianace/CampusPulse_VladimirAcelas.git
@@ -235,6 +237,16 @@ Edita `.env` (nunca lo subas al repositorio):
 GEMINI_API_KEY=tu_key_de_google_ai_studio
 GEMINI_MODEL=gemini-3.6-flash
 PORT=3000
+POSTGRES_PASSWORD=una_contraseña_que_tu_elijas
+POSTGRES_PUERTO=5433
+```
+
+Levanta la base de datos antes de arrancar la app (la primera vez que arranca, la app aplica las
+migraciones y carga los datos iniciales sola):
+
+```bash
+docker compose up -d db
+npm run dev
 ```
 
 `GEMINI_MODEL` es el id exacto del modelo (por ejemplo `gemini-3.6-flash`, el que usamos en la
@@ -255,12 +267,13 @@ error claro y el formulario manual, nunca con una respuesta inventada.
 
 Abre `http://localhost:3000` y crea una cuenta con **Crear una cuenta** (solo la primera vez).
 
-Sin `.env` la aplicación funciona igual: las funciones de IA muestran un error claro y se usa el
-formulario manual.
+Sin la clave de Gemini la aplicación funciona igual: las funciones de IA muestran un error claro y
+se usa el formulario manual. **Sin PostgreSQL no arranca**: si ves "No hay conexión con PostgreSQL",
+abre Docker Desktop y corre `docker compose up -d db`.
 
-La primera vez que arranca, el servidor crea `data/db.json` a partir de `data/raw/espacios.csv`,
-`data/seed/espacios-extra.json` y `data/seed/recursos.json`. El botón **Restaurar** (`POST /api/restaurar`) vuelve a ese estado
-inicial.
+La primera vez que arranca, la app carga en PostgreSQL los datos de `data/raw/espacios.csv`,
+`data/seed/espacios-extra.json` y `data/seed/recursos.json`. El botón **Restaurar**
+(`POST /api/restaurar`) vuelve a ese estado inicial.
 
 ## Suposiciones sobre los datos
 
