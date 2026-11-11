@@ -115,7 +115,7 @@ errores responden `{error: {codigo, mensaje}}` con el mensaje en español: 422 d
 
 ## Rol de la IA y cómo se controla
 
-La IA solo **sugiere** en dos puntos. Nunca escribe en la base de datos ni decide si algo está
+La IA solo **sugiere** en tres puntos. Nunca escribe en la base de datos ni decide si algo está
 permitido.
 
 ### 1. Triaje de incidencias — `POST /api/ia/triaje`
@@ -137,6 +137,18 @@ permitido.
    aforo, horario, días hábiles, duración, estado y no solapamiento, ordenados por mejor ajuste.
 3. La IA solo **redacta** la explicación de esas opciones ya filtradas. Si menciona un espacio
    que no estaba en la lista, se descarta.
+
+### 3. Incidencias parecidas — `POST /api/ia/similares`
+
+1. La IA convierte el texto en un **embedding** (768 números) con `gemini-embedding-001`.
+2. **pgvector** busca las incidencias abiertas con el vector más cercano (distancia coseno, índice HNSW).
+3. Las **reglas** deciden cuáles se sugieren: solo las del mismo equipo o espacio que identificó el
+   triaje, y que lleguen al umbral de similitud (`UMBRAL_SIMILITUD_INCIDENCIA`).
+4. La interfaz pregunta *"¿Es la misma incidencia?"*. Si la persona confirma, su reporte se suma a la
+   existente (`POST /api/incidencias/:id/reportes`) en vez de crear un duplicado.
+
+Si el servicio de embeddings falla, la incidencia se crea igual, sin la sugerencia. Detalle,
+mediciones y decisiones en [docs/incidencias-parecidas.md](docs/incidencias-parecidas.md).
 
 ### Controles
 
@@ -210,6 +222,8 @@ editar un valor y guardar (`npm run dev` reinicia el servidor solo).
 | Tipos de espacio que la IA nunca recomienda | `TIPOS_FUERA_DE_RECOMENDACION` | mesa_juego |
 | Consultas a la IA por usuario en la ventana | `LIMITE_IA_PETICIONES` / `LIMITE_IA_VENTANA_MINUTOS` | 5 por minuto |
 | Minutos que se guarda la respuesta del triaje | `CACHE_IA_MINUTOS` | 10 |
+| Similitud mínima para sugerir una incidencia parecida (provisional) | `UMBRAL_SIMILITUD_INCIDENCIA` | 0.93 |
+| Cuántas incidencias parecidas se muestran | `MAX_INCIDENCIAS_PARECIDAS` | 3 |
 
 Además:
 
@@ -278,6 +292,7 @@ error claro y el formulario manual, nunca con una respuesta inventada.
 | `npm test` | Ejecuta las pruebas de las reglas |
 | `npm run probar-ia` | Comprueba que la key y el modelo de Gemini responden |
 | `npm run migrar` | Aplica las migraciones de `db/migrations/` a PostgreSQL (necesita `docker compose up -d db`) |
+| `npm run embeddings` | Genera el embedding de las incidencias que no lo tienen (usa la clave de Gemini) |
 | `npm run importar-cuentas` | Copia las cuentas del viejo `data/auth.json` a PostgreSQL (se corre una vez) |
 | `npm run semilla` | Carga espacios, recursos y calidad de datos en PostgreSQL |
 | `npm run medir-triaje` | Mide el triaje sin ejemplos y con ellos (24 llamadas a Gemini, ~5 min; gasta cuota) |
