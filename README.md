@@ -243,13 +243,27 @@ POSTGRES_PASSWORD=una_contraseña_que_tu_elijas
 POSTGRES_PUERTO=5433
 ```
 
-Levanta la base de datos antes de arrancar la app (la primera vez que arranca, la app aplica las
-migraciones y carga los datos iniciales sola):
+Hay dos formas de correrlo:
+
+**A. Todo en Docker** (la más simple; no hace falta tener Node instalado):
+
+```bash
+docker compose up -d --build
+```
+
+La app queda en `http://localhost:3000`. La primera vez aplica las migraciones y carga los datos
+iniciales sola. Para apagarla: `docker compose stop` (conserva los datos) o `docker compose down -v`
+(borra también los datos).
+
+**B. Solo la base en Docker y la app con Node** (para desarrollar; se reinicia al guardar):
 
 ```bash
 docker compose up -d db
 npm run dev
 ```
+
+No corras las dos a la vez: usan el mismo puerto (3000). Con `NODE_ENV=production` la cookie de
+sesión es `Secure` y solo viaja por HTTPS: déjalo vacío mientras uses `http://localhost`.
 
 `GEMINI_MODEL` es el id exacto del modelo (por ejemplo `gemini-3.6-flash`, el que usamos en la
 demo). Si `npm run probar-ia` responde 503 ("high demand"), el modelo está saturado en ese
