@@ -16,8 +16,12 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
   escritura es una transacción con bloqueo; las reservas simultáneas a la misma franja dejan una
   sola, y la restricción de la base es la última defensa. Al arrancar, la app aplica las migraciones
   y carga la semilla la primera vez.
+- **Cuentas y sesiones pasan de `data/auth.json` a PostgreSQL** (tablas `usuarios` y `sesiones`). El
+  registro de la primera cuenta usa una transacción con bloqueo para que dos registros simultáneos no
+  creen dos admins, y la clave primaria impide usuarios repetidos. `npm run importar-cuentas` copia
+  las cuentas del archivo anterior.
 - **Cambio de requisitos:** ahora hace falta PostgreSQL (`docker compose up -d db`) para arrancar la
-  app y correr `npm test`; las cuentas y sesiones siguen en `data/auth.json` por ahora.
+  app y correr `npm test`.
 
 ### IA
 

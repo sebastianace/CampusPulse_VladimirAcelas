@@ -7,15 +7,10 @@
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 
 import { crearBaseDeLaApp } from './ayuda-bd.js';
 
-const CARPETA = mkdtempSync(join(tmpdir(), 'campus-pulse-api-'));
 const bd = await crearBaseDeLaApp(); // la app corre contra una base PostgreSQL temporal
-process.env.AUTH_PATH = join(CARPETA, 'auth.json');
 const { app } = await import('../src/server.js');
 
 let servidor;
@@ -34,7 +29,6 @@ before(async () => {
 after(async () => {
   servidor.close();
   await bd.cerrar();
-  rmSync(CARPETA, { recursive: true, force: true });
 });
 
 // Hace la petición y devuelve {status, cuerpo}.
