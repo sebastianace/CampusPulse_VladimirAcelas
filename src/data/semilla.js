@@ -21,7 +21,8 @@ export async function sembrar(pool) {
   try {
     await cliente.query('BEGIN');
     // Una sola sentencia: TRUNCATE exige listar también las tablas que apuntan a espacios y recursos.
-    await cliente.query('TRUNCATE reservas, prestamos, incidencias, recursos, espacios, calidad_datos');
+    // RESTART IDENTITY reinicia la columna "posicion", que guarda el orden de las filas.
+    await cliente.query('TRUNCATE reservas, prestamos, incidencias, recursos, espacios, calidad_datos RESTART IDENTITY');
     for (const e of espacios) {
       await cliente.query('INSERT INTO espacios (id, nombre, tipo, aforo, estado) VALUES ($1, $2, $3, $4, $5)',
         [e.id, e.nombre, e.tipo, e.aforo ?? null, e.estado]);

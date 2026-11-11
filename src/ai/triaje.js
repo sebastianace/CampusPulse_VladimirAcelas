@@ -11,7 +11,7 @@
 // =====================================================================
 
 import { AREAS, CATEGORIAS, PRIORIDADES } from '../config/reglas.js';
-import { leerDB } from '../data/store.js';
+import { leerDB } from '../data/almacen.js';
 import { generarJSON } from './cliente.js';
 import { promptTriaje } from './prompts/triaje.js';
 import { validarTriaje } from './validar.js';
@@ -47,7 +47,7 @@ export function crearSchema(catalogo) {
  * Si la IA falla lanza IANoDisponibleError (503).
  */
 export async function triarIncidencia(descripcion) {
-  const { espacios, recursos } = leerDB();
+  const { espacios, recursos } = await leerDB();
   const catalogo = { espacios, recursos };
   const { datos, modelo } = await generarJSON(promptTriaje(descripcion, catalogo), crearSchema(catalogo));
   return { ...validarTriaje(datos, catalogo), modelo };

@@ -29,7 +29,30 @@ export function urlDeConexion(baseDeDatos) {
 
 /** Pool de conexiones a la base indicada (o a la de Campus Pulse). */
 export function crearPool(baseDeDatos) {
-  return new Pool({ connectionString: urlDeConexion(baseDeDatos) });
+  const pool = new Pool({ connectionString: urlDeConexion(baseDeDatos) });
+  // Sin este manejador, una conexión inactiva que se cae (por ejemplo, Docker se cierra) tumbaría el proceso.
+  // El cierre ordenado por el administrador (57P01: docker stop, DROP DATABASE ... FORCE) es deliberado
+  // y no se registra; los demás fallos sí, y cada consulta que falle explica su causa.
+  pool.on('error', (error) => {
+    if (error.code !== '57P01') console.error(`[pg] ${explicarErrorDeConexion(error)}`);
+  });
+  return pool;
+}
+
+// Pool compartido por toda la aplicación: se crea al primer uso, con las variables de entorno de ese momento.
+let poolDeLaApp = null;
+
+/** Pool de la aplicación (los repositorios y las rutas usan este). */
+export function obtenerPool() {
+  poolDeLaApp ??= crearPool();
+  return poolDeLaApp;
+}
+
+/** Cierra el pool de la aplicación (al apagar el servidor o al terminar un test). */
+export async function cerrarPool() {
+  const pool = poolDeLaApp;
+  poolDeLaApp = null;
+  await pool?.end();
 }
 
 /** Traduce un error de conexión en un mensaje que diga qué hacer. */
