@@ -34,7 +34,7 @@ Para desarrollar con `npm run dev` se levanta solo la base, como se explica a co
 
 ## Esquema
 
-Ocho tablas, más `schema_migrations` (qué migraciones ya se aplicaron):
+Diez tablas, más `schema_migrations` (qué migraciones ya se aplicaron):
 
 | Tabla | Qué guarda |
 |---|---|
@@ -46,9 +46,11 @@ Ocho tablas, más `schema_migrations` (qué migraciones ya se aplicaron):
 | `usuarios` | Cuentas, con rol `admin`, `profesor` o `soporte_tecnico` |
 | `sesiones` | Sesiones activas (se guarda el hash del token, no el token) |
 | `calidad_datos` | Reporte de calidad del CSV oficial (una sola fila) |
+| `incidencias_embeddings` | El embedding (`vector(768)`, índice HNSW coseno) de cada incidencia, para buscar parecidas |
+| `incidencias_reportes` | Reportes que se suman a una incidencia existente (quién, cuándo y qué escribió) |
 
 Las migraciones están en [`db/migrations/`](../db/migrations/): `001_extensiones.sql`,
-`002_esquema.sql` y `003_orden.sql`. Cada archivo corre en una transacción; lo aplicado queda en `schema_migrations`.
+`002_esquema.sql`, `003_orden.sql` y `004_embeddings.sql`. Cada archivo corre en una transacción; lo aplicado queda en `schema_migrations`.
 
 ## Decisiones
 
