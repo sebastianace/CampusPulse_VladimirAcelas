@@ -74,6 +74,14 @@ export const REGLAS = {
 
   // Minutos que se guarda la respuesta del triaje para un texto idéntico.
   CACHE_IA_MINUTOS: 10,
+
+  // Incidencias parecidas (embeddings). Similitud coseno (0 a 1) desde la cual una incidencia abierta
+  // se sugiere como "¿es la misma?". PROVISIONAL: sale de una medición de 10 reportes (la misma
+  // incidencia dio 0.96 a 0.98, y las distintas de la misma sala o equipo 0.84 a 0.90). Falta el notebook
+  // que lo justifique con más ejemplos (docs/incidencias-parecidas.md).
+  UMBRAL_SIMILITUD_INCIDENCIA: 0.93,
+  // Cuántas incidencias parecidas se muestran como máximo.
+  MAX_INCIDENCIAS_PARECIDAS: 3,
 };
 
 // =====================================================================

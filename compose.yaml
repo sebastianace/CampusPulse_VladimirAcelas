@@ -1,0 +1,46 @@
+# Campus Pulse completo: la base de datos (PostgreSQL con pgvector) y la aplicación.
+#   docker compose up -d --build     levanta todo; la app queda en http://localhost:3000
+#   docker compose up -d db          solo la base, para trabajar con `npm run dev`
+# La contraseña de la base sale de POSTGRES_PASSWORD en .env. No corras a la vez la app de aquí y
+# `npm run dev` en el mismo puerto.
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: campus
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env (ver .env.example)}
+      POSTGRES_DB: campus_pulse
+    ports:
+      # Solo accesible desde este computador. 5433 y no 5432 para no chocar con un PostgreSQL local.
+      - "127.0.0.1:${POSTGRES_PUERTO:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campus -d campus_pulse"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    # El .env aporta GEMINI_API_KEY y GEMINI_MODEL (es opcional: sin ellas la IA usa el formulario manual).
+    env_file:
+      - path: .env
+        required: false
+    # Lo que va aquí manda sobre el .env: dentro de la red de Docker la base es el servicio "db" en su puerto 5432.
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PUERTO: "5432"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env (ver .env.example)}
+      PORT: "3000"
+      # Vacío a propósito: con NODE_ENV=production la cookie de sesión es "secure" y no viaja por
+      # http://localhost. Ponlo en production cuando la app se sirva por HTTPS.
+      NODE_ENV: ${NODE_ENV:-}
+    ports:
+      - "127.0.0.1:${PORT:-3000}:3000"
+
+volumes:
+  pgdata:

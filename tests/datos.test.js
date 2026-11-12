@@ -1,21 +1,18 @@
 // =====================================================================
-// TESTS DE DATOS: loader del CSV y store (node:test)
+// TESTS DE DATOS: loader del CSV (node:test)
 // ---------------------------------------------------------------------
-// Todo se escribe en una carpeta temporal: nunca se toca data/raw/ ni
-// data/db.json del proyecto.
+// Los CSV de prueba se escriben en una carpeta temporal: nunca se toca data/raw/.
+// (El almacén de datos en PostgreSQL se prueba en tests/almacen.test.js.)
 // =====================================================================
 
 import { test, describe, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-// La base de pruebas va a una carpeta temporal; se define ANTES de importar el store.
 const CARPETA = mkdtempSync(join(tmpdir(), 'campus-pulse-'));
-process.env.DB_PATH = join(CARPETA, 'db.json');
 const { cargarEspacios } = await import('../src/data/loader.js');
-const { leerDB, actualizarDB, restaurarDB } = await import('../src/data/store.js');
 
 after(() => rmSync(CARPETA, { recursive: true, force: true }));
 
@@ -51,38 +48,5 @@ describe('Loader del CSV', () => {
   test('un archivo inexistente o sin columnas útiles no lanza error', () => {
     assert.equal(cargarEspacios(join(CARPETA, 'no-existe.csv')).espacios.length, 0);
     assert.equal(cargarEspacios(csv('raro.csv', 'a,b\n1,2\n')).calidad.inconsistentes.length, 1);
-  });
-});
-
-describe('Store', () => {
-  test('crea db.json si no existe y guarda los cambios', () => {
-    const db = leerDB();
-    assert.ok(Array.isArray(db.espacios) && Array.isArray(db.reservas));
-    actualizarDB((d) => d.reservas.push({ id: 'r1' }));
-    assert.equal(leerDB().reservas.length, 1);
-  });
-
-  test('si el cambio lanza un error no se guarda nada', () => {
-    const antes = leerDB().reservas.length;
-    assert.throws(() => actualizarDB((d) => { d.reservas.push({ id: 'r2' }); throw new Error('regla'); }));
-    assert.equal(leerDB().reservas.length, antes);
-  });
-
-  test('escritura atómica: no deja archivos temporales', () => {
-    actualizarDB((d) => d.reservas.push({ id: 'r3' }));
-    assert.equal(readdirSync(CARPETA).filter((f) => f.endsWith('.tmp')).length, 0);
-  });
-
-  test('un db.json corrupto se respalda y se recrea', () => {
-    writeFileSync(process.env.DB_PATH, '{roto', 'utf8');
-    assert.equal(leerDB().reservas.length, 0);
-    assert.ok(readdirSync(CARPETA).some((f) => f.startsWith('db.corrupto-')));
-  });
-
-  test('restaurar vuelve al estado inicial', () => {
-    actualizarDB((d) => d.reservas.push({ id: 'r4' }));
-    restaurarDB();
-    assert.equal(leerDB().reservas.length, 0);
-    assert.equal(JSON.parse(readFileSync(process.env.DB_PATH, 'utf8')).prestamos.length, 0);
   });
 });

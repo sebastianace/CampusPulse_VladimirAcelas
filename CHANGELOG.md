@@ -6,11 +6,48 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Incidencias parecidas (Fase 3B)
+
+- Al confirmar un reporte, la app busca incidencias **abiertas parecidas** con embeddings de Gemini
+  (`gemini-embedding-001`, 768 dimensiones) guardados en pgvector (índice HNSW, distancia coseno) y
+  pregunta *"¿Es la misma incidencia?"*. Si se confirma, el reporte se suma a la existente
+  (`POST /api/incidencias/:id/reportes`) en vez de crear un duplicado.
+- Regla híbrida: solo se comparan incidencias del mismo equipo o espacio que identificó el triaje y que
+  lleguen al umbral de similitud (`UMBRAL_SIMILITUD_INCIDENCIA`, 0.93, provisional). Si el servicio
+  falla, la incidencia se crea igual. `npm run embeddings` rellena las que no tienen embedding.
+- Ver `docs/incidencias-parecidas.md` (mediciones y decisiones).
+
+### Base de datos
+
+- PostgreSQL con pgvector en `compose.yaml` (`docker compose up -d db`), esquema SQL en
+  `db/migrations/` con la restricción `EXCLUDE USING gist` que impide reservas solapadas, ejecutor
+  de migraciones (`npm run migrar`) y semilla (`npm run semilla`). Ver `docs/base-de-datos.md`.
+- **Espacios, recursos, reservas, préstamos e incidencias pasan de `data/db.json` a PostgreSQL**
+  (`src/data/almacen.js` y `src/data/repos/`), sin cambiar las reglas de `src/domain/`. Cada
+  escritura es una transacción con bloqueo; las reservas simultáneas a la misma franja dejan una
+  sola, y la restricción de la base es la última defensa. Al arrancar, la app aplica las migraciones
+  y carga la semilla la primera vez.
+- **Cuentas y sesiones pasan de `data/auth.json` a PostgreSQL** (tablas `usuarios` y `sesiones`). El
+  registro de la primera cuenta usa una transacción con bloqueo para que dos registros simultáneos no
+  creen dos admins, y la clave primaria impide usuarios repetidos. `npm run importar-cuentas` copia
+  las cuentas del archivo anterior.
+- **Se retira el almacén en archivo** (`src/data/store.js` y `data/db.json`). La lógica que arma el
+  estado inicial desde el CSV y las semillas pasa a `src/data/estado-inicial.js`. Los archivos
+  `data/db.json` y `data/auth.json` de versiones anteriores ya no se usan y pueden borrarse.
+- **La app corre en Docker:** `Dockerfile` y servicio `app` en `compose.yaml`, de modo que
+  `docker compose up -d --build` levanta la aplicación y la base. La imagen no incluye `.env` y el
+  proceso corre como usuario sin permisos de administrador.
+- **Cambio de requisitos:** ahora hace falta PostgreSQL (`docker compose up -d db`) para arrancar la
+  app y correr `npm test`.
+
 ### IA
 
 - Los prompts salieron del código a `src/ai/prompts/`, uno por archivo, con la plantilla de seis
   secciones vista en clase (rol y objetivo, tono, políticas, límites, procedimiento y entrada).
   Documentados en `docs/biblioteca-prompts.md`.
+- Triaje con 4 ejemplos few-shot del campus (`src/ai/prompts/ejemplos-triaje.js`) y script
+  `npm run medir-triaje` para compararlo contra la versión sin ejemplos con 12 reportes de prueba
+  (`evaluacion/`).
 - Personalidad de **Pulse** con el modelo Big Five (`src/ai/prompts/personalidad.js`), aplicada al
   tono del triaje y de la explicación de salas. Justificada en `docs/personalidad.md`.
 

@@ -14,6 +14,7 @@ import { triarIncidencia } from '../ai/triaje.js';
 import { recomendarEspacios } from '../ai/asistente.js';
 import { consumirCupoIA } from '../ai/limite.js';
 import { guardarCache, leerCache } from '../ai/cache.js';
+import { buscarSimilares, embeddingEnCache } from '../ai/similares.js';
 
 // Largo máximo del texto que se envía a la IA.
 const MAX_CARACTERES = 1000;
@@ -55,6 +56,18 @@ router.post('/triaje', async (req, res) => {
   const sugerencia = await triarIncidencia(descripcion);
   guardarCache(descripcion, sugerencia);
   res.json(sugerencia);
+});
+
+// POST /api/ia/similares  {descripcion, espacioId?, recursoId?}
+// -> {candidatas: [{id, descripcion, categoria, prioridad, area, espacioId, recursoId, fecha, similitud, reportesAdicionales}], umbral, modelo}
+// Incidencias ABIERTAS parecidas, para preguntar "¿es la misma?". Si el servicio de embeddings falla
+// responde 503 y la interfaz sigue sin la sugerencia. Si el embedding del texto ya está en la caché
+// (porque se acaba de pedir), no gasta cupo.
+router.post('/similares', async (req, res) => {
+  const descripcion = exigirTexto(req.body?.descripcion, 'la descripción de la incidencia');
+  const idOpcional = (valor) => (typeof valor === 'string' && valor.trim() ? valor.trim() : null);
+  if (!embeddingEnCache(descripcion)) gastarCupo(req, res);
+  res.json(await buscarSimilares({ descripcion, espacioId: idOpcional(req.body?.espacioId), recursoId: idOpcional(req.body?.recursoId) }));
 });
 
 // POST /api/ia/recomendar  {texto}
