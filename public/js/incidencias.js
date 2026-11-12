@@ -14,6 +14,7 @@ import { AREAS, CATEGORIAS, PRIORIDADES, etiqueta } from './catalogos.js';
 import { obtenerEstado } from './estado.js';
 import { puede } from './sesion.js';
 import * as toasts from './toasts.js';
+import { agregarDictado } from './voz.js';
 
 let refrescar = async () => {};
 let mostrarPestana = () => {};
@@ -28,6 +29,8 @@ export function iniciarIncidencias(opciones) {
   const form = document.getElementById('form-triaje');
   form.addEventListener('submit', clasificarConIA);
   form.descripcion.addEventListener('input', () => form.descripcion.removeAttribute('aria-invalid'));
+  // Dictado por voz: solo aparece si el navegador lo soporta. Escribe en el campo; la persona revisa y envía.
+  agregarDictado(form.descripcion, form.descripcion, { conTexto: true });
   document.getElementById('btn-manual').addEventListener('click', () => {
     abrirFormulario({ modo: 'manual', descripcion: form.descripcion.value.trim() });
   });
