@@ -120,5 +120,8 @@ export const ESTADOS_INCIDENCIA = ['abierta', 'resuelta'];
 // Origen de una incidencia: sugerida por la IA y confirmada, o llenada a mano.
 export const ORIGENES_INCIDENCIA = ['ia', 'manual'];
 
+// Canales por los que n8n avisa de una incidencia al área responsable.
+export const CANALES_NOTIFICACION = ['correo', 'telegram'];
+
 // Estados de un préstamo: activo mientras el recurso no se ha devuelto.
 export const ESTADOS_PRESTAMO = ['activo', 'devuelto'];
