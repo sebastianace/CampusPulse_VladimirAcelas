@@ -77,6 +77,9 @@ src/config/        reglas.js: TODAS las constantes de negocio y valores cerrados
 src/data/          almacen.js (lee y guarda en PostgreSQL), repos/ (una tabla por archivo), pg.js, migrar.js, semilla.js y arranque.js;
                    loader.js (lee el CSV), estado-inicial.js (arma los datos iniciales) e importar-cuentas.js
 db/migrations/     Esquema SQL de PostgreSQL (ver docs/base-de-datos.md)
+src/integraciones/ Webhook firmado hacia n8n (n8n.js); las rutas que llama n8n están en src/routes/integraciones.js
+n8n/               Los 6 flujos de n8n exportados (JSON); se importan con npm run n8n:preparar
+scripts/           preparar-n8n.mjs
 src/ai/            cliente.js, validar.js, triaje.js, asistente.js, limite.js, cache.js, intencion.js, conocimiento.js
 pulse-ai/          Servicio Python (FastAPI + LangChain): RAG sobre knowledge/ con pgvector (ver docs/rag.md)
 knowledge/         Documentos de ejemplo que Pulse usa para responder preguntas con fuentes
@@ -181,6 +184,16 @@ Por qué RAG y no fine-tuning, y por qué pgvector y no Qdrant o Chroma: [docs/d
   aparecen y todo sigue funcionando por texto.
 - **Privacidad:** en Chrome el reconocimiento lo hace el servicio de voz del navegador, que envía el audio a un servidor
   del proveedor. No pasa por Campus Pulse ni se guarda aquí. Solo funciona con `localhost` o HTTPS.
+
+### 6. Automatización con n8n y webhooks
+
+Al crear una incidencia, Express envía un **webhook firmado** (HMAC-SHA256, con protección contra repetición) a **n8n**, que
+valida la firma, enruta por área (**Switch**), avisa por correo con un **subworkflow**, une los resultados (**Merge**) y llama
+de vuelta a Campus Pulse para dejar constancia (*"Avisada: Soporte TI"* en la lista). Las críticas avisan al instante; el resto
+va a un **resumen diario con IA** (Gemini devuelve JSON y un Code node lo valida contra los datos reales antes de enviarlo).
+Hay además un flujo de **ingesta de documentos** por formulario (Document Loader, Embeddings, PGVector), un **agente de
+coordinación** con memoria y un **Error Workflow**. Todo en Docker, gratis, con los correos en un buzón local (Mailpit).
+Detalle, pruebas y límites en [docs/workflows.md](docs/workflows.md); los flujos exportados están en [n8n/](n8n/).
 
 ### Controles
 
@@ -297,9 +310,11 @@ Hay dos formas de correrlo:
 docker compose up -d --build
 ```
 
-Levanta tres servicios: la base (`db`), la app (`app`, en `http://localhost:3000`) y el RAG (`pulse-ai`,
-en `http://localhost:8000`). La primera vez aplica las migraciones, carga los datos iniciales y los
-documentos de `knowledge/` solas. Para apagarla: `docker compose stop` (conserva los datos) o `docker compose down -v`
+Levanta cinco servicios: la base (`db`), la app (`app`, en `http://localhost:3000`), el RAG (`pulse-ai`,
+en `http://localhost:8000`), n8n (`http://localhost:5678`) y un buzón de correo de prueba (`mailpit`,
+`http://localhost:8025`). La primera vez aplica las migraciones, carga los datos iniciales y los
+documentos de `knowledge/` solas. Para las automatizaciones define `N8N_SECRETO` en `.env` y corre
+`npm run n8n:preparar` (ver [docs/workflows.md](docs/workflows.md)). Para apagarla: `docker compose stop` (conserva los datos) o `docker compose down -v`
 (borra también los datos).
 
 **B. Solo la base en Docker y la app con Node** (para desarrollar; se reinicia al guardar):
@@ -328,6 +343,7 @@ error claro y el formulario manual, nunca con una respuesta inventada.
 | `npm run migrar` | Aplica las migraciones de `db/migrations/` a PostgreSQL (necesita `docker compose up -d db`) |
 | `npm run embeddings` | Genera el embedding de las incidencias que no lo tienen (usa la clave de Gemini) |
 | `npm run importar-cuentas` | Copia las cuentas del viejo `data/auth.json` a PostgreSQL (se corre una vez) |
+| `npm run n8n:preparar` | Crea las credenciales en n8n, importa y activa los flujos de `n8n/` y reinicia n8n |
 | `npm run conocimiento` | Recarga `knowledge/` en la base vectorial (necesita `pulse-ai` levantado) |
 | `npm run evaluar-rag` | Hace las 15 preguntas de prueba del RAG, con y sin reranking (gasta cuota de Gemini, ~8 min) |
 | `npm run semilla` | Carga espacios, recursos y calidad de datos en PostgreSQL |

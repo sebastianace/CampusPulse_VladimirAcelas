@@ -110,7 +110,25 @@ No comparé tiempos ni calidad entre las tres con datos de este proyecto. Con ta
 
 ---
 
-## 4. Preguntas que pueden hacerme y mi respuesta corta
+## 4. n8n para lo que rodea a las incidencias, código para las reglas
+
+- **Decisión:** las **reglas de negocio** (reservas, aforo, qué se inhabilita) viven en código con tests; las
+  **automatizaciones alrededor** (avisar, resumir, ingerir documentos) viven en n8n.
+- **Por qué n8n ahí:** son flujos de pasos con servicios externos (correo, IA, base vectorial) donde se quiere ver el flujo,
+  cambiar un destinatario o agregar un canal sin tocar ni desplegar el backend, y tener reintentos y manejo de errores ya
+  resueltos. Un cambio como "avisar también a Seguridad" es arrastrar un nodo.
+- **Por qué NO las reglas en n8n:** las reglas tienen que ser probables con tests, versionables en Git y no depender de una
+  interfaz. Aquí hay cientos de tests; los flujos de n8n solo se pueden probar con las partes de código que contienen (por eso la
+  validación del resumen y la firma son Code nodes que se ejecutan en un test) o a mano.
+- **El costo de n8n:** otro servicio que operar, otra herramienta que aprender, JSON exportados difíciles de leer en un
+  *diff*, y la lógica queda repartida en dos lugares (la firma está implementada en Express *y* en un Code node; un test
+  comprueba que sigan siendo compatibles).
+- **Límite real que apareció:** el nodo de embeddings de Gemini de n8n no deja elegir las dimensiones (3072), así que n8n
+  usa su propia tabla vectorial y no puede compartir la de `pulse-ai` (768). Ver `docs/workflows.md`.
+
+---
+
+## 5. Preguntas que pueden hacerme y mi respuesta corta
 
 **¿Por qué RAG y no fine-tuning?** Porque el conocimiento cambia, quiero citar fuentes y poder decir "no sé", y no tengo
 miles de ejemplos. Fine-tuning sirve para estilo o clasificación a gran escala, no para datos vigentes.
@@ -127,5 +145,11 @@ consulta, y tengo integridad referencial. Cambiaría a Qdrant con millones de ve
 
 **¿Qué es la similitud coseno?** El coseno del ángulo entre dos vectores: 1 si apuntan igual, 0 si no se parecen. Mide
 significado, no palabras. En pgvector el operador `<=>` da la distancia coseno y la similitud es `1 - distancia`.
+
+**¿Qué pasa si n8n se cae?** La incidencia se crea igual (el webhook va en segundo plano y falla en silencio). Se pierde la
+alerta inmediata de esa incidencia, pero el resumen diario la incluye. Es un límite conocido: no hay cola de reintentos.
+
+**¿Cómo sabes que el webhook es de Campus Pulse y no de un atacante?** Va firmado con HMAC-SHA256 con un secreto compartido
+sobre `timestamp.cuerpo`; n8n rechaza una firma incorrecta, un cuerpo alterado y un mensaje de hace más de 5 minutos.
 
 **¿Qué hiciste tú y qué la IA?** Ver `README.md` ("Uso de IA en el desarrollo").
