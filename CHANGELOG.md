@@ -6,6 +6,11 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Decisiones documentadas (Fase 3E)
+
+- `docs/decisiones.md`: por qué RAG y no fine-tuning (y cuándo sí usaría fine-tuning), por qué pgvector y no Qdrant ni
+  Chroma, y qué aportó y qué no LangChain, con la evidencia del proyecto y lo que no se midió.
+
 ### Voz (Fase 3D)
 
 - **Dictado por voz** (Web Speech API) en el reporte de incidencias y en la barra Ctrl+K, y botón **Escuchar** en las
