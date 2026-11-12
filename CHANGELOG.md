@@ -6,6 +6,19 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Automatización con n8n y webhooks (Fase 3F)
+
+- **n8n 2.47.4 y Mailpit** en `compose.yaml`. Seis flujos exportados en `n8n/`: **incidencia nueva** (webhook firmado con
+  HMAC-SHA256 y protección contra repetición, IF por prioridad, Switch por área, subworkflow de notificación, Merge y llamada
+  de vuelta), **notificar por correo**, **resumen diario con IA** (JSON validado en un Code node contra los datos reales),
+  **Error Workflow**, **ingesta de documentos** (formulario, Document Loader, Embeddings, PGVector) y **agente de
+  coordinación** (memoria, PGVector y HTTP como herramientas). `npm run n8n:preparar` los instala.
+- **Express:** webhook de incidencias en segundo plano (nunca impide crear una incidencia), rutas `/api/integraciones` con
+  autenticación por secreto compartido (`N8N_SECRETO`; apagadas si no está definido) y tabla `incidencias_notificaciones`
+  (migración 005). La lista de incidencias muestra *"Avisada: <área>"*.
+- Hallazgos documentados en `docs/workflows.md`: el nodo de embeddings de n8n no permite 768 dimensiones (tabla propia de 3072),
+  el Error Workflow debe estar activo para atrapar fallas, y si n8n está caído la alerta inmediata se pierde.
+
 ### Decisiones documentadas (Fase 3E)
 
 - `docs/decisiones.md`: por qué RAG y no fine-tuning (y cuándo sí usaría fine-tuning), por qué pgvector y no Qdrant ni
