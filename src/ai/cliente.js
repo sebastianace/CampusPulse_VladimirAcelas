@@ -7,6 +7,7 @@
 // - Temperatura baja para respuestas estables.
 // - Timeout de 15 s con AbortController y un reintento.
 // - Si falla, lanza IANoDisponibleError -> la ruta responde 503.
+// - También genera embeddings (generarEmbeddings) para buscar incidencias parecidas.
 // NUNCA se devuelve una respuesta simulada o de respaldo.
 // =====================================================================
 
@@ -15,6 +16,12 @@ import { GoogleGenAI } from '@google/genai';
 const TEMPERATURA = 0.2;
 const TIMEOUT_MS = 15_000;
 const INTENTOS = 2; // el primero + un reintento
+
+// Embeddings. gemini-embedding-001 devuelve 3072 dimensiones por defecto, pero un índice HNSW de
+// pgvector no admite más de 2000: se piden 768 (db/migrations/004_embeddings.sql).
+export const MODELO_EMBEDDINGS = 'gemini-embedding-001';
+export const DIMENSIONES_EMBEDDING = 768;
+const TIMEOUT_EMBEDDINGS_MS = 8_000; // un solo intento: la sugerencia de parecidas es opcional
 
 // 503: la IA no respondió o respondió algo inutilizable.
 // Lleva status y codigo para que el manejador global de server.js lo traduzca.
@@ -37,6 +44,15 @@ function obtenerCliente() {
   }
   cliente ??= new GoogleGenAI({ apiKey: GEMINI_API_KEY });
   return { ai: cliente, modelo: GEMINI_MODEL };
+}
+
+// Los embeddings solo necesitan la key (no el modelo de texto).
+function obtenerClienteDeEmbeddings() {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new IANoDisponibleError('La IA no está configurada (falta GEMINI_API_KEY). Se omite la búsqueda de incidencias parecidas.');
+  }
+  cliente ??= new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  return cliente;
 }
 
 // Un intento: llama a Gemini y corta la espera a los TIMEOUT_MS.
@@ -81,4 +97,37 @@ export async function generarJSON(prompt, schema) {
     ? `no respondió en ${TIMEOUT_MS / 1000} segundos`
     : 'no respondió correctamente';
   throw new IANoDisponibleError(`La IA ${motivo}. Intenta de nuevo o usa el formulario manual.`);
+}
+
+/**
+ * Convierte textos en vectores (embeddings) para comparar su significado.
+ * Devuelve { vectores: number[][], modelo } con un vector de DIMENSIONES_EMBEDDING por texto, en el
+ * mismo orden. Un solo intento y TIMEOUT_EMBEDDINGS_MS de espera; si falla, lanza IANoDisponibleError.
+ */
+export async function generarEmbeddings(textos) {
+  const ai = obtenerClienteDeEmbeddings();
+  let temporizador;
+  try {
+    const respuesta = await Promise.race([
+      ai.models.embedContent({
+        model: MODELO_EMBEDDINGS,
+        contents: textos,
+        config: { taskType: 'SEMANTIC_SIMILARITY', outputDimensionality: DIMENSIONES_EMBEDDING },
+      }),
+      new Promise((_, rechazar) => {
+        temporizador = setTimeout(() => rechazar(Object.assign(new Error('tiempo agotado'), { name: 'AbortError' })), TIMEOUT_EMBEDDINGS_MS);
+      }),
+    ]);
+    const vectores = (respuesta.embeddings ?? []).map((e) => e.values);
+    const validos = vectores.length === textos.length
+      && vectores.every((v) => Array.isArray(v) && v.length === DIMENSIONES_EMBEDDING && v.every(Number.isFinite));
+    if (!validos) throw new Error('la respuesta no trae los vectores esperados');
+    return { vectores, modelo: MODELO_EMBEDDINGS };
+  } catch (error) {
+    console.warn(`[ia] Embeddings fallaron: ${error.message}`);
+    const motivo = error.name === 'AbortError' ? `no respondió en ${TIMEOUT_EMBEDDINGS_MS / 1000} segundos` : 'no respondió correctamente';
+    throw new IANoDisponibleError(`El servicio de embeddings ${motivo}.`);
+  } finally {
+    clearTimeout(temporizador);
+  }
 }

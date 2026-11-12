@@ -14,6 +14,8 @@ import { fileURLToPath } from 'node:url';
 import { migrar } from '../src/data/migrar.js';
 import { cerrarPool, crearPool, explicarErrorDeConexion } from '../src/data/pg.js';
 import { sembrar } from '../src/data/semilla.js';
+import { esperarEmbeddingsPendientes, usarGeneradorDeEmbeddings } from '../src/ai/similares.js';
+import { generadorDeHash } from './embeddings-falsos.js';
 
 // Toma del .env SOLO las variables de la base (no se carga la key de Gemini en los tests).
 // Lo que ya esté en el entorno tiene prioridad.
@@ -56,14 +58,18 @@ export async function crearBaseDePrueba({ migrada = true } = {}) {
 /**
  * Base temporal ya migrada y sembrada, y la deja como la base de la aplicación (POSTGRES_DB):
  * llámala ANTES de importar src/server.js. cerrar() cierra también el pool de la app y borra la base.
+ * Los embeddings son falsos (tests/embeddings-falsos.js): ningún test de la app llama a Gemini.
  */
 export async function crearBaseDeLaApp() {
   const bd = await crearBaseDePrueba();
   await sembrar(bd.pool);
   process.env.POSTGRES_DB = bd.nombre;
+  const restaurarGenerador = usarGeneradorDeEmbeddings(generadorDeHash);
   return {
     ...bd,
     async cerrar() {
+      await esperarEmbeddingsPendientes(); // los embeddings en segundo plano usan el pool: se esperan antes de cerrarlo
+      restaurarGenerador();
       await cerrarPool();
       await bd.cerrar();
     },
