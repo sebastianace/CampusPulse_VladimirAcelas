@@ -287,6 +287,7 @@ function crearItemIncidencia(incidencia) {
         ? el('span', { className: 'etiqueta', title: 'Personas que confirmaron que era la misma incidencia' },
           `${incidencia.reportesAdicionales} reporte${incidencia.reportesAdicionales > 1 ? 's' : ''} más`)
         : null,
+      ...(incidencia.notificaciones ?? []).map((n) => el('span', { className: 'etiqueta', title: `Aviso enviado por ${n.canal}` }, `Avisada: ${n.area}`)),
       resuelta ? el('span', { className: 'etiqueta etiqueta--resuelta' }, 'Resuelta') : null),
     el('span', { className: 'item__meta' }, [incidencia.area, lugar].filter(Boolean).join(' · ')),
     incidencia.inhabilito && !resuelta ? el('span', { className: 'item__alerta' }, `Fuera de servicio: ${lugar}`) : null,
