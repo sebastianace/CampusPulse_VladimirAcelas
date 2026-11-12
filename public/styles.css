@@ -737,6 +737,14 @@ option { color: var(--texto); background: var(--placa-alta); }
 
 .solicitud { display: flex; flex-wrap: wrap; gap: 8px; }
 
+/* Voz: dictado (micrófono) y lectura en voz alta. Los botones solo existen si el navegador los soporta */
+.btn--voz { gap: 6px; justify-self: end; }
+.btn--voz-icono { min-width: 46px; min-height: 46px; padding: 0; justify-self: auto; }
+.btn--voz-activo { border-color: var(--inhabilitado); color: var(--inhabilitado); animation: latido 1.2s ease-in-out infinite; }
+.tarjeta-ia .btn--voz { justify-self: start; }
+@keyframes latido { 50% { box-shadow: 0 0 0 4px rgb(239 83 80 / 0.25); } }
+@media (prefers-reduced-motion: reduce) { .btn--voz-activo { animation: none; } }
+
 /* Conversación de preguntas a Pulse */
 .turno { display: grid; gap: 8px; }
 .turno__pregunta {
