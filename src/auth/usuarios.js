@@ -1,24 +1,18 @@
 // =====================================================================
 // USUARIOS Y SESIONES (inicio de sesión)
 // ---------------------------------------------------------------------
-// - No hay usuarios ni contraseñas en el repositorio: cada equipo crea
-//   su cuenta desde la pantalla de inicio (registro).
+// - No hay usuarios ni contraseñas en el repositorio: la primera cuenta se
+//   crea desde la pantalla de inicio (registro) y es admin; las demás las
+//   crea un admin.
 // - Las contraseñas se guardan con hash scrypt y sal aleatoria; nunca
 //   en texto plano. Las sesiones se guardan con el hash del token.
-// - Todo vive en data/auth.json (ignorado por Git). "Restaurar datos"
-//   no lo toca, y las sesiones sobreviven a los reinicios de npm run dev.
+// - Todo vive en PostgreSQL (tablas usuarios y sesiones). "Restaurar datos"
+//   no lo toca, y las sesiones sobreviven a los reinicios del servidor.
 // =====================================================================
 
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { obtenerPool } from '../data/pg.js';
 import { DatosInvalidosError, ErrorApi } from '../domain/errors.js';
-
-const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
-
-// AUTH_PATH permite usar otro archivo en los tests.
-const RUTA_AUTH = process.env.AUTH_PATH ?? join(RAIZ, 'data', 'auth.json');
 
 // Reglas del inicio de sesión
 export const HORAS_SESION = 8;          // tiempo que dura una sesión
@@ -28,28 +22,13 @@ const FORMATO_USUARIO = /^[a-z0-9._-]{3,30}$/; // minúsculas, números, punto, 
 // Roles: el primer usuario registrado es admin; el admin crea a los demás (profesor o soporte técnico).
 export const ROLES = ['admin', 'profesor', 'soporte_tecnico'];
 export const ROLES_CREABLES = ['profesor', 'soporte_tecnico']; // los que un admin puede crear
-const ROL_POR_DEFECTO = 'profesor'; // cuentas antiguas sin rol o con un rol que ya no existe
+const ROL_POR_DEFECTO = 'profesor'; // al importar cuentas antiguas sin rol o con un rol que ya no existe
 
 // 401: no hay sesión o las credenciales no son válidas.
 export class NoAutorizadoError extends ErrorApi {
   constructor(mensaje, codigo = 'SESION_REQUERIDA') {
     super(401, codigo, mensaje);
   }
-}
-
-// ---------- archivo data/auth.json ----------
-
-function leer() {
-  if (!existsSync(RUTA_AUTH)) return { usuarios: [], sesiones: [] };
-  return JSON.parse(readFileSync(RUTA_AUTH, 'utf8'));
-}
-
-// Escritura atómica, igual que store.js: temporal + rename.
-function guardar(datos) {
-  mkdirSync(dirname(RUTA_AUTH), { recursive: true });
-  const temporal = `${RUTA_AUTH}.${process.pid}.tmp`;
-  writeFileSync(temporal, JSON.stringify(datos, null, 2), 'utf8');
-  renameSync(temporal, RUTA_AUTH);
 }
 
 // ---------- contraseñas y tokens ----------
@@ -80,37 +59,11 @@ function validarCredenciales(datos) {
 
 // ---------- funciones públicas ----------
 
-/**
- * Registro público: solo sirve para crear la primera cuenta, que es admin.
- * Después el registro se cierra y las cuentas las crea un admin con crearCuenta().
- */
-export function registrar(datos) {
-  if (leer().usuarios.length > 0) {
-    throw new ErrorApi(403, 'REGISTRO_CERRADO', 'El registro está cerrado: pide a un administrador que cree tu cuenta');
-  }
-  return guardarUsuario(datos, 'admin');
-}
+const BLOQUEO_REGISTRO = 727276; // número cualquiera: evita que dos registros simultáneos creen dos admins
+const USUARIO_REPETIDO = '23505'; // error de PostgreSQL: la clave primaria ya existe
 
-/** ¿Está abierto el registro público? Solo mientras no exista ninguna cuenta. */
-export function registroAbierto() {
-  return leer().usuarios.length === 0;
-}
-
-/** Todas las cuentas, sin claves: [{usuario, nombre, rol}]. */
-export function listarUsuarios() {
-  return leer().usuarios.map(publico);
-}
-
-/** Cuenta creada por un admin. El rol debe ser uno de ROLES_CREABLES. Devuelve {usuario, nombre, rol}. */
-export function crearCuenta(datos) {
-  if (!ROLES_CREABLES.includes(datos?.rol)) {
-    throw new DatosInvalidosError(`El rol debe ser uno de: ${ROLES_CREABLES.join(', ')}`);
-  }
-  return guardarUsuario(datos, datos.rol);
-}
-
-// Valida los datos y guarda el usuario con el rol indicado.
-function guardarUsuario(datos, rol) {
+// Valida los datos y calcula el hash de la clave (422 si algo está mal). No toca la base.
+function prepararUsuario(datos) {
   const { usuario, clave } = validarCredenciales(datos);
   const nombre = String(datos?.nombre ?? '').trim();
   if (!FORMATO_USUARIO.test(usuario)) {
@@ -120,53 +73,100 @@ function guardarUsuario(datos, rol) {
   if (clave.length < MIN_LARGO_CLAVE) {
     throw new DatosInvalidosError(`La contraseña debe tener al menos ${MIN_LARGO_CLAVE} caracteres`);
   }
+  return { usuario, nombre, claveHash: hashClave(clave) };
+}
 
-  const auth = leer();
-  if (auth.usuarios.some((u) => u.usuario === usuario)) {
-    throw new ErrorApi(409, 'USUARIO_EXISTE', `El usuario "${usuario}" ya existe`);
+// Inserta el usuario con el rol indicado. La clave primaria impide repetidos, incluso si dos
+// peticiones piden el mismo usuario a la vez.
+async function insertarUsuario(ejecutor, { usuario, nombre, claveHash }, rol) {
+  try {
+    await ejecutor.query('INSERT INTO usuarios (usuario, nombre, rol, clave_hash) VALUES ($1, $2, $3, $4)', [usuario, nombre, rol, claveHash]);
+  } catch (error) {
+    if (error.code === USUARIO_REPETIDO) throw new ErrorApi(409, 'USUARIO_EXISTE', `El usuario "${usuario}" ya existe`);
+    throw error;
   }
-  const nuevo = { usuario, nombre, rol, clave: hashClave(clave) };
-  auth.usuarios.push(nuevo);
-  guardar(auth);
-  return publico(nuevo);
+  return publico({ usuario, nombre, rol });
+}
+
+/**
+ * Registro público: solo sirve para crear la primera cuenta, que es admin.
+ * Después el registro se cierra y las cuentas las crea un admin con crearCuenta().
+ * Contar y crear van en una transacción con bloqueo: si dos personas se registran a la vez en una
+ * base vacía, solo una crea la cuenta admin y la otra recibe 403.
+ */
+export async function registrar(datos) {
+  const cliente = await obtenerPool().connect();
+  try {
+    await cliente.query('BEGIN');
+    await cliente.query('SELECT pg_advisory_xact_lock($1)', [BLOQUEO_REGISTRO]);
+    const { rows } = await cliente.query('SELECT count(*)::int AS n FROM usuarios');
+    if (rows[0].n > 0) {
+      throw new ErrorApi(403, 'REGISTRO_CERRADO', 'El registro está cerrado: pide a un administrador que cree tu cuenta');
+    }
+    const creada = await insertarUsuario(cliente, prepararUsuario(datos), 'admin');
+    await cliente.query('COMMIT');
+    return creada;
+  } catch (error) {
+    await cliente.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    cliente.release();
+  }
+}
+
+/** ¿Está abierto el registro público? Solo mientras no exista ninguna cuenta. */
+export async function registroAbierto() {
+  const { rows } = await obtenerPool().query('SELECT NOT EXISTS (SELECT 1 FROM usuarios) AS abierto');
+  return rows[0].abierto;
+}
+
+/** Todas las cuentas, sin claves: [{usuario, nombre, rol}]. */
+export async function listarUsuarios() {
+  const { rows } = await obtenerPool().query('SELECT usuario, nombre, rol FROM usuarios ORDER BY creado, usuario');
+  return rows.map(publico);
+}
+
+/** Cuenta creada por un admin. El rol debe ser uno de ROLES_CREABLES. Devuelve {usuario, nombre, rol}. */
+export async function crearCuenta(datos) {
+  if (!ROLES_CREABLES.includes(datos?.rol)) {
+    throw new DatosInvalidosError(`El rol debe ser uno de: ${ROLES_CREABLES.join(', ')}`);
+  }
+  return insertarUsuario(obtenerPool(), prepararUsuario(datos), datos.rol);
 }
 
 /** Comprueba usuario y contraseña. Devuelve {usuario, nombre, rol} o lanza 401. */
-export function autenticar(datos) {
+export async function autenticar(datos) {
   const { usuario, clave } = validarCredenciales(datos);
-  const encontrado = leer().usuarios.find((u) => u.usuario === usuario);
+  const { rows } = await obtenerPool().query('SELECT usuario, nombre, rol, clave_hash FROM usuarios WHERE usuario = $1', [usuario]);
+  const encontrado = rows[0];
   // Mismo mensaje si el usuario no existe o la clave falla: no se revela cuál de los dos
-  if (!encontrado || !claveCorrecta(clave, encontrado.clave)) {
+  if (!encontrado || !claveCorrecta(clave, encontrado.clave_hash)) {
     throw new NoAutorizadoError('Usuario o contraseña incorrectos', 'CREDENCIALES_INVALIDAS');
   }
   return publico(encontrado);
 }
 
 /** Abre una sesión para el usuario y devuelve el token (va en la cookie). */
-export function crearSesion(usuario) {
+export async function crearSesion(usuario) {
   const token = randomBytes(32).toString('hex');
-  const auth = leer();
-  const ahora = Date.now();
-  // De paso se limpian las sesiones vencidas
-  auth.sesiones = auth.sesiones.filter((s) => s.expira > ahora);
-  auth.sesiones.push({ token: hashToken(token), usuario, expira: ahora + HORAS_SESION * 3_600_000 });
-  guardar(auth);
+  const pool = obtenerPool();
+  await pool.query('DELETE FROM sesiones WHERE expira < now()'); // de paso se limpian las vencidas
+  await pool.query('INSERT INTO sesiones (token_hash, usuario, expira) VALUES ($1, $2, now() + make_interval(hours => $3))',
+    [hashToken(token), usuario, HORAS_SESION]);
   return token;
 }
 
 /** Usuario dueño del token, o null si no hay sesión válida. */
-export function usuarioDeSesion(token) {
+export async function usuarioDeSesion(token) {
   if (!token) return null;
-  const auth = leer();
-  const sesion = auth.sesiones.find((s) => s.token === hashToken(token) && s.expira > Date.now());
-  const usuario = sesion && auth.usuarios.find((u) => u.usuario === sesion.usuario);
-  return usuario ? publico(usuario) : null;
+  const { rows } = await obtenerPool().query(
+    `SELECT u.usuario, u.nombre, u.rol FROM sesiones s JOIN usuarios u USING (usuario)
+     WHERE s.token_hash = $1 AND s.expira > now()`, [hashToken(token)]);
+  return rows[0] ? publico(rows[0]) : null;
 }
 
 /** Cierra la sesión del token (si existe). */
-export function cerrarSesion(token) {
+export async function cerrarSesion(token) {
   if (!token) return;
-  const auth = leer();
-  auth.sesiones = auth.sesiones.filter((s) => s.token !== hashToken(token));
-  guardar(auth);
+  await obtenerPool().query('DELETE FROM sesiones WHERE token_hash = $1', [hashToken(token)]);
 }

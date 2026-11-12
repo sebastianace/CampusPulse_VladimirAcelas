@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import { crearBaseDePrueba } from './ayuda-bd.js';
 import { migrar } from '../src/data/migrar.js';
 import { sembrar } from '../src/data/semilla.js';
-import { crearEstadoInicial } from '../src/data/store.js';
+import { crearEstadoInicial } from '../src/data/estado-inicial.js';
 import {
   AREAS, CATEGORIAS, ESTADOS_ESPACIO, ESTADOS_INCIDENCIA, ESTADOS_PRESTAMO, ESTADOS_RECURSO, ORIGENES_INCIDENCIA, PRIORIDADES,
 } from '../src/config/reglas.js';
@@ -152,7 +152,7 @@ describe('Usuarios y sesiones', () => {
 });
 
 describe('Semilla', () => {
-  test('carga los espacios, recursos y el reporte de calidad que hoy carga db.json', async () => {
+  test('carga los espacios, recursos y el reporte de calidad del estado inicial', async () => {
     const resultado = await sembrar(pool);
     const esperado = crearEstadoInicial();
     assert.deepEqual(resultado, { espacios: esperado.espacios.length, recursos: esperado.recursos.length });

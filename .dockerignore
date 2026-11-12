@@ -1,0 +1,10 @@
+# Lo que nunca debe entrar a la imagen
+.env
+.env.*
+node_modules
+.git
+data/db.json
+data/auth.json
+tests
+docs
+evaluacion

@@ -59,8 +59,8 @@ las reglas deciden. Los cambios de la v2 se registran en [CHANGELOG.md](CHANGELO
 
 - **Node.js 24** + **Express 5**, módulos ES (`"type": "module"`).
 - **Frontend** en HTML, CSS y JavaScript nativo, sin frameworks ni build.
-- **Persistencia** en **PostgreSQL 16 con pgvector** (Docker). Las cuentas y sesiones siguen en
-  `data/auth.json` por ahora; ver [docs/base-de-datos.md](docs/base-de-datos.md).
+- **Persistencia** en **PostgreSQL 16 con pgvector** (Docker): datos del campus, cuentas y
+  sesiones. Ver [docs/base-de-datos.md](docs/base-de-datos.md).
 - **IA**: Google Gemini mediante `@google/genai`.
 - **Tests** con `node:test` (sin dependencias extra).
 
@@ -74,7 +74,7 @@ src/auth/          usuarios.js: cuentas (clave con hash scrypt) y sesiones
 src/domain/        Reglas de negocio: reservas, préstamos, incidencias, fechas, errores
 src/config/        reglas.js: TODAS las constantes de negocio y valores cerrados
 src/data/          almacen.js (lee y guarda en PostgreSQL), repos/ (una tabla por archivo), pg.js, migrar.js, semilla.js y arranque.js;
-                   loader.js (lee el CSV) y store.js (el viejo db.json, se retirará)
+                   loader.js (lee el CSV), estado-inicial.js (arma los datos iniciales) e importar-cuentas.js
 db/migrations/     Esquema SQL de PostgreSQL (ver docs/base-de-datos.md)
 src/ai/            cliente.js, validar.js, triaje.js, asistente.js, limite.js, cache.js
 src/ai/prompts/    Un archivo por prompt del sistema, con la plantilla de la clase (ver docs/biblioteca-prompts.md)
@@ -103,13 +103,15 @@ errores responden `{error: {codigo, mensaje}}` con el mensaje en español: 422 d
   y `soporte_tecnico` (además resuelve incidencias, lo que rehabilita espacios y equipos). La
   tabla de permisos está en [docs/contrato-api.md](docs/contrato-api.md).
 - Las contraseñas se guardan con hash `scrypt` y sal aleatoria, y las sesiones con el hash de su
-  token, en `data/auth.json` (ignorado por Git). La sesión dura 8 horas y viaja en una cookie
+  token, en PostgreSQL (tablas `usuarios` y `sesiones`). La sesión dura 8 horas y viaja en una cookie
   `HttpOnly`, que además es `Secure` (solo HTTPS) cuando `NODE_ENV=production`.
 - Tras **5 intentos fallidos** del mismo usuario desde la misma IP en 15 minutos, el login
   responde `429` hasta que pase la ventana (`src/auth/intentos.js`). Los contadores viven en
   memoria y se borran al reiniciar el servidor.
 - **Restaurar datos** no borra las cuentas, y las sesiones sobreviven a los reinicios de
   `npm run dev` (útil en el reto en vivo).
+- Si venías de la versión con `data/auth.json`, copia tus cuentas con `npm run importar-cuentas`
+  (los hashes se copian tal cual; las sesiones no, así que vuelve a iniciar sesión).
 
 ## Rol de la IA y cómo se controla
 
@@ -241,13 +243,27 @@ POSTGRES_PASSWORD=una_contraseña_que_tu_elijas
 POSTGRES_PUERTO=5433
 ```
 
-Levanta la base de datos antes de arrancar la app (la primera vez que arranca, la app aplica las
-migraciones y carga los datos iniciales sola):
+Hay dos formas de correrlo:
+
+**A. Todo en Docker** (la más simple; no hace falta tener Node instalado):
+
+```bash
+docker compose up -d --build
+```
+
+La app queda en `http://localhost:3000`. La primera vez aplica las migraciones y carga los datos
+iniciales sola. Para apagarla: `docker compose stop` (conserva los datos) o `docker compose down -v`
+(borra también los datos).
+
+**B. Solo la base en Docker y la app con Node** (para desarrollar; se reinicia al guardar):
 
 ```bash
 docker compose up -d db
 npm run dev
 ```
+
+No corras las dos a la vez: usan el mismo puerto (3000). Con `NODE_ENV=production` la cookie de
+sesión es `Secure` y solo viaja por HTTPS: déjalo vacío mientras uses `http://localhost`.
 
 `GEMINI_MODEL` es el id exacto del modelo (por ejemplo `gemini-3.6-flash`, el que usamos en la
 demo). Si `npm run probar-ia` responde 503 ("high demand"), el modelo está saturado en ese
@@ -262,6 +278,7 @@ error claro y el formulario manual, nunca con una respuesta inventada.
 | `npm test` | Ejecuta las pruebas de las reglas |
 | `npm run probar-ia` | Comprueba que la key y el modelo de Gemini responden |
 | `npm run migrar` | Aplica las migraciones de `db/migrations/` a PostgreSQL (necesita `docker compose up -d db`) |
+| `npm run importar-cuentas` | Copia las cuentas del viejo `data/auth.json` a PostgreSQL (se corre una vez) |
 | `npm run semilla` | Carga espacios, recursos y calidad de datos en PostgreSQL |
 | `npm run medir-triaje` | Mide el triaje sin ejemplos y con ellos (24 llamadas a Gemini, ~5 min; gasta cuota) |
 

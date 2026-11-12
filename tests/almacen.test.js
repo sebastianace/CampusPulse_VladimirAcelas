@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------------
 // Necesitan PostgreSQL levantado: docker compose up -d db
 // Comprueban que src/data/almacen.js (foto + diferencias) devuelve y guarda los datos
-// con la misma forma que db.json y respeta las transacciones.
+// con la misma forma que tenía db.json y respeta las transacciones.
 // =====================================================================
 
 import { test, describe, before, after } from 'node:test';
@@ -12,7 +12,7 @@ import { crearBaseDeLaApp } from './ayuda-bd.js';
 
 const bd = await crearBaseDeLaApp();
 const { leerDB, actualizarDB, restaurarDB } = await import('../src/data/almacen.js');
-const { crearEstadoInicial } = await import('../src/data/store.js');
+const { crearEstadoInicial } = await import('../src/data/estado-inicial.js');
 const { REGLAS } = await import('../src/config/reglas.js');
 const { cancelarReserva, crearReserva, editarReserva } = await import('../src/domain/reservas.js');
 const { crearIncidencia, resolverIncidencia } = await import('../src/domain/incidencias.js');
@@ -32,7 +32,7 @@ const DIA = diaHabilFuturo();
 const reserva = (cambios = {}) => ({ espacioId: 'apolo', responsable: 'Ana', asistentes: 5, inicio: `${DIA}T10:00`, fin: `${DIA}T12:00`, ...cambios });
 
 describe('Lectura', () => {
-  test('devuelve los mismos espacios, recursos y calidad de datos que db.json, en el mismo orden', async () => {
+  test('devuelve los mismos espacios, recursos y calidad de datos del estado inicial, en el mismo orden', async () => {
     const db = await leerDB();
     const esperado = crearEstadoInicial();
     assert.deepEqual(db.espacios, esperado.espacios);
