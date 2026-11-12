@@ -6,6 +6,21 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Preguntas con fuentes: RAG (Fase 3C)
+
+- **Servicio `pulse-ai`** (Python, FastAPI y LangChain, en `compose.yaml`): ingesta de `knowledge/` con
+  `MarkdownHeaderTextSplitter` y `RecursiveCharacterTextSplitter`, embeddings de Gemini en pgvector (tabla
+  `conocimiento`, índice HNSW), reformulación con memoria, **reranking** con Gemini y respuesta con citas.
+  Si los documentos no tienen la respuesta, dice que no la sabe. Ver `docs/rag.md`.
+- **`POST /api/ia/preguntar`** y **`POST /api/ia/asistente`**: la barra Ctrl+K decide si la persona quiere reservar
+  una sala o hacer una pregunta, y las respuestas traen *Ver fuentes*. `POST /api/ia/conocimiento/ingestar` (solo
+  admin) recarga los documentos. Si `pulse-ai` cae, solo falla esta función.
+- **Documentos de ejemplo** en `knowledge/` (reglamento, espacios, préstamos, incidencias, preguntas frecuentes), con
+  un test que avisa si una cifra deja de coincidir con `reglas.js`.
+- **Evaluación**: 15 preguntas con y sin reranking (`npm run evaluar-rag`, `docs/evaluacion-rag.md`).
+- Corregidos durante las pruebas: la reformulación mezclaba temas distintos (2 de 4 intentos), el servicio fallaba al
+  reiniciar con la tabla ya creada y un fragmento "Introducción" ensuciaba la búsqueda.
+
 ### Incidencias parecidas (Fase 3B)
 
 - Al confirmar un reporte, la app busca incidencias **abiertas parecidas** con embeddings de Gemini
