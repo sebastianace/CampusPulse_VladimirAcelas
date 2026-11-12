@@ -42,6 +42,9 @@ services:
       # Dentro de la red de Docker, pulse-ai es el servicio "pulse-ai".
       PULSE_AI_URL: http://pulse-ai:8000
       PULSE_AI_TOKEN: ${PULSE_AI_TOKEN:-}
+      # Webhook firmado hacia n8n al crear una incidencia. Sin N8N_SECRETO la integración queda apagada.
+      N8N_WEBHOOK_URL: http://n8n:5678/webhook/incidencia-nueva
+      N8N_SECRETO: ${N8N_SECRETO:-}
     ports:
       - "127.0.0.1:${PORT:-3000}:3000"
 
@@ -68,5 +71,43 @@ services:
     ports:
       - "127.0.0.1:${PULSE_AI_PUERTO:-8000}:8000"
 
+  # Automatización con n8n (edición Community, autoalojada): avisa de las incidencias, resume el día con IA, ingiere
+  # documentos y tiene un agente para el personal de coordinación. Ver docs/workflows.md.
+  #   docker compose up -d n8n mailpit  y luego  npm run n8n:preparar  (importa credenciales y flujos)
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:2.47.4
+    depends_on:
+      db:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    environment:
+      # Secreto compartido con Campus Pulse: firma del webhook y autenticación de /api/integraciones.
+      N8N_SECRETO: ${N8N_SECRETO:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-}
+      CAMPUS_URL: http://app:3000
+      GENERIC_TIMEZONE: America/Bogota
+      TZ: America/Bogota
+      # Los flujos leen N8N_SECRETO y GEMINI_MODEL con $env y verifican la firma con el módulo crypto de Node.
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+      NODE_FUNCTION_ALLOW_BUILTIN: crypto
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_VERSION_NOTIFICATIONS_ENABLED: "false"
+      WEBHOOK_URL: http://localhost:5678/
+    ports:
+      - "127.0.0.1:${N8N_PUERTO:-5678}:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      # Los flujos exportados (JSON) se montan en solo lectura para importarlos.
+      - ./n8n:/workflows:ro
+
+  # Buzón de correo local y gratuito: n8n envía aquí los avisos (SMTP) y se leen en http://localhost:8025.
+  # No sale ningún correo a Internet.
+  mailpit:
+    image: axllent/mailpit:v1.33.1
+    ports:
+      - "127.0.0.1:${MAILPIT_PUERTO:-8025}:8025"
+
 volumes:
   pgdata:
+  n8n_data:
