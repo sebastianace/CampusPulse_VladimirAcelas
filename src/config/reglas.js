@@ -82,6 +82,12 @@ export const REGLAS = {
   UMBRAL_SIMILITUD_INCIDENCIA: 0.93,
   // Cuántas incidencias parecidas se muestran como máximo.
   MAX_INCIDENCIAS_PARECIDAS: 3,
+
+  // Preguntas al asistente de conocimiento (RAG, servicio pulse-ai).
+  // Cuántos mensajes anteriores de la conversación se envían para entender preguntas de seguimiento.
+  MAX_MENSAJES_HISTORIAL: 6,
+  // Segundos que se espera a pulse-ai (reformular + buscar + reordenar + responder son varias llamadas a Gemini).
+  TIMEOUT_CONOCIMIENTO_SEGUNDOS: 40,
 };
 
 // =====================================================================
