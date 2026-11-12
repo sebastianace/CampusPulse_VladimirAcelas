@@ -31,22 +31,22 @@ export function tokenDe(req) {
 // En producción la cookie es "secure": el navegador solo la envía por HTTPS.
 const opcionesCookie = () => ({ httpOnly: true, sameSite: 'lax', path: '/', secure: process.env.NODE_ENV === 'production' });
 
-function abrirSesion(res, usuario) {
-  const token = crearSesion(usuario.usuario);
+async function abrirSesion(res, usuario) {
+  const token = await crearSesion(usuario.usuario);
   res.cookie(COOKIE, token, { ...opcionesCookie(), maxAge: HORAS_SESION * 3_600_000 });
 }
 
-router.get('/estado', (req, res) => {
-  res.json({ registroAbierto: registroAbierto() });
+router.get('/estado', async (req, res) => {
+  res.json({ registroAbierto: await registroAbierto() });
 });
 
-router.post('/registro', (req, res) => {
-  const usuario = registrar(req.body);
-  abrirSesion(res, usuario);
+router.post('/registro', async (req, res) => {
+  const usuario = await registrar(req.body);
+  await abrirSesion(res, usuario);
   res.status(201).json(usuario);
 });
 
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   // Mismo formato que usa autenticar(): así "ANA" y "ana" cuentan como el mismo usuario
   const pedido = String(req.body?.usuario ?? '').trim().toLowerCase();
   const espera = segundosDeBloqueo(pedido, req.ip);
@@ -60,31 +60,31 @@ router.post('/login', (req, res) => {
 
   let usuario;
   try {
-    usuario = autenticar(req.body);
+    usuario = await autenticar(req.body);
   } catch (error) {
     if (error.codigo === 'CREDENCIALES_INVALIDAS') registrarFallo(pedido, req.ip);
     throw error;
   }
   limpiarFallos(pedido, req.ip);
-  abrirSesion(res, usuario);
+  await abrirSesion(res, usuario);
   res.json(usuario);
 });
 
-router.post('/logout', (req, res) => {
-  cerrarSesion(tokenDe(req));
+router.post('/logout', async (req, res) => {
+  await cerrarSesion(tokenDe(req));
   res.clearCookie(COOKIE, opcionesCookie());
   res.json({ mensaje: 'Sesión cerrada' });
 });
 
-router.get('/yo', (req, res) => {
-  const usuario = usuarioDeSesion(tokenDe(req));
+router.get('/yo', async (req, res) => {
+  const usuario = await usuarioDeSesion(tokenDe(req));
   if (!usuario) throw new NoAutorizadoError('Inicia sesión para continuar');
   res.json(usuario);
 });
 
 /** Middleware: deja pasar solo peticiones con sesión válida (si no, 401). */
-export function exigirSesion(req, res, next) {
-  const usuario = usuarioDeSesion(tokenDe(req));
+export async function exigirSesion(req, res, next) {
+  const usuario = await usuarioDeSesion(tokenDe(req));
   if (!usuario) throw new NoAutorizadoError('Inicia sesión para continuar');
   req.usuario = usuario;
   next();

@@ -9,13 +9,9 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const CARPETA = mkdtempSync(join(tmpdir(), 'campus-pulse-fewshot-'));
-process.env.DB_PATH = join(CARPETA, 'db.json');
-const { leerDB } = await import('../src/data/store.js');
+const { crearEstadoInicial } = await import('../src/data/estado-inicial.js');
 const { AREAS, CATEGORIAS, PRIORIDADES, REGLAS } = await import('../src/config/reglas.js');
 const { EJEMPLOS_TRIAJE } = await import('../src/ai/prompts/ejemplos-triaje.js');
 const { promptTriaje } = await import('../src/ai/prompts/triaje.js');
@@ -23,9 +19,8 @@ const { construirPrompt } = await import('../src/ai/prompts/estructura.js');
 const { CASOS_TRIAJE } = await import('../evaluacion/triaje-casos.js');
 const { CAMPOS, compararTriaje, resumir } = await import('../src/ai/medir-triaje.js');
 
-const { espacios, recursos } = leerDB();
+const { espacios, recursos } = crearEstadoInicial();
 const CATALOGO = { espacios, recursos };
-rmSync(CARPETA, { recursive: true, force: true });
 
 // Revisa que una clasificación sea válida: enums, IDs del catálogo y la regla de inhabilitar.
 function assertClasificacionValida(c, nombre) {

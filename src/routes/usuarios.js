@@ -7,12 +7,12 @@ import { crearCuenta, listarUsuarios } from '../auth/usuarios.js';
 
 const router = Router();
 
-router.get('/', (req, res) => {
-  res.json(listarUsuarios());
+router.get('/', async (req, res) => {
+  res.json(await listarUsuarios());
 });
 
-router.post('/', (req, res) => {
-  res.status(201).json(crearCuenta(req.body));
+router.post('/', async (req, res) => {
+  res.status(201).json(await crearCuenta(req.body));
 });
 
 export default router;

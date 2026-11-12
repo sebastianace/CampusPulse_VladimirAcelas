@@ -10,7 +10,8 @@
     "probar-ia": "node --env-file-if-exists=.env src/ai/probar-gemini.js",
     "medir-triaje": "node --env-file-if-exists=.env src/ai/medir-triaje.js",
     "migrar": "node --env-file-if-exists=.env src/data/migrar.js",
-    "semilla": "node --env-file-if-exists=.env src/data/semilla.js"
+    "semilla": "node --env-file-if-exists=.env src/data/semilla.js",
+    "importar-cuentas": "node --env-file-if-exists=.env src/data/importar-cuentas.js"
   },
   "keywords": [],
   "author": "",

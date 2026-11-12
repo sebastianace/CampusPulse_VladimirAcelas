@@ -1,10 +1,13 @@
 # Base de datos (PostgreSQL + pgvector)
 
-> **Estado:** migración en curso (Fase 2 del plan). **Espacios, recursos, reservas, préstamos e
-> incidencias ya viven en PostgreSQL.** Faltan las cuentas y sesiones (siguen en `data/auth.json`) y
-> retirar el viejo `data/db.json`.
+> **Estado:** todos los datos (espacios, recursos, reservas, préstamos, incidencias, cuentas y
+> sesiones) viven en PostgreSQL. Los archivos `data/db.json` y `data/auth.json` de versiones
+> anteriores ya no se usan.
 
 ## Cómo levantarla
+
+`docker compose up -d --build` levanta la app **y** la base (la app en `http://localhost:3000`).
+Para desarrollar con `npm run dev` se levanta solo la base, como se explica a continuación.
 
 1. Agrega a tu `.env` (nunca lo subas al repositorio) una contraseña que elijas:
 
@@ -133,10 +136,33 @@ rechazar a la perdedora con un *deadlock* (`40P01`, detectado tras ~1 s) en luga
 restricción (en una prueba de 60 rondas ocurrió 3 veces). Aun así solo se guarda una reserva. Por eso
 la aplicación mantiene el bloqueo: con él, la respuesta es siempre un `409` limpio e inmediato.
 
+### Cuentas y sesiones
+
+Las cuentas (`usuarios`) y las sesiones (`sesiones`) también están en PostgreSQL
+([`src/auth/usuarios.js`](../src/auth/usuarios.js)). Las contraseñas siguen guardándose con scrypt
+y sal aleatoria, y las sesiones con el hash SHA-256 del token. Dos detalles que antes no hacían falta:
+
+- **El primer admin:** si dos personas se registran a la vez en una base vacía, ambas verían "no hay
+  cuentas" y las dos serían admin. El registro cuenta y crea dentro de una transacción con bloqueo
+  (`pg_advisory_xact_lock`), así que solo una crea la cuenta y la otra recibe `403`. Un test lo
+  demuestra: sin el bloqueo falla 5 de 5 veces.
+- **Usuarios repetidos:** la clave primaria de `usuarios` impide dos cuentas con el mismo nombre
+  aunque dos peticiones lo pidan a la vez; el error `23505` se traduce a `409 USUARIO_EXISTE`.
+
+Los roles ahora los fija la base: un `CHECK` solo acepta `admin`, `profesor` y `soporte_tecnico`.
+`npm run importar-cuentas` copia las cuentas del viejo `data/auth.json` (los roles que ya no existen
+pasan a `profesor`; si no queda ningún admin, la primera cuenta importada lo es).
+
 ## Pendiente de la Fase 2
 
 1. ✅ Servicio, migraciones, semilla y pruebas del esquema.
 2. ✅ Espacios, recursos, reservas, préstamos e incidencias en PostgreSQL, con pruebas de peticiones
    simultáneas.
-3. Cuentas y sesiones en PostgreSQL; retirar `data/db.json` y `store.js`; sumar la app a
-   `compose.yaml`.
+3. ✅ Cuentas y sesiones en PostgreSQL, con importador de las cuentas anteriores.
+4. ✅ `store.js` y `data/db.json` retirados; el estado inicial se arma en `src/data/estado-inicial.js`.
+5. ✅ La app dentro de `compose.yaml` (`Dockerfile`, usuario sin permisos de administrador, sin `.env`
+   dentro de la imagen). Se comprobó que al reiniciar solo el contenedor de la app, la sesión y los
+   datos siguen ahí porque viven en PostgreSQL.
+
+**La Fase 2 está completa:** `docker compose up -d --build` levanta app y base, los tests pasan y dos
+reservas simultáneas en la misma franja dejan solo una.

@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------------
 // La IA sugiere, las reglas deciden. Todo lo que devuelve la IA se
 // compara contra los valores cerrados de src/config/reglas.js y contra
-// los IDs reales del catálogo (db.json).
+// los IDs reales del catálogo (la base de datos).
 // - Un valor fuera de la lista o un ID que no existe se convierte en
 //   null: la UI le pide a la persona elegirlo a mano.
 // - Nunca se inventa ni se "adivina" un valor de reemplazo.

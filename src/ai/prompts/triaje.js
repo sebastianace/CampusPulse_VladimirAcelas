@@ -31,7 +31,7 @@ function formatearEjemplos() {
 }
 
 /**
- * Prompt para clasificar una incidencia. catalogo = {espacios, recursos} de db.json.
+ * Prompt para clasificar una incidencia. catalogo = {espacios, recursos} de la base de datos.
  * conEjemplos: true (por defecto) agrega los casos few-shot; false deja el prompt zero-shot
  * (se usa para medir si los ejemplos mejoran la clasificación).
  */

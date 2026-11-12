@@ -1,21 +1,15 @@
 // =====================================================================
 // TESTS DEL INICIO DE SESIÓN (node:test)
 // ---------------------------------------------------------------------
-// Levanta el servidor con una base y un archivo de usuarios temporales
+// Levanta el servidor con una base PostgreSQL temporal (docker compose up -d db)
 // y prueba registro, login, rutas protegidas y cierre de sesión.
 // =====================================================================
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-
 import { crearBaseDeLaApp } from './ayuda-bd.js';
 
-const CARPETA = mkdtempSync(join(tmpdir(), 'campus-pulse-auth-'));
 const bd = await crearBaseDeLaApp(); // la app corre contra una base PostgreSQL temporal
-process.env.AUTH_PATH = join(CARPETA, 'auth.json');
 const { app } = await import('../src/server.js');
 
 let servidor;
@@ -27,7 +21,6 @@ before(() => {
 after(async () => {
   servidor.close();
   await bd.cerrar();
-  rmSync(CARPETA, { recursive: true, force: true });
 });
 
 // Hace la petición y devuelve {status, cuerpo, cookie}.
@@ -56,8 +49,8 @@ test('estado: sin cuentas el registro está abierto; con la primera se cierra', 
   assert.deepEqual((await pedir('/api/auth/estado')).cuerpo, { registroAbierto: true });
   await pedir('/api/auth/registro', 'POST', { usuario: 'temporal', nombre: 'Temporal', clave: 'clave-temporal' });
   assert.deepEqual((await pedir('/api/auth/estado')).cuerpo, { registroAbierto: false });
-  // Se deja el archivo vacío para que el siguiente test cree la primera cuenta
-  writeFileSync(process.env.AUTH_PATH, JSON.stringify({ usuarios: [], sesiones: [] }));
+  // Se vacía la tabla para que el siguiente test cree la primera cuenta
+  await bd.pool.query('TRUNCATE usuarios CASCADE');
 });
 
 test('registro: crea la cuenta, abre sesión y no guarda la clave en texto plano', async () => {
@@ -66,7 +59,10 @@ test('registro: crea la cuenta, abre sesión y no guarda la clave en texto plano
   assert.deepEqual(cuerpo, { usuario: 'ana.gomez', nombre: 'Ana Gómez', rol: 'admin' }); // primera cuenta
   assert.match(cookie, /^sesion=/);
   assert.equal((await pedir('/api/espacios', 'GET', null, cookie)).status, 200);
-  assert.ok(!readFileSync(process.env.AUTH_PATH, 'utf8').includes(ANA.clave));
+  const { rows } = await bd.pool.query('SELECT clave_hash FROM usuarios');
+  assert.equal(rows.length, 1);
+  assert.ok(!rows[0].clave_hash.includes(ANA.clave), 'la clave no se guarda en texto plano');
+  assert.match(rows[0].clave_hash, /^[0-9a-f]{32}:[0-9a-f]{128}$/, 'sal:hash scrypt');
 });
 
 test('registro público: después de la primera cuenta queda cerrado (403)', async () => {
@@ -124,4 +120,28 @@ test('logout: la sesión deja de servir', async () => {
   const { cookie } = await pedir('/api/auth/login', 'POST', { usuario: ANA.usuario, clave: ANA.clave });
   assert.equal((await pedir('/api/auth/logout', 'POST', null, cookie)).status, 200);
   assert.equal((await pedir('/api/espacios', 'GET', null, cookie)).status, 401);
+});
+
+test('las sesiones viven en la base: se guarda el hash del token, no el token', async () => {
+  const { cookie } = await pedir('/api/auth/login', 'POST', { usuario: ANA.usuario, clave: ANA.clave });
+  const token = decodeURIComponent(cookie.split('=')[1]);
+  const { rows } = await bd.pool.query('SELECT token_hash FROM sesiones');
+  assert.ok(rows.length >= 1);
+  assert.ok(rows.every((f) => f.token_hash !== token), 'el token en claro no está en la base');
+  assert.ok(rows.every((f) => /^[0-9a-f]{64}$/.test(f.token_hash)), 'sha-256 en hexadecimal');
+});
+
+test('una sesión vencida deja de servir (401) y se limpia al abrir otra', async () => {
+  const { cookie } = await pedir('/api/auth/login', 'POST', { usuario: ANA.usuario, clave: ANA.clave });
+  assert.equal((await pedir('/api/espacios', 'GET', null, cookie)).status, 200);
+  await bd.pool.query("UPDATE sesiones SET expira = now() - interval '1 minute'");
+  assert.equal((await pedir('/api/espacios', 'GET', null, cookie)).status, 401);
+  await pedir('/api/auth/login', 'POST', { usuario: ANA.usuario, clave: ANA.clave });
+  assert.equal((await bd.pool.query('SELECT count(*)::int AS n FROM sesiones')).rows[0].n, 1, 'solo queda la nueva');
+});
+
+test('"Restaurar datos" no borra las cuentas ni las sesiones', async () => {
+  const { cookie } = await pedir('/api/auth/login', 'POST', { usuario: ANA.usuario, clave: ANA.clave });
+  assert.equal((await pedir('/api/restaurar', 'POST', null, cookie)).status, 200);
+  assert.equal((await pedir('/api/auth/yo', 'GET', null, cookie)).cuerpo.usuario, ANA.usuario);
 });
