@@ -16,7 +16,7 @@ import {
   AREAS, CATEGORIAS, ESTADOS_ESPACIO, ESTADOS_INCIDENCIA, ESTADOS_PRESTAMO, ESTADOS_RECURSO, ORIGENES_INCIDENCIA, PRIORIDADES,
 } from '../src/config/reglas.js';
 
-const TABLAS = ['calidad_datos', 'espacios', 'incidencias', 'prestamos', 'recursos', 'reservas', 'schema_migrations', 'sesiones', 'usuarios'];
+const TABLAS = ['calidad_datos', 'espacios', 'incidencias', 'incidencias_embeddings', 'incidencias_reportes', 'prestamos', 'recursos', 'reservas', 'schema_migrations', 'sesiones', 'usuarios'];
 
 let bd;
 let pool;
@@ -52,7 +52,7 @@ describe('Migraciones', () => {
   test('volver a migrar no repite nada', async () => {
     assert.deepEqual(await migrar(pool), []);
     const { rows } = await pool.query('SELECT version FROM schema_migrations ORDER BY version');
-    assert.deepEqual(rows.map((f) => f.version), ['001_extensiones.sql', '002_esquema.sql', '003_orden.sql']);
+    assert.deepEqual(rows.map((f) => f.version), ['001_extensiones.sql', '002_esquema.sql', '003_orden.sql', '004_embeddings.sql']);
   });
 });
 
@@ -175,5 +175,48 @@ describe('Semilla', () => {
     assert.equal((await pool.query('SELECT count(*)::int AS n FROM reservas')).rows[0].n, 0);
     assert.equal((await pool.query('SELECT count(*)::int AS n FROM incidencias')).rows[0].n, 0);
     assert.equal((await pool.query("SELECT count(*)::int AS n FROM usuarios WHERE usuario = 'conservada'")).rows[0].n, 1);
+  });
+});
+
+describe('Incidencias parecidas: embeddings y reportes', () => {
+  const incidencia = (id) => pool.query(
+    `INSERT INTO incidencias (id, descripcion, categoria, prioridad, area, origen, estado, fecha)
+     VALUES ($1, 'x', 'otro', 'media', 'Soporte TI', 'manual', 'abierta', '2026-11-09T10:00')`, [id]);
+  const vector = (n, valor = 0.1) => `[${new Array(n).fill(valor).join(',')}]`;
+
+  test('el índice de embeddings es HNSW con distancia coseno', async () => {
+    const { rows } = await pool.query("SELECT indexdef FROM pg_indexes WHERE indexname = 'incidencias_embeddings_hnsw_idx'");
+    assert.equal(rows.length, 1);
+    assert.match(rows[0].indexdef, /USING hnsw/);
+    assert.match(rows[0].indexdef, /vector_cosine_ops/);
+  });
+
+  test('la columna exige exactamente 768 dimensiones', async () => {
+    await incidencia('inc-dim');
+    assert.equal(await codigoDeError("INSERT INTO incidencias_embeddings (incidencia_id, embedding, modelo) VALUES ('inc-dim', $1::vector, 'm')", [vector(3)]), '22000');
+    assert.equal(await codigoDeError("INSERT INTO incidencias_embeddings (incidencia_id, embedding, modelo) VALUES ('inc-dim', $1::vector, 'm')", [vector(3072)]), '22000');
+    await pool.query("INSERT INTO incidencias_embeddings (incidencia_id, embedding, modelo) VALUES ('inc-dim', $1::vector, 'm')", [vector(768)]);
+  });
+
+  test('una incidencia tiene a lo sumo un embedding, y la similitud es 1 menos la distancia coseno', async () => {
+    assert.equal(await codigoDeError("INSERT INTO incidencias_embeddings (incidencia_id, embedding, modelo) VALUES ('inc-dim', $1::vector, 'm')", [vector(768)]), '23505');
+    const { rows } = await pool.query("SELECT 1 - ($1::vector <=> $2::vector) AS similitud", [`[1,0,${new Array(766).fill(0).join(',')}]`, `[1,1,${new Array(766).fill(0).join(',')}]`]);
+    assert.ok(Math.abs(Number(rows[0].similitud) - Math.SQRT1_2) < 1e-9);
+  });
+
+  test('un embedding o un reporte de una incidencia que no existe se rechaza (23503)', async () => {
+    assert.equal(await codigoDeError("INSERT INTO incidencias_embeddings (incidencia_id, embedding, modelo) VALUES ('inc-fantasma', $1::vector, 'm')", [vector(768)]), '23503');
+    assert.equal(await codigoDeError("INSERT INTO incidencias_reportes (incidencia_id, descripcion, reportado_por, fecha) VALUES ('inc-fantasma', 'x', 'u-profesor', '2026-11-09T10:00')"), '23503');
+  });
+
+  test('un reporte debe ser de un usuario que existe (23503)', async () => {
+    assert.equal(await codigoDeError("INSERT INTO incidencias_reportes (incidencia_id, descripcion, reportado_por, fecha) VALUES ('inc-dim', 'x', 'nadie', '2026-11-09T10:00')"), '23503');
+  });
+
+  test('al borrar la incidencia se borran su embedding y sus reportes', async () => {
+    await pool.query("INSERT INTO incidencias_reportes (incidencia_id, descripcion, reportado_por, fecha) VALUES ('inc-dim', 'otro', 'u-profesor', '2026-11-09T10:00')");
+    await pool.query("DELETE FROM incidencias WHERE id = 'inc-dim'");
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM incidencias_embeddings WHERE incidencia_id = 'inc-dim'")).rows[0].n, 0);
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM incidencias_reportes WHERE incidencia_id = 'inc-dim'")).rows[0].n, 0);
   });
 });

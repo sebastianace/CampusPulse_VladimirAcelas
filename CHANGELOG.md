@@ -6,6 +6,17 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Incidencias parecidas (Fase 3B)
+
+- Al confirmar un reporte, la app busca incidencias **abiertas parecidas** con embeddings de Gemini
+  (`gemini-embedding-001`, 768 dimensiones) guardados en pgvector (índice HNSW, distancia coseno) y
+  pregunta *"¿Es la misma incidencia?"*. Si se confirma, el reporte se suma a la existente
+  (`POST /api/incidencias/:id/reportes`) en vez de crear un duplicado.
+- Regla híbrida: solo se comparan incidencias del mismo equipo o espacio que identificó el triaje y que
+  lleguen al umbral de similitud (`UMBRAL_SIMILITUD_INCIDENCIA`, 0.93, provisional). Si el servicio
+  falla, la incidencia se crea igual. `npm run embeddings` rellena las que no tienen embedding.
+- Ver `docs/incidencias-parecidas.md` (mediciones y decisiones).
+
 ### Base de datos
 
 - PostgreSQL con pgvector en `compose.yaml` (`docker compose up -d db`), esquema SQL en

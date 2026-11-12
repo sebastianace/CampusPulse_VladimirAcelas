@@ -630,6 +630,11 @@ option { color: var(--texto); background: var(--placa-alta); }
 
 .tarjeta-manual__titulo { font-weight: 700; }
 
+/* "¿Es la misma incidencia?": se muestra debajo de los botones del formulario, con aire arriba */
+.parecidas { display: grid; gap: 12px; margin-top: 18px; }
+.parecidas .tarjeta-manual__titulo { margin: 0; }
+.parecidas .item__acciones { flex-wrap: wrap; }
+
 .nota { font-size: 12.5px; color: var(--tenue); }
 
 /* Campo que la IA no pudo decidir: la persona debe elegirlo */

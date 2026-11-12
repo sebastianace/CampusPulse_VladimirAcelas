@@ -16,7 +16,9 @@ sin esperar a que P1 termine.
 | `GET /api/prestamos` | — | `[{id, recursoId, persona, estado, fecha}]` | P1 |
 | `POST /api/prestamos` | `{recursoId, persona}` | `201` + el préstamo | P1 |
 | `POST /api/prestamos/:id/devolver` | `{estadoFinal: "disponible" \| "danado"}` | `200` + el préstamo | P1 |
-| `GET /api/incidencias` | — | `[{id, descripcion, categoria, prioridad, area, espacioId, recursoId, estado, origen, ia}]` | P1 |
+| `GET /api/incidencias` | — | `[{id, descripcion, categoria, prioridad, area, espacioId, recursoId, estado, origen, ia, reportesAdicionales}]` (`reportesAdicionales`: personas que confirmaron que era la misma) | P1 |
+| `POST /api/incidencias/:id/reportes` | `{descripcion}` | `201 {reporte: {id, incidenciaId, descripcion, reportadoPor, fecha}, totalReportes}`. Suma el reporte a una incidencia abierta; `404` si no existe, `409 INCIDENCIA_YA_RESUELTA` si ya se resolvió | P1 |
+| `GET /api/incidencias/:id/reportes` | — | `[{id, incidenciaId, descripcion, reportadoPor, fecha}]` | P1 |
 | `POST /api/incidencias` | `{descripcion, categoria, prioridad, area, espacioId, recursoId, inhabilitar, origen, ia}` | `201` + la incidencia (y cambia el estado del espacio o recurso) | P1 |
 | `PATCH /api/incidencias/:id` | `{estado: "resuelta"}` | `200` (rehabilita el espacio o recurso). Solo `admin` y `soporte_tecnico`; otro rol → `403` | P1 |
 | `GET /api/calidad-datos` | — | `{cargados, validos, inconsistentes: [{fila, motivo}]}` | P1 |
@@ -29,6 +31,7 @@ sin esperar a que P1 termine.
 | `POST /api/auth/logout` | — | `200` y cierra la sesión | P2 |
 | `GET /api/auth/yo` | — | `200 {usuario, nombre, rol}` o `401` | P2 |
 | `POST /api/ia/triaje` | `{descripcion}` | `{categoria, prioridad, area, espacioId, recursoId, inhabilitar, razon, modelo}` | P2 |
+| `POST /api/ia/similares` | `{descripcion, espacioId?, recursoId?}` | `{candidatas: [{id, descripcion, categoria, prioridad, area, espacioId, recursoId, fecha, similitud, reportesAdicionales}], umbral, modelo}`. Incidencias **abiertas** parecidas, de la más a la menos parecida. `503` si el servicio de embeddings falla | P2 |
 | `POST /api/ia/recomendar` | `{texto}` | `{solicitud: {asistentes, inicio, fin, necesitaComputadores}, opciones: [{espacioId, motivo}], explicacion, modelo}` | P2 |
 
 Además de los 9 espacios del CSV oficial, `GET /api/espacios` incluye las mesas de ping-pong de
@@ -59,6 +62,8 @@ listo para mostrar en un toast.
 - `POST /api/ia/triaje` guarda la respuesta `CACHE_IA_MINUTOS` minutos: un texto idéntico (sin
   importar mayúsculas ni espacios) se responde desde la caché con la cabecera `X-Cache: HIT`.
   `POST /api/ia/recomendar` no se cachea porque depende de la disponibilidad y de la fecha.
+- `POST /api/ia/similares` cuenta como una consulta a la IA, salvo que el embedding del texto ya esté
+  en la caché (o en camino, si llegan varias peticiones iguales a la vez).
 
 ## Roles
 
