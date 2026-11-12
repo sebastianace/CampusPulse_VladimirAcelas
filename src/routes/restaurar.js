@@ -1,11 +1,11 @@
-// POST /api/restaurar -> recrea data/db.json desde data/raw/ y data/seed/ (raw/ nunca se modifica).
+// POST /api/restaurar -> vuelve la base de datos al estado inicial desde data/raw/ y data/seed/ (raw/ nunca se modifica).
 import { Router } from 'express';
-import { restaurarDB } from '../data/store.js';
+import { restaurarDB } from '../data/almacen.js';
 
 const router = Router();
 
-router.post('/', (req, res) => {
-  const db = restaurarDB();
+router.post('/', async (req, res) => {
+  const db = await restaurarDB();
   res.json({ mensaje: 'Datos restaurados al estado inicial', calidadDatos: db.calidadDatos });
 });
 

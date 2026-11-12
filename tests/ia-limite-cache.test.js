@@ -9,13 +9,10 @@
 
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 
-const CARPETA = mkdtempSync(join(tmpdir(), 'campus-pulse-ia-'));
-process.env.DB_PATH = join(CARPETA, 'db.json');
-process.env.AUTH_PATH = join(CARPETA, 'auth.json');
+import { crearBaseDeLaApp } from './ayuda-bd.js';
+
+const bd = await crearBaseDeLaApp(); // la app corre contra una base PostgreSQL temporal
 delete process.env.GEMINI_API_KEY; // la IA no está configurada: responde 503
 delete process.env.GEMINI_MODEL;
 const { app } = await import('../src/server.js');
@@ -85,10 +82,10 @@ describe('Rutas /api/ia', () => {
     servidor = app.listen(0);
     base = `http://localhost:${servidor.address().port}`;
   });
-  after(() => {
+  after(async () => {
     servidor.close();
-    rmSync(CARPETA, { recursive: true, force: true });
-  });
+    await bd.cerrar();
+    });
 
   // Hace la petición y devuelve {status, cuerpo, cookie, reintentar}.
   async function pedir(ruta, cuerpo, cookie = '') {

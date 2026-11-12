@@ -12,7 +12,7 @@
 // =====================================================================
 
 import { REGLAS } from '../config/reglas.js';
-import { leerDB } from '../data/store.js';
+import { leerDB } from '../data/almacen.js';
 import { DatosInvalidosError } from '../domain/errors.js';
 import { ahoraBogota } from '../domain/fechas.js';
 import { buscarEspaciosDisponibles } from '../domain/reservas.js';
@@ -94,7 +94,7 @@ function armarOpciones(espacios, motivos) {
  */
 export async function recomendarEspacios(texto) {
   const { solicitud, modelo } = await extraerSolicitud(texto);
-  const espacios = buscarEspaciosDisponibles(solicitud, leerDB())
+  const espacios = buscarEspaciosDisponibles(solicitud, await leerDB())
     .filter((e) => !REGLAS.TIPOS_FUERA_DE_RECOMENDACION.includes(e.tipo))
     .slice(0, MAX_OPCIONES);
 

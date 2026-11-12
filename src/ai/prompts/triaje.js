@@ -1,8 +1,9 @@
-// Prompt del triaje de incidencias (POST /api/ia/triaje). Versión 1.1 (con la personalidad de Pulse)
+// Prompt del triaje de incidencias (POST /api/ia/triaje). Versión 1.2 (personalidad de Pulse + few-shot)
 // Ver docs/biblioteca-prompts.md.
 
 import { AREAS, CATEGORIAS, PRIORIDADES, REGLAS } from '../../config/reglas.js';
 import { construirPrompt } from './estructura.js';
+import { EJEMPLOS_TRIAJE } from './ejemplos-triaje.js';
 import { tonoDePulse } from './personalidad.js';
 
 // Área sugerida para cada categoría (guía para la IA, no una regla).
@@ -21,8 +22,20 @@ function describirCatalogo({ espacios, recursos }) {
   return `ESPACIOS:\n${lineasEspacios.join('\n') || '- (ninguno)'}\n\nRECURSOS:\n${lineasRecursos.join('\n') || '- (ninguno)'}`;
 }
 
-/** Prompt para clasificar una incidencia. catalogo = {espacios, recursos} de db.json. */
-export function promptTriaje(descripcion, catalogo) {
+// Los ejemplos se muestran como "Reporte / Respuesta" (con otro formato que el reporte real,
+// para no confundir cuál es el que hay que clasificar).
+function formatearEjemplos() {
+  const casos = EJEMPLOS_TRIAJE.map(({ reporte, respuesta }, i) =>
+    `Ejemplo ${i + 1}\nReporte: "${reporte}"\nRespuesta: ${JSON.stringify(respuesta)}`);
+  return `Casos resueltos que muestran el criterio y el formato. Los IDs de los ejemplos son solo ilustrativos: usa únicamente los del catálogo de la Entrada.\n\n${casos.join('\n\n')}`;
+}
+
+/**
+ * Prompt para clasificar una incidencia. catalogo = {espacios, recursos} de la base de datos.
+ * conEjemplos: true (por defecto) agrega los casos few-shot; false deja el prompt zero-shot
+ * (se usa para medir si los ejemplos mejoran la clasificación).
+ */
+export function promptTriaje(descripcion, catalogo, { conEjemplos = true } = {}) {
   const guiaAreas = Object.entries(AREA_POR_CATEGORIA).map(([c, a]) => `${c} -> ${a}`).join(', ');
   return construirPrompt({
     rol: 'Eres el asistente de triaje de incidencias del campus Campuslands. Tu objetivo es clasificar el reporte y responder SOLO con el JSON pedido.',
@@ -45,6 +58,7 @@ export function promptTriaje(descripcion, catalogo) {
       'inhabilitar: según la política anterior.',
       'razon: una frase corta en español que explique la clasificación.',
     ],
+    ejemplos: conEjemplos ? formatearEjemplos() : null,
     entrada: `Catálogo real del campus:\n${describirCatalogo(catalogo)}\n\n<reporte>\n${descripcion}\n</reporte>`,
   });
 }

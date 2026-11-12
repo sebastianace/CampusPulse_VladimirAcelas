@@ -2,18 +2,14 @@
 // TESTS DE ROLES Y PERMISOS (node:test)
 // ---------------------------------------------------------------------
 // Roles admin, profesor y soporte_tecnico; middleware exigirRol(...roles).
-// Levanta el servidor con una base y un archivo de usuarios temporales.
+// Levanta el servidor con una base PostgreSQL temporal (docker compose up -d db).
 // =====================================================================
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { crearBaseDeLaApp } from './ayuda-bd.js';
 
-const CARPETA = mkdtempSync(join(tmpdir(), 'campus-pulse-roles-'));
-process.env.DB_PATH = join(CARPETA, 'db.json');
-process.env.AUTH_PATH = join(CARPETA, 'auth.json');
+const bd = await crearBaseDeLaApp(); // la app corre contra una base PostgreSQL temporal
 const { app } = await import('../src/server.js');
 const { exigirRol } = await import('../src/routes/auth.js');
 
@@ -23,9 +19,9 @@ before(() => {
   servidor = app.listen(0);
   base = `http://localhost:${servidor.address().port}`;
 });
-after(() => {
+after(async () => {
   servidor.close();
-  rmSync(CARPETA, { recursive: true, force: true });
+  await bd.cerrar();
 });
 
 // Hace la petición y devuelve {status, cuerpo, cookie}.
@@ -141,17 +137,12 @@ test('GET /api/usuarios: el admin ve las cuentas sin claves; los demás reciben 
   }
 });
 
-test('una cuenta antigua con rol camper, coordinador o sin rol se trata como profesor', async () => {
-  const auth = JSON.parse(readFileSync(process.env.AUTH_PATH, 'utf8'));
-  auth.usuarios.find((u) => u.usuario === 'profe').rol = 'camper';
-  auth.usuarios.find((u) => u.usuario === 'tecnico').rol = 'coordinador';
-  writeFileSync(process.env.AUTH_PATH, JSON.stringify(auth));
-  assert.equal((await entrar('profe')).cuerpo.rol, 'profesor');
-  assert.equal((await entrar('tecnico')).cuerpo.rol, 'profesor');
-
-  delete auth.usuarios.find((u) => u.usuario === 'profe').rol;
-  writeFileSync(process.env.AUTH_PATH, JSON.stringify(auth));
-  assert.equal((await entrar('profe')).cuerpo.rol, 'profesor');
+test('la base solo acepta los tres roles: camper y coordinador ya no existen', async () => {
+  for (const rol of ['camper', 'coordinador']) {
+    await assert.rejects(
+      bd.pool.query("INSERT INTO usuarios (usuario, nombre, rol, clave_hash) VALUES ($1, $1, $2, 'x')", [`viejo-${rol}`, rol]),
+      { code: '23514' }, rol);
+  }
 });
 
 test('exigirRol deja pasar a los roles indicados', () => {

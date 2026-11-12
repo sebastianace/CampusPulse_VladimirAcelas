@@ -21,7 +21,6 @@
 
 import { randomUUID } from 'node:crypto';
 import { REGLAS } from '../config/reglas.js';
-import { leerDB } from '../data/store.js';
 import { DatosInvalidosError, NoEncontradoError, ReglaNegocioError } from './errors.js';
 import { ahoraBogota, diaDeLaSemana, esFechaHoraValida, minutosDelDia, minutosEntre, seSolapan } from './fechas.js';
 
@@ -230,7 +229,7 @@ export function cancelarReserva(db, id) {
  * lanza la ReglaNegocioError correspondiente para que el usuario sepa por qué.
  * La usa P2 en POST /api/ia/recomendar: la IA nunca decide sola qué sala está libre.
  */
-export function buscarEspaciosDisponibles(datos, db = leerDB()) {
+export function buscarEspaciosDisponibles(datos, db) {
   const { asistentes, inicio, fin } = validarSolicitud(datos);
   validarFranja(inicio, fin);
   const conComputadores = datos.necesitaComputadores === true;

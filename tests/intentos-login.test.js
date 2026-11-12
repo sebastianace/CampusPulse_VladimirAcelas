@@ -7,13 +7,10 @@
 
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 
-const CARPETA = mkdtempSync(join(tmpdir(), 'campus-pulse-intentos-'));
-process.env.DB_PATH = join(CARPETA, 'db.json');
-process.env.AUTH_PATH = join(CARPETA, 'auth.json');
+import { crearBaseDeLaApp } from './ayuda-bd.js';
+
+const bd = await crearBaseDeLaApp(); // la app corre contra una base PostgreSQL temporal
 const { app } = await import('../src/server.js');
 const {
   MAX_INTENTOS_LOGIN, MINUTOS_VENTANA_LOGIN, limpiarFallos, registrarFallo, segundosDeBloqueo,
@@ -71,10 +68,10 @@ describe('POST /api/auth/login', () => {
       });
     }
   });
-  after(() => {
+  after(async () => {
     servidor.close();
-    rmSync(CARPETA, { recursive: true, force: true });
-  });
+    await bd.cerrar();
+    });
 
   // Hace la petición y devuelve {status, cuerpo, reintentar}.
   async function login(cuerpo, ruta = '/api/auth/login') {

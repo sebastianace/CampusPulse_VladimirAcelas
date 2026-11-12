@@ -59,7 +59,8 @@ las reglas deciden. Los cambios de la v2 se registran en [CHANGELOG.md](CHANGELO
 
 - **Node.js 24** + **Express 5**, módulos ES (`"type": "module"`).
 - **Frontend** en HTML, CSS y JavaScript nativo, sin frameworks ni build.
-- **Persistencia** en `data/db.json` con escritura atómica (archivo temporal + rename).
+- **Persistencia** en **PostgreSQL 16 con pgvector** (Docker): datos del campus, cuentas y
+  sesiones. Ver [docs/base-de-datos.md](docs/base-de-datos.md).
 - **IA**: Google Gemini mediante `@google/genai`.
 - **Tests** con `node:test` (sin dependencias extra).
 
@@ -72,9 +73,12 @@ src/routes/        Rutas HTTP (una por recurso). ia.js -> /api/ia/*, auth.js -> 
 src/auth/          usuarios.js: cuentas (clave con hash scrypt) y sesiones
 src/domain/        Reglas de negocio: reservas, préstamos, incidencias, fechas, errores
 src/config/        reglas.js: TODAS las constantes de negocio y valores cerrados
-src/data/          loader.js (lee el CSV) y store.js (lee/escribe db.json)
+src/data/          almacen.js (lee y guarda en PostgreSQL), repos/ (una tabla por archivo), pg.js, migrar.js, semilla.js y arranque.js;
+                   loader.js (lee el CSV), estado-inicial.js (arma los datos iniciales) e importar-cuentas.js
+db/migrations/     Esquema SQL de PostgreSQL (ver docs/base-de-datos.md)
 src/ai/            cliente.js, validar.js, triaje.js, asistente.js, limite.js, cache.js
 src/ai/prompts/    Un archivo por prompt del sistema, con la plantilla de la clase (ver docs/biblioteca-prompts.md)
+evaluacion/        Reportes de prueba del triaje y sus resultados (npm run medir-triaje)
 data/raw/          espacios.csv oficial (nunca se modifica)
 data/seed/         recursos.json con equipos ficticios
 docs/              contrato-api.md, demo.md, reto-en-vivo.md y capturas
@@ -99,17 +103,19 @@ errores responden `{error: {codigo, mensaje}}` con el mensaje en español: 422 d
   y `soporte_tecnico` (además resuelve incidencias, lo que rehabilita espacios y equipos). La
   tabla de permisos está en [docs/contrato-api.md](docs/contrato-api.md).
 - Las contraseñas se guardan con hash `scrypt` y sal aleatoria, y las sesiones con el hash de su
-  token, en `data/auth.json` (ignorado por Git). La sesión dura 8 horas y viaja en una cookie
+  token, en PostgreSQL (tablas `usuarios` y `sesiones`). La sesión dura 8 horas y viaja en una cookie
   `HttpOnly`, que además es `Secure` (solo HTTPS) cuando `NODE_ENV=production`.
 - Tras **5 intentos fallidos** del mismo usuario desde la misma IP en 15 minutos, el login
   responde `429` hasta que pase la ventana (`src/auth/intentos.js`). Los contadores viven en
   memoria y se borran al reiniciar el servidor.
 - **Restaurar datos** no borra las cuentas, y las sesiones sobreviven a los reinicios de
   `npm run dev` (útil en el reto en vivo).
+- Si venías de la versión con `data/auth.json`, copia tus cuentas con `npm run importar-cuentas`
+  (los hashes se copian tal cual; las sesiones no, así que vuelve a iniciar sesión).
 
 ## Rol de la IA y cómo se controla
 
-La IA solo **sugiere** en dos puntos. Nunca escribe en la base de datos ni decide si algo está
+La IA solo **sugiere** en tres puntos. Nunca escribe en la base de datos ni decide si algo está
 permitido.
 
 ### 1. Triaje de incidencias — `POST /api/ia/triaje`
@@ -132,6 +138,18 @@ permitido.
 3. La IA solo **redacta** la explicación de esas opciones ya filtradas. Si menciona un espacio
    que no estaba en la lista, se descarta.
 
+### 3. Incidencias parecidas — `POST /api/ia/similares`
+
+1. La IA convierte el texto en un **embedding** (768 números) con `gemini-embedding-001`.
+2. **pgvector** busca las incidencias abiertas con el vector más cercano (distancia coseno, índice HNSW).
+3. Las **reglas** deciden cuáles se sugieren: solo las del mismo equipo o espacio que identificó el
+   triaje, y que lleguen al umbral de similitud (`UMBRAL_SIMILITUD_INCIDENCIA`).
+4. La interfaz pregunta *"¿Es la misma incidencia?"*. Si la persona confirma, su reporte se suma a la
+   existente (`POST /api/incidencias/:id/reportes`) en vez de crear un duplicado.
+
+Si el servicio de embeddings falla, la incidencia se crea igual, sin la sugerencia. Detalle,
+mediciones y decisiones en [docs/incidencias-parecidas.md](docs/incidencias-parecidas.md).
+
 ### Controles
 
 - Salida JSON por schema, temperatura 0.2, timeout de 15 s y un reintento (`src/ai/cliente.js`).
@@ -146,6 +164,8 @@ permitido.
 - **Personalidad:** Pulse tiene una personalidad definida con el modelo Big Five (responsabilidad
   alta, amabilidad alta, extraversión media, apertura media, neuroticismo bajo), justificada en
   [docs/personalidad.md](docs/personalidad.md). Solo ajusta el tono; no cambia reglas ni límites.
+- **Few-shot:** el triaje lleva 4 ejemplos resueltos del campus y se mide contra la versión sin
+  ejemplos con 12 reportes distintos (ver [docs/biblioteca-prompts.md](docs/biblioteca-prompts.md)).
 - Cambiar de proveedor de IA solo exige tocar `src/ai/cliente.js`.
 
 ## Uso de IA en el desarrollo
@@ -202,6 +222,8 @@ editar un valor y guardar (`npm run dev` reinicia el servidor solo).
 | Tipos de espacio que la IA nunca recomienda | `TIPOS_FUERA_DE_RECOMENDACION` | mesa_juego |
 | Consultas a la IA por usuario en la ventana | `LIMITE_IA_PETICIONES` / `LIMITE_IA_VENTANA_MINUTOS` | 5 por minuto |
 | Minutos que se guarda la respuesta del triaje | `CACHE_IA_MINUTOS` | 10 |
+| Similitud mínima para sugerir una incidencia parecida (provisional) | `UMBRAL_SIMILITUD_INCIDENCIA` | 0.93 |
+| Cuántas incidencias parecidas se muestran | `MAX_INCIDENCIAS_PARECIDAS` | 3 |
 
 Además:
 
@@ -216,7 +238,7 @@ Además:
 
 ## Instalación y ejecución
 
-Requisitos: **Node.js 24** o superior.
+Requisitos: **Node.js 24** o superior y **Docker** (para PostgreSQL).
 
 ```bash
 git clone https://github.com/sebastianace/CampusPulse_VladimirAcelas.git
@@ -231,7 +253,31 @@ Edita `.env` (nunca lo subas al repositorio):
 GEMINI_API_KEY=tu_key_de_google_ai_studio
 GEMINI_MODEL=gemini-3.6-flash
 PORT=3000
+POSTGRES_PASSWORD=una_contraseña_que_tu_elijas
+POSTGRES_PUERTO=5433
 ```
+
+Hay dos formas de correrlo:
+
+**A. Todo en Docker** (la más simple; no hace falta tener Node instalado):
+
+```bash
+docker compose up -d --build
+```
+
+La app queda en `http://localhost:3000`. La primera vez aplica las migraciones y carga los datos
+iniciales sola. Para apagarla: `docker compose stop` (conserva los datos) o `docker compose down -v`
+(borra también los datos).
+
+**B. Solo la base en Docker y la app con Node** (para desarrollar; se reinicia al guardar):
+
+```bash
+docker compose up -d db
+npm run dev
+```
+
+No corras las dos a la vez: usan el mismo puerto (3000). Con `NODE_ENV=production` la cookie de
+sesión es `Secure` y solo viaja por HTTPS: déjalo vacío mientras uses `http://localhost`.
 
 `GEMINI_MODEL` es el id exacto del modelo (por ejemplo `gemini-3.6-flash`, el que usamos en la
 demo). Si `npm run probar-ia` responde 503 ("high demand"), el modelo está saturado en ese
@@ -245,15 +291,21 @@ error claro y el formulario manual, nunca con una respuesta inventada.
 | `npm run dev` | Igual, pero se reinicia solo al guardar un archivo |
 | `npm test` | Ejecuta las pruebas de las reglas |
 | `npm run probar-ia` | Comprueba que la key y el modelo de Gemini responden |
+| `npm run migrar` | Aplica las migraciones de `db/migrations/` a PostgreSQL (necesita `docker compose up -d db`) |
+| `npm run embeddings` | Genera el embedding de las incidencias que no lo tienen (usa la clave de Gemini) |
+| `npm run importar-cuentas` | Copia las cuentas del viejo `data/auth.json` a PostgreSQL (se corre una vez) |
+| `npm run semilla` | Carga espacios, recursos y calidad de datos en PostgreSQL |
+| `npm run medir-triaje` | Mide el triaje sin ejemplos y con ellos (24 llamadas a Gemini, ~5 min; gasta cuota) |
 
 Abre `http://localhost:3000` y crea una cuenta con **Crear una cuenta** (solo la primera vez).
 
-Sin `.env` la aplicación funciona igual: las funciones de IA muestran un error claro y se usa el
-formulario manual.
+Sin la clave de Gemini la aplicación funciona igual: las funciones de IA muestran un error claro y
+se usa el formulario manual. **Sin PostgreSQL no arranca**: si ves "No hay conexión con PostgreSQL",
+abre Docker Desktop y corre `docker compose up -d db`.
 
-La primera vez que arranca, el servidor crea `data/db.json` a partir de `data/raw/espacios.csv`,
-`data/seed/espacios-extra.json` y `data/seed/recursos.json`. El botón **Restaurar** (`POST /api/restaurar`) vuelve a ese estado
-inicial.
+La primera vez que arranca, la app carga en PostgreSQL los datos de `data/raw/espacios.csv`,
+`data/seed/espacios-extra.json` y `data/seed/recursos.json`. El botón **Restaurar**
+(`POST /api/restaurar`) vuelve a ese estado inicial.
 
 ## Suposiciones sobre los datos
 
