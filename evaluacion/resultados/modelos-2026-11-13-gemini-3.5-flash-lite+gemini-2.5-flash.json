@@ -1,0 +1,584 @@
+{
+  "fecha": "2026-11-13",
+  "ahoraFijo": "2026-11-13T09:00",
+  "resultados": [
+    {
+      "modelo": "gemini-3.5-flash-lite",
+      "triaje": {
+        "resumen": {
+          "total": 12,
+          "aciertos": 10,
+          "errores": 0,
+          "msPromedio": 1508,
+          "tokensEntrada": 1533,
+          "tokensSalida": 93,
+          "tokensRazonamiento": 0
+        },
+        "llamadas": [
+          {
+            "ms": 1500,
+            "tokensEntrada": 1532,
+            "tokensSalida": 99,
+            "tokensRazonamiento": 0,
+            "obtenido": {
+              "categoria": "tecnologia",
+              "prioridad": "media",
+              "area": "Soporte TI",
+              "espacioId": "cosmos",
+              "recursoId": "rec-02",
+              "inhabilitar": false,
+              "razon": "El proyector no enciende pero no hay riesgo para las personas; se reporta para reparación sin inhabilitar el espacio."
+            },
+            "acierto": true
+          },
+          {
+            "ms": 2016,
+            "tokensEntrada": 1539,
+            "tokensSalida": 99,
+            "tokensRazonamiento": 0,
+            "obtenido": {
+              "categoria": "infraestructura",
+              "prioridad": "critica",
+              "area": "Infraestructura",
+              "espacioId": "spooki",
+              "recursoId": null,
+              "inhabilitar": true,
+              "razon": "El agua cerca de los tomacorrientes representa riesgo eléctrico para las personas, por lo que es prioridad crítica y se inhabilita el espacio."
+            },
+            "acierto": true
+          },
+          {
+            "ms": 1580,
+            "tokensEntrada": 1531,
+            "tokensSalida": 100,
+            "tokensRazonamiento": 0,
+            "obtenido": {
+              "categoria": "tecnologia",
+              "prioridad": "baja",
+              "area": "Soporte TI",
+              "espacioId": "auditorio",
+              "recursoId": "rec-04",
+              "inhabilitar": false,
+              "razon": "El equipo no enciende por batería muerta, lo cual no representa riesgo para las personas y el espacio puede seguir utilizándose."
+            },
+            "acierto": true
+          },
+          {
+            "ms": 1054,
+            "tokensEntrada": 1533,
+            "tokensSalida": 98,
+            "tokensRazonamiento": 0,
+            "obtenido": {
+              "categoria": "aseo",
+              "prioridad": "alta",
+              "area": "Servicios generales",
+              "espacioId": null,
+              "recursoId": null,
+              "inhabilitar": false,
+              "razon": "El líquido derramado presenta riesgo de caídas para las personas, por lo que requiere atención prioritaria aunque no afecte un espacio o recurso específico del catálogo."
+            },
+            "acierto": false
+          },
+          {
+            "ms": 1809,
+            "tokensEntrada": 1538,
+            "tokensSalida": 84,
+            "tokensRazonamiento": 0,
+            "obtenido": {
+              "categoria": "bienestar",
+              "prioridad": "media",
+              "area": "Bienestar",
+              "espacioId": null,
+              "recursoId": null,
+              "inhabilitar": false,
+              "razon": "Solicitud de apoyo psicológico por estrés, atendida por bienestar sin riesgo material ni espacio específico."
+            },
+            "acierto": true
+          },
+          {
+            "ms": 1656,
+            "tokensEntrada": 1533,
+            "tokensSalida": 92,
+            "tokensRazonamiento": 0,
+            "obtenido": {
+              "categoria": "infraestructura",
+              "prioridad": "critica",
+              "area": "Infraestructura",
+              "espacioId": "auditorio",
+              "recursoId": "rec-03",
+              "inhabilitar": true,
+              "razon": "Los cables pelados y con cortocircuito representan un riesgo eléctrico inminente para las personas."
+            },
+            "acierto": false
+          },
+          {
+            "ms": 1417,
+            "tokensEntrada": 1530,
+            "tokensSalida": 97,
+            "tokensRazonamiento": 0,
+            "obtenido": {
+              "categoria": "tecnologia",
+              "prioridad": "media",
+              "area": "Soporte TI",
+              "espacioId": "skilab",
+              "recursoId": "rec-06",
+              "inhabilitar": false,
+              "razon": "El televisor presenta fallas sin representar un riesgo para las personas, por lo que no requiere inhabilitación."
+            },
+            "acierto": true
+          },
+          {
+            "ms": 1591,
+            "tokensEntrada": 1527,
+            "tokensSalida": 97,
+            "tokensRazonamiento": 0,
+            "obtenido": {
+              "categoria": "tecnologia",
+              "prioridad": "media",
+              "area": "Soporte TI",
+              "espacioId": null,
+              "recursoId": "rec-10",
+              "inhabilitar": false,
+              "razon": "La pantalla rota es un daño estético y funcional pero sin riesgo para las personas, por lo que no se inhabilita."
+            },
+            "acierto": true
+          },
+          {
+            "ms": 1821,
+            "tokensEntrada": 1536,
+            "tokensSalida": 89,
+            "tokensRazonamiento": 0,
+            "obtenido": {
+              "categoria": "infraestructura",
+              "prioridad": "media",
+              "area": "Infraestructura",
+              "espacioId": "amarillas-verdes",
+              "recursoId": null,
+              "inhabilitar": false,
+              "razon": "Las sillas rotas afectan la comodidad pero no representan un riesgo inminente para las personas."
+            },
+            "acierto": true
+          },
+          {
+            "ms": 1188,
+            "tokensEntrada": 1531,
+            "tokensSalida": 92,
+            "tokensRazonamiento": 0,
+            "obtenido": {
+              "categoria": "aseo",
+              "prioridad": "baja",
+              "area": "Servicios generales",
+              "espacioId": null,
+              "recursoId": null,
+              "inhabilitar": false,
+              "razon": "Falta de suministros de aseo sin riesgo para las personas y el baño de la entrada no pertenece al catálogo de espacios."
+            },
+            "acierto": true
+          },
+          {
+            "ms": 1207,
+            "tokensEntrada": 1534,
+            "tokensSalida": 90,
+            "tokensRazonamiento": 0,
+            "obtenido": {
+              "categoria": "seguridad",
+              "prioridad": "alta",
+              "area": "Seguridad",
+              "espacioId": "apolo",
+              "recursoId": null,
+              "inhabilitar": false,
+              "razon": "Una mochila abandonada representa un riesgo potencial para la seguridad y requiere revisión, reportada frente a la sala Apolo."
+            },
+            "acierto": true
+          },
+          {
+            "ms": 1258,
+            "tokensEntrada": 1526,
+            "tokensSalida": 80,
+            "tokensRazonamiento": 0,
+            "obtenido": {
+              "categoria": "tecnologia",
+              "prioridad": "baja",
+              "area": "Soporte TI",
+              "espacioId": null,
+              "recursoId": "rec-12",
+              "inhabilitar": false,
+              "razon": "El parlante presenta un fallo de conectividad sin riesgo para las personas, por lo que no requiere inhabilitación."
+            },
+            "acierto": true
+          }
+        ]
+      },
+      "solicitud": {
+        "resumen": {
+          "total": 6,
+          "aciertos": 6,
+          "errores": 0,
+          "msPromedio": 1484,
+          "tokensEntrada": 308,
+          "tokensSalida": 70,
+          "tokensRazonamiento": 0
+        },
+        "llamadas": [
+          {
+            "ms": 1437,
+            "tokensEntrada": 308,
+            "tokensSalida": 70,
+            "tokensRazonamiento": 0,
+            "obtenido": {
+              "asistentes": 30,
+              "inicio": "2026-11-17T14:00",
+              "fin": "2026-11-17T16:00"
+            },
+            "acierto": true
+          },
+          {
+            "ms": 2066,
+            "tokensEntrada": 309,
+            "tokensSalida": 69,
+            "tokensRazonamiento": 0,
+            "obtenido": {
+              "asistentes": 8,
+              "inicio": "2026-11-14T10:00",
+              "fin": "2026-11-14T11:30"
+            },
+            "acierto": true
+          },
+          {
+            "ms": 2452,
+            "tokensEntrada": 307,
+            "tokensSalida": 70,
+            "tokensRazonamiento": 0,
+            "obtenido": {
+              "asistentes": 25,
+              "inicio": "2026-11-16T08:00",
+              "fin": "2026-11-16T12:00"
+            },
+            "acierto": true
+          },
+          {
+            "ms": 912,
+            "tokensEntrada": 305,
+            "tokensSalida": 70,
+            "tokensRazonamiento": 0,
+            "obtenido": {
+              "asistentes": 12,
+              "inicio": "2026-11-13T15:00",
+              "fin": "2026-11-13T17:00"
+            },
+            "acierto": true
+          },
+          {
+            "ms": 906,
+            "tokensEntrada": 311,
+            "tokensSalida": 70,
+            "tokensRazonamiento": 0,
+            "obtenido": {
+              "asistentes": 60,
+              "inicio": "2026-11-18T09:00",
+              "fin": "2026-11-18T11:00"
+            },
+            "acierto": true
+          },
+          {
+            "ms": 1128,
+            "tokensEntrada": 310,
+            "tokensSalida": 70,
+            "tokensRazonamiento": 0,
+            "obtenido": {
+              "asistentes": 90,
+              "inicio": "2026-11-19T14:00",
+              "fin": "2026-11-19T17:00"
+            },
+            "acierto": true
+          }
+        ]
+      }
+    },
+    {
+      "modelo": "gemini-2.5-flash",
+      "triaje": {
+        "resumen": {
+          "total": 12,
+          "aciertos": 7,
+          "errores": 0,
+          "msPromedio": 3329,
+          "tokensEntrada": 1533,
+          "tokensSalida": 66,
+          "tokensRazonamiento": 326
+        },
+        "llamadas": [
+          {
+            "ms": 2913,
+            "tokensEntrada": 1532,
+            "tokensSalida": 65,
+            "tokensRazonamiento": 323,
+            "obtenido": {
+              "categoria": "tecnologia",
+              "prioridad": "alta",
+              "area": "Soporte TI",
+              "espacioId": "cosmos",
+              "recursoId": "rec-02",
+              "inhabilitar": false,
+              "razon": "El proyector no enciende, afectando una clase próxima, pero sin riesgo para las personas."
+            },
+            "acierto": false
+          },
+          {
+            "ms": 2679,
+            "tokensEntrada": 1539,
+            "tokensSalida": 71,
+            "tokensRazonamiento": 320,
+            "obtenido": {
+              "categoria": "infraestructura",
+              "prioridad": "critica",
+              "area": "Infraestructura",
+              "espacioId": "spooki",
+              "recursoId": null,
+              "inhabilitar": true,
+              "razon": "La gotera cerca de tomacorrientes es un riesgo eléctrico, por lo que la prioridad es crítica y se inhabilita el espacio."
+            },
+            "acierto": true
+          },
+          {
+            "ms": 3715,
+            "tokensEntrada": 1531,
+            "tokensSalida": 69,
+            "tokensRazonamiento": 367,
+            "obtenido": {
+              "categoria": "tecnologia",
+              "prioridad": "media",
+              "area": "Soporte TI",
+              "espacioId": "auditorio",
+              "recursoId": "rec-04",
+              "inhabilitar": false,
+              "razon": "La batería muerta impide el uso del micrófono, pero no hay riesgo para inhabilitar el espacio o el recurso."
+            },
+            "acierto": false
+          },
+          {
+            "ms": 6159,
+            "tokensEntrada": 1533,
+            "tokensSalida": 72,
+            "tokensRazonamiento": 406,
+            "obtenido": {
+              "categoria": "aseo",
+              "prioridad": "alta",
+              "area": "Servicios generales",
+              "espacioId": null,
+              "recursoId": null,
+              "inhabilitar": false,
+              "razon": "El café derramado en el pasillo es un riesgo de resbalón, pero no se identifica un espacio o recurso específico del catálogo para inhabilitar."
+            },
+            "acierto": false
+          },
+          {
+            "ms": 2383,
+            "tokensEntrada": 1538,
+            "tokensSalida": 54,
+            "tokensRazonamiento": 266,
+            "obtenido": {
+              "categoria": "bienestar",
+              "prioridad": "media",
+              "area": "Bienestar",
+              "espacioId": null,
+              "recursoId": null,
+              "inhabilitar": false,
+              "razon": "Los estudiantes reportan estrés por carga de trabajo y solicitan apoyo de bienestar."
+            },
+            "acierto": true
+          },
+          {
+            "ms": 3100,
+            "tokensEntrada": 1533,
+            "tokensSalida": 70,
+            "tokensRazonamiento": 261,
+            "obtenido": {
+              "categoria": "tecnologia",
+              "prioridad": "critica",
+              "area": "Soporte TI",
+              "espacioId": "auditorio",
+              "recursoId": "rec-03",
+              "inhabilitar": true,
+              "razon": "Cables pelados y corto eléctrico son un riesgo para las personas: prioridad crítica y se inhabilita el equipo."
+            },
+            "acierto": true
+          },
+          {
+            "ms": 2856,
+            "tokensEntrada": 1530,
+            "tokensSalida": 68,
+            "tokensRazonamiento": 319,
+            "obtenido": {
+              "categoria": "tecnologia",
+              "prioridad": "media",
+              "area": "Soporte TI",
+              "espacioId": "skilab",
+              "recursoId": "rec-06",
+              "inhabilitar": false,
+              "razon": "El televisor no funciona pero no representa un riesgo para las personas, por lo que no se inhabilita."
+            },
+            "acierto": true
+          },
+          {
+            "ms": 2468,
+            "tokensEntrada": 1527,
+            "tokensSalida": 68,
+            "tokensRazonamiento": 307,
+            "obtenido": {
+              "categoria": "tecnologia",
+              "prioridad": "media",
+              "area": "Soporte TI",
+              "espacioId": null,
+              "recursoId": "rec-10",
+              "inhabilitar": false,
+              "razon": "La pantalla rota es un daño funcional sin riesgo para las personas, por lo que no se inhabilita el equipo."
+            },
+            "acierto": true
+          },
+          {
+            "ms": 4401,
+            "tokensEntrada": 1536,
+            "tokensSalida": 68,
+            "tokensRazonamiento": 500,
+            "obtenido": {
+              "categoria": "infraestructura",
+              "prioridad": "alta",
+              "area": "Infraestructura",
+              "espacioId": "amarillas-verdes",
+              "recursoId": null,
+              "inhabilitar": true,
+              "razon": "Las sillas rotas con patas faltantes son un riesgo de caída y se debe inhabilitar el uso de las mismas."
+            },
+            "acierto": false
+          },
+          {
+            "ms": 2629,
+            "tokensEntrada": 1531,
+            "tokensSalida": 62,
+            "tokensRazonamiento": 277,
+            "obtenido": {
+              "categoria": "aseo",
+              "prioridad": "baja",
+              "area": "Servicios generales",
+              "espacioId": null,
+              "recursoId": null,
+              "inhabilitar": false,
+              "razon": "Falta de insumos de aseo, sin riesgo para las personas ni necesidad de inhabilitar espacios."
+            },
+            "acierto": true
+          },
+          {
+            "ms": 2471,
+            "tokensEntrada": 1534,
+            "tokensSalida": 57,
+            "tokensRazonamiento": 254,
+            "obtenido": {
+              "categoria": "seguridad",
+              "prioridad": "alta",
+              "area": "Seguridad",
+              "espacioId": "apolo",
+              "recursoId": null,
+              "inhabilitar": false,
+              "razon": "Una mochila abandonada es un riesgo de seguridad, pero no inhabilita el espacio."
+            },
+            "acierto": true
+          },
+          {
+            "ms": 4172,
+            "tokensEntrada": 1526,
+            "tokensSalida": 67,
+            "tokensRazonamiento": 314,
+            "obtenido": {
+              "categoria": "tecnologia",
+              "prioridad": "media",
+              "area": "Soporte TI",
+              "espacioId": null,
+              "recursoId": "rec-12",
+              "inhabilitar": false,
+              "razon": "El parlante no funciona correctamente, pero no hay riesgo para las personas ni un espacio asignado en el catálogo."
+            },
+            "acierto": false
+          }
+        ]
+      },
+      "solicitud": {
+        "resumen": {
+          "total": 6,
+          "aciertos": 4,
+          "errores": 1,
+          "msPromedio": 2425,
+          "tokensEntrada": 308,
+          "tokensSalida": 54,
+          "tokensRazonamiento": 358
+        },
+        "llamadas": [
+          {
+            "ms": 2425,
+            "tokensEntrada": 308,
+            "tokensSalida": 54,
+            "tokensRazonamiento": 353,
+            "obtenido": {
+              "asistentes": 30,
+              "inicio": "2026-11-17T14:00",
+              "fin": "2026-11-17T16:00"
+            },
+            "acierto": true
+          },
+          {
+            "ms": 2439,
+            "tokensEntrada": 309,
+            "tokensSalida": 53,
+            "tokensRazonamiento": 362,
+            "obtenido": {
+              "asistentes": 8,
+              "inicio": "2026-11-14T10:00",
+              "fin": "2026-11-14T11:30"
+            },
+            "acierto": true
+          },
+          {
+            "ms": 2296,
+            "tokensEntrada": 307,
+            "tokensSalida": 54,
+            "tokensRazonamiento": 345,
+            "obtenido": {
+              "asistentes": 25,
+              "inicio": "2026-11-17T08:00",
+              "fin": "2026-11-17T12:00"
+            },
+            "acierto": false
+          },
+          {
+            "ms": 2535,
+            "tokensEntrada": 305,
+            "tokensSalida": 54,
+            "tokensRazonamiento": 406,
+            "obtenido": {
+              "asistentes": 12,
+              "inicio": "2026-11-13T15:00",
+              "fin": "2026-11-13T17:00"
+            },
+            "acierto": true
+          },
+          {
+            "ms": 2430,
+            "tokensEntrada": 311,
+            "tokensSalida": 54,
+            "tokensRazonamiento": 326,
+            "obtenido": {
+              "asistentes": 60,
+              "inicio": "2026-11-18T09:00",
+              "fin": "2026-11-18T11:00"
+            },
+            "acierto": true
+          },
+          {
+            "error": "{\"error\":{\"code\":429,\"message\":\"You exceeded your current quota, please check your plan and billing details. For more in",
+            "acierto": false
+          }
+        ]
+      }
+    }
+  ]
+}
