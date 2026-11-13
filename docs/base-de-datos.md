@@ -52,6 +52,15 @@ Diez tablas, más `schema_migrations` (qué migraciones ya se aplicaron):
 Las migraciones están en [`db/migrations/`](../db/migrations/): `001_extensiones.sql`,
 `002_esquema.sql`, `003_orden.sql` y `004_embeddings.sql`. Cada archivo corre en una transacción; lo aplicado queda en `schema_migrations`.
 
+### La tabla `conocimiento` (RAG) no está en `db/migrations/`
+
+La tabla donde se guardan los fragmentos de `knowledge/` con su embedding (768 dimensiones, índice HNSW con
+`vector_cosine_ops`) la crea el servicio `pulse-ai` al arrancar, con `PGVectorStore` de `langchain-postgres`, solo si
+no existe (`pulse-ai/app/almacen.py`). Columnas: `id`, `contenido`, `embedding` y `metadatos` (jsonb con `archivo`,
+`documento`, `seccion`, `ejemplo`). Se hizo así porque la librería es dueña de ese esquema y un reinicio del contenedor
+no debe depender del orden en que arranque Node; el costo es que su esquema no se ve en las migraciones, y por eso queda
+documentado aquí. Ver `docs/rag.md`.
+
 ## Decisiones
 
 ### No solapamiento de reservas, en la base de datos

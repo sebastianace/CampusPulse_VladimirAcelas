@@ -3,6 +3,7 @@
 // (en español, listo para mostrar en un toast).
 
 const TIEMPO_LIMITE_MS = 20000; // la IA puede tardar hasta 15 s + un reintento
+export const TIEMPO_LIMITE_PREGUNTAS_MS = 45000; // el RAG hace varias llamadas a Gemini (reformular, reordenar, responder)
 
 export class ErrorApi extends Error {
   constructor(mensaje, { codigo = 'ERROR', status = 0 } = {}) {
@@ -16,11 +17,11 @@ export class ErrorApi extends Error {
 /**
  * Llama a la API y devuelve el JSON de la respuesta.
  * @param {string} ruta   ej. '/api/reservas?fecha=2026-10-16'
- * @param {object} opciones  { metodo: 'GET'|'POST'|'PATCH', cuerpo: objeto }
+ * @param {object} opciones  { metodo: 'GET'|'POST'|'PATCH', cuerpo: objeto, tiempoMs: espera máxima }
  */
-export async function pedir(ruta, { metodo = 'GET', cuerpo } = {}) {
+export async function pedir(ruta, { metodo = 'GET', cuerpo, tiempoMs = TIEMPO_LIMITE_MS } = {}) {
   const control = new AbortController();
-  const temporizador = setTimeout(() => control.abort(), TIEMPO_LIMITE_MS);
+  const temporizador = setTimeout(() => control.abort(), tiempoMs);
 
   let respuesta;
   try {
