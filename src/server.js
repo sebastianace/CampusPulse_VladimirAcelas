@@ -20,6 +20,7 @@ import calidadRouter from './routes/calidad.js';
 import restaurarRouter from './routes/restaurar.js';
 import usuariosRouter from './routes/usuarios.js';
 import iaRouter from './routes/ia.js';
+import integracionesRouter from './routes/integraciones.js';
 import authRouter, { exigirRol, exigirSesion } from './routes/auth.js';
 
 const CARPETA_PUBLICA = fileURLToPath(new URL('../public', import.meta.url));
@@ -32,6 +33,8 @@ app.use(express.static(CARPETA_PUBLICA));
 // ---------- rutas de la API ----------
 // Inicio de sesión: es lo único de /api que se puede usar sin sesión.
 app.use('/api/auth', authRouter);
+// n8n no tiene sesión: se autentica con un secreto compartido (src/routes/integraciones.js).
+app.use('/api/integraciones', integracionesRouter);
 // Todo lo demás de /api exige una sesión válida (si no, 401).
 app.use('/api', exigirSesion);
 
