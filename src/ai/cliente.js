@@ -76,12 +76,19 @@ async function intentar(ai, modelo, prompt, schema) {
   }
 }
 
+// Solo para los tests: reemplaza a Gemini por una función (prompt, schema) => {datos, modelo}.
+let generadorDeJSON = null;
+export function usarGeneradorDeJSON(funcion) {
+  generadorDeJSON = funcion;
+}
+
 /**
  * Pide a la IA un objeto JSON que cumpla "schema".
  * Devuelve { datos, modelo }. Si tras el reintento sigue fallando,
  * lanza IANoDisponibleError con un mensaje en español.
  */
 export async function generarJSON(prompt, schema) {
+  if (generadorDeJSON) return generadorDeJSON(prompt, schema);
   const { ai, modelo } = obtenerCliente();
   let ultimoError;
   for (let intento = 1; intento <= INTENTOS; intento++) {

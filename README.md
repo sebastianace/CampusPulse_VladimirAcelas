@@ -61,7 +61,8 @@ las reglas deciden. Los cambios de la v2 se registran en [CHANGELOG.md](CHANGELO
 - **Frontend** en HTML, CSS y JavaScript nativo, sin frameworks ni build.
 - **Persistencia** en **PostgreSQL 16 con pgvector** (Docker): datos del campus, cuentas y
   sesiones. Ver [docs/base-de-datos.md](docs/base-de-datos.md).
-- **IA**: Google Gemini mediante `@google/genai`.
+- **IA**: Google Gemini mediante `@google/genai` (Node) y **LangChain** (Python, servicio `pulse-ai`
+  con FastAPI) para el RAG. Ver [docs/rag.md](docs/rag.md).
 - **Tests** con `node:test` (sin dependencias extra).
 
 ## Arquitectura
@@ -76,7 +77,9 @@ src/config/        reglas.js: TODAS las constantes de negocio y valores cerrados
 src/data/          almacen.js (lee y guarda en PostgreSQL), repos/ (una tabla por archivo), pg.js, migrar.js, semilla.js y arranque.js;
                    loader.js (lee el CSV), estado-inicial.js (arma los datos iniciales) e importar-cuentas.js
 db/migrations/     Esquema SQL de PostgreSQL (ver docs/base-de-datos.md)
-src/ai/            cliente.js, validar.js, triaje.js, asistente.js, limite.js, cache.js
+src/ai/            cliente.js, validar.js, triaje.js, asistente.js, limite.js, cache.js, intencion.js, conocimiento.js
+pulse-ai/          Servicio Python (FastAPI + LangChain): RAG sobre knowledge/ con pgvector (ver docs/rag.md)
+knowledge/         Documentos de ejemplo que Pulse usa para responder preguntas con fuentes
 src/ai/prompts/    Un archivo por prompt del sistema, con la plantilla de la clase (ver docs/biblioteca-prompts.md)
 evaluacion/        Reportes de prueba del triaje y sus resultados (npm run medir-triaje)
 data/raw/          espacios.csv oficial (nunca se modifica)
@@ -149,6 +152,23 @@ permitido.
 
 Si el servicio de embeddings falla, la incidencia se crea igual, sin la sugerencia. Detalle,
 mediciones y decisiones en [docs/incidencias-parecidas.md](docs/incidencias-parecidas.md).
+
+### 4. Preguntas con fuentes (RAG) — `POST /api/ia/preguntar` y la barra Ctrl+K
+
+La barra **Ctrl+K** entiende dos cosas: pedir una sala (flujo 2) o hacer una pregunta. La IA decide cuál
+(`POST /api/ia/asistente`). Las preguntas ("¿cuántas horas puedo reservar una sala?") las responde el
+servicio `pulse-ai` con **RAG**:
+
+1. Busca en pgvector los fragmentos de `knowledge/` más cercanos a la pregunta.
+2. Un **reranking** con Gemini deja los 4 más útiles.
+3. Gemini responde **solo con esos fragmentos y dice cuáles usó**; la interfaz los muestra en *Ver fuentes*.
+4. Si los documentos no tienen la respuesta, Pulse **dice que no la sabe** (y sugiere un área) en vez de inventar.
+   Una respuesta sin una cita válida también cuenta como "no sé".
+5. Recuerda los últimos 6 mensajes para entender seguimientos ("¿y los domingos?").
+
+Si `pulse-ai` o Gemini fallan, solo falla esta función: reservas, préstamos e incidencias siguen igual.
+Los documentos son **de ejemplo**, no un reglamento oficial. Diseño, decisiones y problemas encontrados en
+[docs/rag.md](docs/rag.md); medición de las 15 preguntas de prueba en [docs/evaluacion-rag.md](docs/evaluacion-rag.md).
 
 ### Controles
 
@@ -265,14 +285,15 @@ Hay dos formas de correrlo:
 docker compose up -d --build
 ```
 
-La app queda en `http://localhost:3000`. La primera vez aplica las migraciones y carga los datos
-iniciales sola. Para apagarla: `docker compose stop` (conserva los datos) o `docker compose down -v`
+Levanta tres servicios: la base (`db`), la app (`app`, en `http://localhost:3000`) y el RAG (`pulse-ai`,
+en `http://localhost:8000`). La primera vez aplica las migraciones, carga los datos iniciales y los
+documentos de `knowledge/` solas. Para apagarla: `docker compose stop` (conserva los datos) o `docker compose down -v`
 (borra también los datos).
 
 **B. Solo la base en Docker y la app con Node** (para desarrollar; se reinicia al guardar):
 
 ```bash
-docker compose up -d db
+docker compose up -d db pulse-ai
 npm run dev
 ```
 
@@ -282,7 +303,8 @@ sesión es `Secure` y solo viaja por HTTPS: déjalo vacío mientras uses `http:/
 `GEMINI_MODEL` es el id exacto del modelo (por ejemplo `gemini-3.6-flash`, el que usamos en la
 demo). Si `npm run probar-ia` responde 503 ("high demand"), el modelo está saturado en ese
 momento: prueba otro modelo flash de tu cuenta. La capa gratis de Gemini permite **5 peticiones
-por minuto por modelo**; el triaje usa 1 y la recomendación 2. Si se supera, la app responde con el
+por minuto por modelo** (en el modelo que usamos al medir el RAG, 15); el triaje usa 1 llamada, la
+recomendación 2 y una pregunta del RAG hasta 4. Si se supera, la app responde con el
 error claro y el formulario manual, nunca con una respuesta inventada.
 
 | Comando | Qué hace |
@@ -294,6 +316,8 @@ error claro y el formulario manual, nunca con una respuesta inventada.
 | `npm run migrar` | Aplica las migraciones de `db/migrations/` a PostgreSQL (necesita `docker compose up -d db`) |
 | `npm run embeddings` | Genera el embedding de las incidencias que no lo tienen (usa la clave de Gemini) |
 | `npm run importar-cuentas` | Copia las cuentas del viejo `data/auth.json` a PostgreSQL (se corre una vez) |
+| `npm run conocimiento` | Recarga `knowledge/` en la base vectorial (necesita `pulse-ai` levantado) |
+| `npm run evaluar-rag` | Hace las 15 preguntas de prueba del RAG, con y sin reranking (gasta cuota de Gemini, ~8 min) |
 | `npm run semilla` | Carga espacios, recursos y calidad de datos en PostgreSQL |
 | `npm run medir-triaje` | Mide el triaje sin ejemplos y con ellos (24 llamadas a Gemini, ~5 min; gasta cuota) |
 

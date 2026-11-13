@@ -39,8 +39,34 @@ services:
       # Vacío a propósito: con NODE_ENV=production la cookie de sesión es "secure" y no viaja por
       # http://localhost. Ponlo en production cuando la app se sirva por HTTPS.
       NODE_ENV: ${NODE_ENV:-}
+      # Dentro de la red de Docker, pulse-ai es el servicio "pulse-ai".
+      PULSE_AI_URL: http://pulse-ai:8000
+      PULSE_AI_TOKEN: ${PULSE_AI_TOKEN:-}
     ports:
       - "127.0.0.1:${PORT:-3000}:3000"
+
+  # Servicio de RAG (Python + LangChain): responde preguntas sobre el campus citando documentos de knowledge/.
+  # Si se cae, la app sigue funcionando (solo falla la pestaña de preguntas). Ver docs/rag.md.
+  pulse-ai:
+    build: ./pulse-ai
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PUERTO: "5432"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env (ver .env.example)}
+      CONOCIMIENTO_DIR: /srv/knowledge
+      # Opcional: si lo defines, Express y pulse-ai se autentican con este secreto compartido.
+      PULSE_AI_TOKEN: ${PULSE_AI_TOKEN:-}
+    volumes:
+      # Los documentos se montan (solo lectura): editar un .md y volver a ingestar no exige reconstruir la imagen.
+      - ./knowledge:/srv/knowledge:ro
+    ports:
+      - "127.0.0.1:${PULSE_AI_PUERTO:-8000}:8000"
 
 volumes:
   pgdata:

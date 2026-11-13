@@ -24,8 +24,30 @@ schema JSON y se vuelve a validar en `src/ai/validar.js`.
 | Triaje de incidencias | `prompts/triaje.js` | `POST /api/ia/triaje` | 1.2 |
 | Extracción de la solicitud de reserva | `prompts/solicitud.js` | `POST /api/ia/recomendar`, paso 1 | 1.0 |
 | Explicación de las salas recomendadas | `prompts/explicacion.js` | `POST /api/ia/recomendar`, paso 3 | 1.1 |
+| Intención del mensaje (reservar o preguntar) | `prompts/intencion.js` | `POST /api/ia/asistente` | 1.0 |
+| Reformular la pregunta con la conversación (few-shot) | `pulse-ai/app/prompts.py` | RAG, `pulse-ai` | 1.1 |
+| Reordenar fragmentos (reranking) | `pulse-ai/app/prompts.py` | RAG, `pulse-ai` | 1.0 |
+| Responder con citas o decir "no sé" | `pulse-ai/app/prompts.py` | RAG, `pulse-ai` | 1.1 |
+
+Los prompts del RAG viven en Python (`pulse-ai/`) porque ahí corre LangChain, con la misma plantilla de seis secciones
+y la misma personalidad de Pulse. Un test de Node comprueba que las conductas de la personalidad sean idénticas en los dos
+lugares (`tests/conocimiento-docs.test.js`).
 
 ## Historial de versiones
+
+### RAG 1.1: la reformulación decide antes de reescribir
+- **Problema encontrado probando con Gemini real** (`gemini-3.5-flash-lite`): con una conversación previa sobre
+  "domingos", la pregunta independiente *"¿Quién ganó el mundial de fútbol de 2014?"* se reescribía como *"¿Cuál es el
+  tiempo máximo de reserva los domingos?"* en 2 de 4 intentos, y Pulse respondía sobre domingos. La v1.0 del prompt pedía
+  "reescribe la pregunta para que se entienda sola", y el modelo la reescribía siempre, mezclando temas.
+- **Cambio:** el modelo primero decide en un campo `depende_del_historial` (true solo si la pregunta no se entiende
+  sin los mensajes anteriores); si es `false`, el código usa la pregunta original sin tocarla aunque el modelo la haya
+  reescrito. Además se agregó la sección de **ejemplos (few-shot)** con cuatro casos, entre ellos el del mundial.
+- **Resultado:** el mismo escenario, 8 de 8 intentos sin contaminar (antes 2 de 4). Los seguimientos legítimos
+  ("¿y los domingos?") siguen reformulándose bien (5 de 5 en una prueba directa).
+- Si la reformulación falla (Gemini caído), el código une la última pregunta de la persona con la nueva, sin IA.
+- **Prompt de respuesta 1.1:** se agregó "ve directo a la respuesta, sin saludar" porque la primera respuesta empezó con
+  "Hola.".
 
 ### 1.2: ejemplos few-shot en el triaje
 
