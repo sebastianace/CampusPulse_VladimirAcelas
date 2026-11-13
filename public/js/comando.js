@@ -27,6 +27,13 @@ export function iniciarComando(opciones) {
   mostrarPestana = opciones.mostrarPestana;
   document.getElementById('form-comando').addEventListener('submit', enviar);
   dialogo().addEventListener('close', () => { detenerLectura(); nuevaConversacion(); });
+  // Salidas que funcionan en el celular, donde no hay tecla Esc: el botón de cerrar y tocar fuera del cuadro.
+  document.getElementById('cerrar-comando').addEventListener('click', () => dialogo().close());
+  dialogo().addEventListener('click', (evento) => {
+    const caja = dialogo().getBoundingClientRect();
+    const fuera = evento.clientX < caja.left || evento.clientX > caja.right || evento.clientY < caja.top || evento.clientY > caja.bottom;
+    if (fuera) dialogo().close();
+  });
   // Dictado por voz en la barra: escribe en el campo y la persona pulsa Enviar (si el navegador no lo soporta, no aparece).
   const campo = document.querySelector('#form-comando input[name="texto"]');
   agregarDictado(campo, campo);
