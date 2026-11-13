@@ -92,5 +92,5 @@ function mensajePorEstado(status) {
 // límite de consultas a la IA superado (429 LIMITE_IA) o sin conexión
 export function esFallaDeIA(error) {
   return error instanceof ErrorApi
-    && (error.status === 503 || error.codigo === 'LIMITE_IA' || error.codigo === 'SIN_CONEXION');
+    && (error.status === 503 || ['LIMITE_IA', 'IA_OCUPADA'].includes(error.codigo) || error.codigo === 'SIN_CONEXION');
 }

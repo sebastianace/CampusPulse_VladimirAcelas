@@ -30,7 +30,7 @@ flowchart LR
    los mensajes anteriores y, solo entonces, la reescribe como "¿Se puede reservar una sala los domingos?".
 3. **Recuperar.** Se calcula el embedding de la pregunta y pgvector devuelve los fragmentos más cercanos (distancia coseno,
    `<=>`). Con reranking se traen 8; sin él, 4.
-4. **Reordenar (reranking).** Gemini califica de 0 a 10 qué tan útil es cada fragmento *para esa pregunta* y se dejan los 4
+4. **Reordenar (reranking, opcional y apagado por defecto).** Gemini califica de 0 a 10 qué tan útil es cada fragmento *para esa pregunta* y se dejan los 4
    mejores. Si ni el mejor llega a 4, Pulse dice que no sabe sin gastar la llamada que redacta.
 5. **Responder.** Gemini recibe los 4 fragmentos numerados y devuelve JSON: `respondido`, `respuesta`, qué fragmentos usó
    y, si no pudo responder, qué área podría ayudar.
@@ -67,15 +67,19 @@ la búsqueda (se vio en una prueba real).
 quede cerca de los fragmentos que la responden. Para comparar incidencias entre sí (mismo tipo de texto) se usa
 `SEMANTIC_SIMILARITY`. 768 y no 3072 porque un índice HNSW de pgvector admite como máximo 2000 dimensiones.
 
-### Reranking con Gemini
+### Reranking con Gemini (apagado por defecto)
 La búsqueda vectorial es rápida pero tosca: mide parecido general, no "¿esto responde la pregunta?". El reranking trae más
 candidatos (8) y le pide a Gemini que los califique contra la pregunta (0 a 10). Se eligió un reranker basado en LLM porque
-es gratis, no necesita descargar un modelo y reutiliza la misma API. El costo: **una llamada más por pregunta**, y con el
-plan gratuito (15 llamadas por minuto) eso importa. Los resultados con y sin reranking están en
-`docs/evaluacion-rag.md`. Si el reranking falla, se usa el orden de la búsqueda vectorial.
+es gratis, no necesita descargar un modelo y reutiliza la misma API. El costo: **una llamada más y ≈ 1.4 s por pregunta**
+(medido: 1.8 s sin reranking, 3.2 s con él), y con el plan gratuito (15 llamadas por minuto para todo el campus) eso importa.
+
+**Está apagado por defecto** porque en la evaluación (`docs/evaluacion-rag.md`) no mejoró la exactitud: ambos modos
+acertaron las 15 preguntas. Se enciende con `RAG_RERANKING=1`, o por petición con `{"reranking": true}` para comparar. Cuando
+está encendido, si falla se usa el orden de la búsqueda vectorial. Si el campus tuviera muchos más documentos parecidos entre
+sí, habría que volver a medir (ver `docs/capacidad-ia.md`).
 
 ### Cómo evitamos que invente (tres capas)
-1. **Compuerta del reranking:** si el mejor fragmento saca menos de 4/10, se responde "no sé" sin llamar al modelo.
+1. **Compuerta del reranking** (solo si está encendido): si el mejor fragmento saca menos de 4/10, se responde "no sé" sin llamar al modelo.
 2. **Prompt:** "responde únicamente con lo que esté escrito en los fragmentos; es mejor no saber que inventar", y salida
    estructurada con `respondido: true/false`.
 3. **Validación de citas en código:** la respuesta debe señalar en qué fragmentos se apoyó. Números inexistentes se
@@ -110,10 +114,10 @@ administrador pueda cambiar `knowledge/`, los documentos son de confianza.
 
 ## Límite real del plan gratuito
 Gemini gratis permite **15 llamadas por minuto por modelo** (se vio al agotarlas: `GenerateRequestsPerMinutePerProjectPerModel-FreeTier`).
-Una pregunta usa hasta 4 (intención, reformular, reordenar, responder), así que unas **4 preguntas por minuto en
-total** agotan la cuota, aunque el límite por persona (5 consultas por minuto) no se haya alcanzado. Por eso hay caché
-para preguntas repetidas y un reintento con espera más larga ante un 429. Para un uso real habría que pasar a un plan de
-pago o bajar el costo por pregunta (por ejemplo, reranking solo cuando la búsqueda tenga dudas).
+Al principio una pregunta usaba hasta 4 (intención, reformular, reordenar, responder), y unas 4 por minuto agotaban la
+cuota de todo el campus. Ahora usa **1** (2 con conversación previa), las repetidas salen de la caché y hay un presupuesto
+global que rechaza al instante lo que no cabe. Cifras, límites y qué hacer si se necesita más capacidad:
+**`docs/capacidad-ia.md`**.
 
 ## Problemas reales que aparecieron al probar
 1. **La reformulación mezclaba temas.** Con historial sobre "domingos", una pregunta sobre el mundial se convertía en una

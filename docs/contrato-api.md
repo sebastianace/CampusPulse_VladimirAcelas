@@ -61,6 +61,15 @@ listo para mostrar en un toast.
 
 ## Límite y caché de la IA
 
+- **Presupuesto global:** además del cupo por persona, hay un presupuesto de llamadas a Gemini por minuto para *todas* las
+  personas (`LIMITE_IA_GLOBAL_LLAMADAS_MINUTO`, porque la capa gratis tiene un límite por proyecto). Si una petición no cabe,
+  responde **`429 IA_OCUPADA`** al instante, con `Retry-After`, y no le cuenta como consulta a la persona. Ver
+  `docs/capacidad-ia.md`.
+- **Modo ahorro:** con poco presupuesto, `POST /api/ia/recomendar` y `POST /api/ia/asistente` (intención `reservar`) devuelven
+  las salas con `modoAhorro: true`: las reglas escriben el `motivo` de cada opción y `explicacion` viene vacía.
+- **Intención sin IA:** `POST /api/ia/asistente` decide con reglas cuando el mensaje es claro y solo le pregunta a Gemini si es
+  ambiguo. Una pregunta ya respondida (sin conversación previa) sale de la caché con `X-Cache: HIT`.
+
 - Cada usuario puede hacer `LIMITE_IA_PETICIONES` consultas a `/api/ia/*` cada
   `LIMITE_IA_VENTANA_MINUTOS` (valores en `src/config/reglas.js`). Una petición inválida (422) o
   respondida desde la caché no gasta cupo.
