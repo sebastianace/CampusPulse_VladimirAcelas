@@ -17,6 +17,8 @@ const { app } = await import('../src/server.js');
 const { REGLAS } = await import('../src/config/reglas.js');
 const { usarGeneradorDeJSON } = await import('../src/ai/cliente.js');
 const { vaciarCache } = await import('../src/ai/cache.js');
+const limiteModulo = await import('../src/ai/limite.js');
+const { reiniciarPresupuesto } = limiteModulo;
 
 const CLAVE = 'clave-de-prueba-1';
 
@@ -104,6 +106,7 @@ beforeEach(() => {
   recibidas = [];
   comportamiento = () => ({ cuerpo: RESPUESTA_OK });
   vaciarCache();
+  reiniciarPresupuesto(); // el presupuesto global de llamadas es estado compartido: cada test parte de cero
   delete process.env.PULSE_AI_TOKEN;
 });
 
@@ -261,13 +264,21 @@ describe('POST /api/ia/asistente (intención)', () => {
   }
   after(() => usarGeneradorDeJSON(null));
 
-  test('intención "preguntar": responde con el RAG y no toca el flujo de reservas', async () => {
-    geminiFalso({ intencion: 'preguntar' });
+  test('una pregunta clara la decide el código: no gasta la llamada que clasifica y va al RAG', async () => {
+    geminiFalso({ intencion: 'reservar' }); // si se le preguntara a la IA, diría "reservar": las reglas tienen que ganar
     const { status, cuerpo } = await pedir('/api/ia/asistente', 'POST', { texto: '¿Cuántas horas puedo reservar?' }, (await sesionNueva()));
     assert.equal(status, 200);
     assert.equal(cuerpo.intencion, 'preguntar');
     assert.equal(cuerpo.respuesta, RESPUESTA_OK.respuesta);
-    assert.equal(llamadasIA.length, 1, 'solo se clasificó');
+    assert.equal(llamadasIA.length, 0, 'sin llamadas a Gemini para clasificar');
+    assert.equal(recibidas.length, 1);
+  });
+
+  test('un mensaje ambiguo sí se le pregunta a la IA (una sola llamada) y responde según su intención', async () => {
+    geminiFalso({ intencion: 'preguntar' });
+    const { cuerpo } = await pedir('/api/ia/asistente', 'POST', { texto: 'hola' }, (await sesionNueva()));
+    assert.equal(cuerpo.intencion, 'preguntar');
+    assert.equal(llamadasIA.length, 1);
     assert.equal(recibidas.length, 1);
   });
 
@@ -299,7 +310,8 @@ describe('POST /api/ia/asistente (intención)', () => {
   test('el historial llega al RAG y la clasificación solo ve los últimos mensajes', async () => {
     geminiFalso({ intencion: 'preguntar' });
     const historial = Array.from({ length: 6 }, (_, i) => ({ rol: i % 2 ? 'pulse' : 'usuario', texto: `mensaje-${i}` }));
-    await pedir('/api/ia/asistente', 'POST', { texto: '¿y los sábados?', historial }, (await sesionNueva()));
+    // "gracias" es ambiguo para las reglas: la clasifica la IA, que ve solo los últimos mensajes
+    await pedir('/api/ia/asistente', 'POST', { texto: 'gracias', historial }, (await sesionNueva()));
     assert.equal(recibidas[0].cuerpo.historial.length, 6);
     assert.ok(llamadasIA[0].includes('mensaje-5') && llamadasIA[0].includes('mensaje-4'));
     assert.ok(!llamadasIA[0].includes('mensaje-0'));
@@ -333,3 +345,126 @@ describe('POST /api/ia/conocimiento/ingestar', () => {
     assert.equal(otra.cache, null);
   });
 });
+
+describe('presupuesto global de llamadas, modo ahorro y caché en Ctrl+K', () => {
+  const { reservarPresupuesto, presupuestoRestante } = limiteModulo;
+  let llamadasIA;
+  function geminiFalso() {
+    llamadasIA = [];
+    usarGeneradorDeJSON(async (prompt) => {
+      llamadasIA.push(prompt.includes('Extraes de una petición') ? 'extraer' : prompt.includes('Redactas la explicación') ? 'explicar' : 'otra');
+      if (prompt.includes('Extraes de una petición')) {
+        return { datos: { asistentes: 10, inicio: '2099-01-05T14:00', fin: '2099-01-05T16:00', necesitaComputadores: false }, modelo: 'falso' };
+      }
+      const ids = [...prompt.matchAll(/^- ([a-z-]+): /gm)].map((m) => m[1]);
+      return { datos: { opciones: ids.map((espacioId) => ({ espacioId, motivo: 'sirve' })), explicacion: 'Te recomiendo la primera.' }, modelo: 'falso' };
+    });
+  }
+  after(() => usarGeneradorDeJSON(null));
+  const RESERVA = 'Una sala para 10 personas el lunes de 2 a 4 pm';
+
+  test('con presupuesto de sobra una reserva gasta 2 llamadas (entender + explicar)', async () => {
+    geminiFalso();
+    const { cuerpo } = await pedir('/api/ia/asistente', 'POST', { texto: RESERVA }, await sesionNueva());
+    assert.deepEqual(llamadasIA, ['extraer', 'explicar']);
+    assert.equal(cuerpo.modoAhorro, undefined);
+    assert.equal(cuerpo.explicacion, 'Te recomiendo la primera.');
+    assert.equal(presupuestoRestante(), REGLAS.LIMITE_IA_GLOBAL_LLAMADAS_MINUTO - 2);
+  });
+
+  test('con poco presupuesto entra el modo ahorro: las reglas escriben el motivo y se ahorra una llamada', async () => {
+    geminiFalso();
+    reservarPresupuesto(REGLAS.LIMITE_IA_GLOBAL_LLAMADAS_MINUTO - REGLAS.UMBRAL_MODO_AHORRO - 1); // quedan pocas
+    const antes = presupuestoRestante();
+    const { status, cuerpo } = await pedir('/api/ia/asistente', 'POST', { texto: RESERVA }, await sesionNueva());
+    assert.equal(status, 200);
+    assert.deepEqual(llamadasIA, ['extraer'], 'no se llama a Gemini para redactar');
+    assert.equal(cuerpo.modoAhorro, true);
+    assert.equal(cuerpo.explicacion, '', 'no hay texto de la IA que mostrar como si lo fuera');
+    assert.ok(cuerpo.opciones.length > 0);
+    assert.ok(cuerpo.opciones.every((o) => /^Caben 10 personas \(\d+ puestos\)/.test(o.motivo)), 'el motivo sale de las reglas');
+    assert.equal(presupuestoRestante(), antes - 1);
+  });
+
+  test('las salas son las mismas con y sin modo ahorro: las reglas deciden, no la IA', async () => {
+    geminiFalso();
+    const normal = await pedir('/api/ia/asistente', 'POST', { texto: RESERVA }, await sesionNueva());
+    reiniciarPresupuesto();
+    reservarPresupuesto(REGLAS.LIMITE_IA_GLOBAL_LLAMADAS_MINUTO - 3);
+    const ahorro = await pedir('/api/ia/asistente', 'POST', { texto: RESERVA }, await sesionNueva());
+    assert.equal(ahorro.cuerpo.modoAhorro, true);
+    assert.deepEqual(ahorro.cuerpo.opciones.map((o) => o.espacioId), normal.cuerpo.opciones.map((o) => o.espacioId));
+  });
+
+  test('sin presupuesto responde 429 IA_OCUPADA al instante, con Retry-After, sin llamar a Gemini ni gastar el cupo de la persona', async () => {
+    geminiFalso();
+    reservarPresupuesto(REGLAS.LIMITE_IA_GLOBAL_LLAMADAS_MINUTO);
+    const usuario = await sesionNueva();
+    const inicio = Date.now();
+    const respuesta = await fetch(`${base}/api/ia/asistente`, {
+      method: 'POST', headers: { 'content-type': 'application/json', cookie: usuario }, body: JSON.stringify({ texto: RESERVA }),
+    });
+    const cuerpo = await respuesta.json();
+    assert.equal(respuesta.status, 429);
+    assert.equal(cuerpo.error.codigo, 'IA_OCUPADA');
+    assert.match(cuerpo.error.mensaje, /formulario manual/);
+    assert.ok(Number(respuesta.headers.get('retry-after')) >= 1);
+    assert.ok(Date.now() - inicio < 500, 'falla rápido, no después de esperar a Gemini');
+    assert.deepEqual(llamadasIA, []);
+    // la persona no perdió su cupo: cuando haya presupuesto, tiene los 5 intactos
+    reiniciarPresupuesto();
+    for (let i = 0; i < REGLAS.LIMITE_IA_PETICIONES; i++) {
+      assert.equal((await pedir('/api/ia/asistente', 'POST', { texto: `${RESERVA} ${i}` }, usuario)).status, 200, `petición ${i + 1}`);
+    }
+  });
+
+  test('una pregunta ya respondida sale de la caché también en Ctrl+K: sin llamadas, sin cupo, sin presupuesto', async () => {
+    geminiFalso();
+    const usuario = await sesionNueva();
+    const primera = await pedir('/api/ia/asistente', 'POST', { texto: '¿Cuántas horas puedo reservar una sala?' }, usuario);
+    assert.equal(primera.cache, null);
+    const restante = presupuestoRestante();
+    for (let i = 0; i < 20; i++) { // 20 seguidas: más que el cupo por persona; todas salen de la caché
+      const otra = await pedir('/api/ia/asistente', 'POST', { texto: '  ¿CUÁNTAS horas puedo   reservar una sala? ' }, usuario);
+      assert.equal(otra.status, 200);
+      assert.equal(otra.cache, 'HIT');
+      assert.equal(otra.cuerpo.intencion, 'preguntar');
+    }
+    assert.equal(presupuestoRestante(), restante);
+    assert.equal(recibidas.length, 1, 'pulse-ai solo se consultó una vez');
+  });
+
+  test('una pregunta con conversación previa cuesta 2 llamadas (reformular y responder); sin ella, 1', async () => {
+    geminiFalso();
+    await pedir('/api/ia/asistente', 'POST', { texto: '¿Cuántas horas puedo reservar una sala?' }, await sesionNueva());
+    assert.equal(presupuestoRestante(), REGLAS.LIMITE_IA_GLOBAL_LLAMADAS_MINUTO - 1);
+    reiniciarPresupuesto();
+    const historial = [{ rol: 'usuario', texto: '¿Se reserva los lunes?' }, { rol: 'pulse', texto: 'Sí.' }];
+    await pedir('/api/ia/asistente', 'POST', { texto: '¿y los sábados?', historial }, await sesionNueva());
+    assert.equal(presupuestoRestante(), REGLAS.LIMITE_IA_GLOBAL_LLAMADAS_MINUTO - 2);
+  });
+
+  test('30 profesores piden sala a la vez: se atienden las que caben en el minuto y el resto falla al instante y con aviso', async () => {
+    geminiFalso();
+    const profesores = [];
+    for (let i = 0; i < 30; i++) profesores.push(await sesionNueva());
+    const inicio = Date.now();
+    const respuestas = await Promise.all(profesores.map(async (cookie, i) => {
+      const r = await fetch(`${base}/api/ia/asistente`, {
+        method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify({ texto: `${RESERVA} (${i})` }),
+      });
+      return { status: r.status, cuerpo: await r.json(), esperar: r.headers.get('retry-after') };
+    }));
+    const atendidas = respuestas.filter((r) => r.status === 200);
+    const ocupadas = respuestas.filter((r) => r.status === 429);
+    assert.equal(atendidas.length + ocupadas.length, 30, 'ninguna da un error distinto');
+    assert.ok(ocupadas.every((r) => r.cuerpo.error.codigo === 'IA_OCUPADA' && Number(r.esperar) >= 1));
+    // 12 llamadas por minuto: 4 peticiones completas (2 llamadas) y luego 4 en modo ahorro (1 llamada) = 8
+    assert.equal(atendidas.length, 8);
+    assert.equal(atendidas.filter((r) => r.cuerpo.modoAhorro === true).length, 4, 'las últimas 4 salieron en modo ahorro');
+    assert.ok(atendidas.every((r) => r.cuerpo.opciones.length > 0), 'todas las atendidas traen salas, con o sin explicación');
+    assert.ok(Date.now() - inicio < 3000, 'las 22 que no caben no esperaron a Gemini');
+    assert.equal(presupuestoRestante(), 0);
+  });
+});
+

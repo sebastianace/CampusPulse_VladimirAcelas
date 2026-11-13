@@ -17,7 +17,7 @@ delete process.env.GEMINI_API_KEY; // la IA no está configurada: responde 503
 delete process.env.GEMINI_MODEL;
 const { app } = await import('../src/server.js');
 const { REGLAS } = await import('../src/config/reglas.js');
-const { consumirCupoIA } = await import('../src/ai/limite.js');
+const { consumirCupoIA, devolverCupoIA, presupuestoRestante, reiniciarPresupuesto, reservarPresupuesto } = await import('../src/ai/limite.js');
 const { guardarCache, leerCache, vaciarCache } = await import('../src/ai/cache.js');
 
 const MINUTO = 60_000;
@@ -129,5 +129,73 @@ describe('Rutas /api/ia', () => {
     const { cookie } = await pedir('/api/auth/login', { usuario: 'profe2', clave: 'clave-de-prueba-1' });
     for (let i = 0; i < LIMITE + 2; i++) assert.equal((await triaje(cookie, '   ')).status, 422);
     assert.equal((await triaje(cookie)).status, 503, 'el cupo sigue completo');
+  });
+});
+
+describe('Presupuesto global de llamadas a Gemini', () => {
+  const TOPE = REGLAS.LIMITE_IA_GLOBAL_LLAMADAS_MINUTO;
+
+  test('reserva llamadas hasta el tope; la que no cabe lanza 429 IA_OCUPADA y no reserva nada', () => {
+    reiniciarPresupuesto();
+    const t0 = 1_000_000;
+    reservarPresupuesto(TOPE - 2, t0);
+    assert.equal(presupuestoRestante(t0), 2);
+    assert.throws(() => reservarPresupuesto(3, t0), (error) => {
+      assert.equal(error.status, 429);
+      assert.equal(error.codigo, 'IA_OCUPADA');
+      assert.match(error.message, /formulario manual/);
+      assert.ok(error.esperaSegundos >= 1);
+      return true;
+    });
+    assert.equal(presupuestoRestante(t0), 2, 'el intento fallido no gastó nada');
+    assert.doesNotThrow(() => reservarPresupuesto(2, t0));
+    assert.equal(presupuestoRestante(t0), 0);
+  });
+
+  test('se recupera cuando las llamadas salen del último minuto, y avisa cuántos segundos faltan', () => {
+    reiniciarPresupuesto();
+    const t0 = 5_000_000;
+    reservarPresupuesto(TOPE, t0);
+    assert.throws(() => reservarPresupuesto(1, t0 + 20_000), (e) => e.esperaSegundos === 40);
+    assert.equal(presupuestoRestante(t0 + MINUTO - 1), 0);
+    assert.equal(presupuestoRestante(t0 + MINUTO), TOPE);
+  });
+
+  test('el presupuesto es de todos: lo que gastan varias personas se suma', () => {
+    reiniciarPresupuesto();
+    const t0 = 9_000_000;
+    for (let persona = 0; persona < 4; persona++) reservarPresupuesto(3, t0);
+    assert.equal(presupuestoRestante(t0), TOPE - 12);
+  });
+
+  test('reservar 0 llamadas (embeddings) nunca falla, ni con el presupuesto agotado', () => {
+    reiniciarPresupuesto();
+    reservarPresupuesto(TOPE, 1);
+    assert.doesNotThrow(() => reservarPresupuesto(0, 1));
+  });
+
+  test('devolverCupoIA le regresa a la persona la consulta que no se atendió', () => {
+    const t0 = 20_000_000;
+    for (let i = 0; i < LIMITE; i++) consumirCupoIA('devuelto', t0);
+    assert.throws(() => consumirCupoIA('devuelto', t0));
+    devolverCupoIA('devuelto');
+    assert.doesNotThrow(() => consumirCupoIA('devuelto', t0));
+  });
+
+  test('el tope deja margen bajo las 15 llamadas por minuto de la capa gratis', () => {
+    assert.ok(TOPE <= 14);
+    assert.ok(REGLAS.UMBRAL_MODO_AHORRO < TOPE);
+  });
+});
+
+describe('Caché de respuestas del RAG', () => {
+  test('una entrada dura el tiempo que se le pida (el RAG, más que el triaje)', () => {
+    vaciarCache();
+    guardarCache('pregunta', 'respuesta', 0, 'rag', REGLAS.CACHE_RAG_MINUTOS);
+    guardarCache('triaje', 'sugerencia', 0, 'triaje');
+    const despues = (REGLAS.CACHE_IA_MINUTOS + 1) * MINUTO;
+    assert.equal(leerCache('pregunta', despues, 'rag'), 'respuesta');
+    assert.equal(leerCache('triaje', despues, 'triaje'), undefined);
+    assert.equal(leerCache('pregunta', (REGLAS.CACHE_RAG_MINUTOS + 1) * MINUTO, 'rag'), undefined);
   });
 });

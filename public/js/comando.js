@@ -132,7 +132,7 @@ function crearFuentes(fragmentos, respondido, abierto) {
 
 // ---------- 2b. Mostrar lo que entendió la IA y las opciones (reserva) ----------
 
-function dibujarRecomendacion({ solicitud, opciones = [], explicacion, modelo }) {
+function dibujarRecomendacion({ solicitud, opciones = [], explicacion, modelo, modoAhorro }) {
   const responsable = el('input', {
     type: 'text', name: 'responsable', autocomplete: 'off', required: true, placeholder: 'Elige o escribe un nombre',
   });
@@ -153,6 +153,8 @@ function dibujarRecomendacion({ solicitud, opciones = [], explicacion, modelo })
         el('span', { className: 'sello-ia__modelo' }, modelo ? ` · ${modelo}` : '')),
       el('p', { className: 'razon-ia' }, explicacion),
       crearBotonEscuchar(() => textoDeRecomendacion({ explicacion, opciones }, nombreDeEspacio))) : '', // '' y no null: replaceChildren pintaría "null"
+
+    modoAhorro ? el('p', { className: 'nota', role: 'status' }, 'Hay mucha gente usando la IA: te muestro las salas que cumplen las reglas, sin la explicación redactada.') : '',
 
     opciones.length ? el('label', { className: 'campo' }, el('span', {}, 'Responsable de la reserva'), responsable) : '',
 

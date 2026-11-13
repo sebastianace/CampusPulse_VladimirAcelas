@@ -12,10 +12,10 @@ import { Router } from 'express';
 import { DatosInvalidosError } from '../domain/errors.js';
 import { triarIncidencia } from '../ai/triaje.js';
 import { recomendarEspacios } from '../ai/asistente.js';
-import { consumirCupoIA } from '../ai/limite.js';
+import { consumirCupoIA, devolverCupoIA, presupuestoRestante, reservarPresupuesto } from '../ai/limite.js';
 import { guardarCache, leerCache, vaciarCache } from '../ai/cache.js';
 import { buscarSimilares, embeddingEnCache } from '../ai/similares.js';
-import { clasificarIntencion } from '../ai/intencion.js';
+import { clasificarIntencion, intencionPorReglas } from '../ai/intencion.js';
 import { ingestarConocimiento, preguntarAlConocimiento } from '../ai/conocimiento.js';
 import { REGLAS } from '../config/reglas.js';
 import { exigirRol } from './auth.js';
@@ -52,12 +52,40 @@ function validarHistorial(valor) {
   return mensajes.slice(-REGLAS.MAX_MENSAJES_HISTORIAL);
 }
 
-// Consume un cupo del usuario; si ya no le quedan, responde 429 con Retry-After.
-function gastarCupo(req, res) {
+// Cuántas llamadas a Gemini se estima que gasta una pregunta al RAG: responder (1) y, si hay conversación previa,
+// reformular la pregunta (1 más). El reranking está apagado por defecto (docs/evaluacion-rag.md).
+const llamadasDePregunta = (historial) => (historial.length ? 2 : 1);
+
+// Con poca cuota en el minuto, la recomendación de salas no gasta la llamada que redacta la explicación.
+const hayQueAhorrar = () => presupuestoRestante() - 2 < REGLAS.UMBRAL_MODO_AHORRO;
+
+function avisarEspera(res, error) {
+  if (error.esperaSegundos) res.set('Retry-After', String(error.esperaSegundos));
+}
+
+// Consume un cupo del usuario y reserva `llamadas` del presupuesto global de Gemini. Si la persona ya gastó su cupo
+// (429 LIMITE_IA) o la IA está saturada para todos (429 IA_OCUPADA), responde enseguida con Retry-After.
+function gastarCupo(req, res, llamadas = 1) {
   try {
     consumirCupoIA(req.usuario.usuario);
+    try {
+      reservarPresupuesto(llamadas);
+    } catch (error) {
+      devolverCupoIA(req.usuario.usuario); // no se atendió: que no le cuente como consulta
+      throw error;
+    }
   } catch (error) {
-    if (error.esperaSegundos) res.set('Retry-After', String(error.esperaSegundos));
+    avisarEspera(res, error);
+    throw error;
+  }
+}
+
+// Reserva llamadas extra del presupuesto cuando la petición ya tiene su cupo de persona (p. ej. tras clasificar la intención).
+function gastarLlamadas(res, llamadas) {
+  try {
+    reservarPresupuesto(llamadas);
+  } catch (error) {
+    avisarEspera(res, error);
     throw error;
   }
 }
@@ -87,7 +115,7 @@ router.post('/triaje', async (req, res) => {
 router.post('/similares', async (req, res) => {
   const descripcion = exigirTexto(req.body?.descripcion, 'la descripción de la incidencia');
   const idOpcional = (valor) => (typeof valor === 'string' && valor.trim() ? valor.trim() : null);
-  if (!embeddingEnCache(descripcion)) gastarCupo(req, res);
+  if (!embeddingEnCache(descripcion)) gastarCupo(req, res, 0); // el embedding tiene otra cuota: no gasta llamadas de generación
   res.json(await buscarSimilares({ descripcion, espacioId: idOpcional(req.body?.espacioId), recursoId: idOpcional(req.body?.recursoId) }));
 });
 
@@ -95,8 +123,9 @@ router.post('/similares', async (req, res) => {
 // -> {solicitud: {asistentes, inicio, fin}, opciones: [{espacioId, motivo}], explicacion, modelo}
 router.post('/recomendar', async (req, res) => {
   const texto = exigirTexto(req.body?.texto, 'el texto de la petición');
-  gastarCupo(req, res); // sin caché: la disponibilidad y "mañana" cambian
-  res.json(await recomendarEspacios(texto));
+  const ahorro = hayQueAhorrar(); // sin caché: la disponibilidad y "mañana" cambian
+  gastarCupo(req, res, ahorro ? 1 : 2);
+  res.json(await recomendarEspacios(texto, { explicarConIA: !ahorro }));
 });
 
 // POST /api/ia/preguntar  {pregunta, historial?}
@@ -113,9 +142,9 @@ router.post('/preguntar', async (req, res) => {
     res.set('X-Cache', 'HIT');
     return res.json(guardada);
   }
-  gastarCupo(req, res);
+  gastarCupo(req, res, llamadasDePregunta(historial));
   const respuesta = await preguntarAlConocimiento({ pregunta, historial });
-  if (historial.length === 0 && respuesta.respondido) guardarCache(pregunta, respuesta, Date.now(), 'rag');
+  if (historial.length === 0 && respuesta.respondido) guardarCache(pregunta, respuesta, Date.now(), 'rag', REGLAS.CACHE_RAG_MINUTOS);
   res.json(respuesta);
 });
 
@@ -125,10 +154,33 @@ router.post('/preguntar', async (req, res) => {
 router.post('/asistente', async (req, res) => {
   const texto = exigirTexto(req.body?.texto, 'el mensaje');
   const historial = validarHistorial(req.body?.historial);
-  gastarCupo(req, res); // un solo cupo por mensaje, aunque por dentro se haga más de una llamada
-  const intencion = await clasificarIntencion(texto, historial.slice(-2));
-  if (intencion === 'reservar') return res.json({ intencion, ...(await recomendarEspacios(texto)) });
-  res.json({ intencion, ...(await preguntarAlConocimiento({ pregunta: texto, historial })) });
+
+  // 1. Una pregunta ya respondida antes (sin conversación previa) sale de la caché: no gasta cupo ni llamadas.
+  const guardada = historial.length === 0 ? leerCache(texto, Date.now(), 'rag') : undefined;
+  if (guardada) {
+    res.set('X-Cache', 'HIT');
+    return res.json({ intencion: 'preguntar', ...guardada });
+  }
+
+  // 2. La intención: primero las reglas (sin IA); solo si el mensaje es ambiguo se le pregunta a Gemini.
+  let intencion = intencionPorReglas(texto);
+  const porReglas = intencion !== null;
+  if (!porReglas) {
+    gastarCupo(req, res, 1); // el cupo de la persona (uno por mensaje) y la llamada que clasifica
+    intencion = await clasificarIntencion(texto, historial.slice(-2));
+  }
+
+  // 3. Lo que sigue gasta llamadas del presupuesto; el cupo de la persona solo se cobra una vez por mensaje.
+  const reservarLlamadas = (n) => (porReglas ? gastarCupo(req, res, n) : gastarLlamadas(res, n));
+  if (intencion === 'reservar') {
+    const ahorro = hayQueAhorrar();
+    reservarLlamadas(ahorro ? 1 : 2);
+    return res.json({ intencion, ...(await recomendarEspacios(texto, { explicarConIA: !ahorro })) });
+  }
+  reservarLlamadas(llamadasDePregunta(historial));
+  const respuesta = await preguntarAlConocimiento({ pregunta: texto, historial });
+  if (historial.length === 0 && respuesta.respondido) guardarCache(texto, respuesta, Date.now(), 'rag', REGLAS.CACHE_RAG_MINUTOS);
+  res.json({ intencion, ...respuesta });
 });
 
 // POST /api/ia/conocimiento/ingestar  (solo admin)
