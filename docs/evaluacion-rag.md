@@ -44,9 +44,11 @@ y los documentos están bien separados por tema, así que la búsqueda vectorial
 (11 de 11) y no queda nada que reordenar. Un reranking aporta cuando hay muchos documentos parecidos entre sí y la
 respuesta correcta queda, por ejemplo, en el puesto 5. Eso aquí no se probó.
 
-**Decisión:** el reranking queda **activado por defecto** porque lo pide el plan, da la "relevancia n/10" que la interfaz
-muestra en *Ver fuentes* y es una compuerta contra respuestas sin fundamento. Pero **no está demostrado con estos datos**, y
-si la cuota importa más, se apaga con `RAG_RERANKING=0` sin perder exactitud medida.
+**Decisión (actualizada):** el reranking quedó **apagado por defecto**. Al principio se dejó encendido porque lo pide el plan,
+pero estos datos no muestran ninguna mejora y sí un costo real: una llamada más y ≈ 1.4 s por pregunta (1.8 s sin reranking
+frente a 3.2 s con él, medido después), justo lo más escaso con la capa gratis de Gemini (`docs/capacidad-ia.md`). La
+funcionalidad sigue disponible: `RAG_RERANKING=1`, o `{"reranking": true}` por petición. Si el campus llegara a tener muchos
+documentos parecidos, habría que volver a medir con un conjunto más difícil.
 
 ### Lo que se vio de los "no sé"
 La similitud del mejor fragmento fue **0.48 a 0.65** en las 4 preguntas sin respuesta y **0.70 a 0.83** en las 11 con

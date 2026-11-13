@@ -169,6 +169,9 @@ servicio `pulse-ai` con **RAG**:
    Una respuesta sin una cita válida también cuenta como "no sé".
 5. Recuerda los últimos 6 mensajes para entender seguimientos ("¿y los domingos?").
 
+Con la capa gratis hay un **presupuesto global de llamadas**, **modo ahorro** y respuestas en caché para que alcance para varias
+personas a la vez: ver [docs/capacidad-ia.md](docs/capacidad-ia.md).
+
 Si `pulse-ai` o Gemini fallan, solo falla esta función: reservas, préstamos e incidencias siguen igual.
 Los documentos son **de ejemplo**, no un reglamento oficial. Diseño, decisiones y problemas encontrados en
 [docs/rag.md](docs/rag.md); medición de las 15 preguntas de prueba en [docs/evaluacion-rag.md](docs/evaluacion-rag.md).
@@ -330,8 +333,9 @@ sesión es `Secure` y solo viaja por HTTPS: déjalo vacío mientras uses `http:/
 `GEMINI_MODEL` es el id exacto del modelo (por ejemplo `gemini-3.6-flash`, el que usamos en la
 demo). Si `npm run probar-ia` responde 503 ("high demand"), el modelo está saturado en ese
 momento: prueba otro modelo flash de tu cuenta. La capa gratis de Gemini permite **5 peticiones
-por minuto por modelo** (en el modelo que usamos al medir el RAG, 15); el triaje usa 1 llamada, la
-recomendación 2 y una pregunta del RAG hasta 4. Si se supera, la app responde con el
+por minuto por modelo** (en el modelo que usamos al medir el RAG, 15) **para todo el campus junto**. El triaje usa 1
+llamada, pedir una sala 2 (1 en modo ahorro) y una pregunta nueva 1; las repetidas salen de la caché. Si se supera,
+la app responde con el
 error claro y el formulario manual, nunca con una respuesta inventada.
 
 | Comando | Qué hace |
