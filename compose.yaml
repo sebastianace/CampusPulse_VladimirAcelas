@@ -63,6 +63,8 @@ services:
       POSTGRES_PUERTO: "5432"
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env (ver .env.example)}
       CONOCIMIENTO_DIR: /srv/knowledge
+      # Reranking apagado por defecto (ahorra una llamada y ~1.4 s por pregunta; ver docs/evaluacion-rag.md). 1 = encendido.
+      RAG_RERANKING: ${RAG_RERANKING:-0}
       # Opcional: si lo defines, Express y pulse-ai se autentican con este secreto compartido.
       PULSE_AI_TOKEN: ${PULSE_AI_TOKEN:-}
     volumes:
