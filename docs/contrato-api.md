@@ -121,7 +121,7 @@ Lo que P2 (IA) importa de P1. Si P1 cambia un nombre, avisa antes.
 |---|---|---|
 | `src/config/reglas.js` | `CATEGORIAS`, `PRIORIDADES`, `AREAS` | Arrays con los valores cerrados de arriba |
 | `src/config/reglas.js` | `REGLAS` | Objeto con las constantes (usa `PRIORIDADES_QUE_INHABILITAN`) |
-| `src/data/store.js` | `leerDB()` | `{espacios, recursos, ...}` (puede ser síncrona o `async`) |
+| `src/data/almacen.js` | `leerDB()` | `Promise<{espacios, recursos, reservas, prestamos, incidencias, ...}>`: la foto de PostgreSQL (siempre `async`) |
 | `src/domain/reservas.js` | `buscarEspaciosDisponibles({asistentes, inicio, fin})` | Espacios que cumplen todas las reglas, ordenados por mejor ajuste de aforo |
 
 Y lo que P1 importa de P2:
