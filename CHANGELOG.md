@@ -6,6 +6,26 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+## [v2.0.0] — 2026-11-13
+
+Versión final del proyecto del curso Inteligencia Artificial 2. Sobre la `v1.1.1` de la hackatón agrega: roles y seguridad,
+PostgreSQL con pgvector, prompts con personalidad, incidencias parecidas con embeddings, preguntas con fuentes (RAG con
+LangChain), voz, automatización con n8n, control de la cuota de la IA y la documentación para sustentarlo. Se desarrolló con
+un asistente de programación (ver "Uso de IA en el desarrollo" en el README).
+
+### Revisión final y evidencias (Fase 4)
+
+- **Seguridad:** `body-parser` 2.3.0 → 2.4.0 por una vulnerabilidad alta de denegación de servicio (GHSA-27r3-jxmh-p828).
+  `npm audit` y `pip-audit` quedan sin vulnerabilidades conocidas.
+- **Triaje, prompt 1.3:** la medición pendiente mostró que el few-shot empeoraba (7/12 frente a 9/12) por una política ambigua
+  sobre cuándo inhabilitar. Con la política aclarada, 10/12 en los dos modos e "inhabilitar" 12/12; el few-shot quedó
+  desactivado porque no mejora y cuesta 420 tokens más por llamada.
+- **Matriz de modelos** (`npm run comparar-modelos`, `docs/matriz-modelos.md`): el modelo rápido acertó más, fue el doble de
+  rápido y costó de 2 a 4 veces menos que uno que razona. Costo estimado para el campus: entre 13 y 26 USD al mes.
+- **Documentación:** README nuevo con arquitectura en Mermaid y capturas; registro de depuración; guía de sustentación con
+  plan de estudio; hoja de ruta con piloto, costos y riesgos; decisiones sobre por qué la IA no escribe en la base y por qué
+  el no-solapamiento vive en la base.
+
 ### Rendimiento y cuota de la IA
 
 - **Más rápida y más barata en llamadas** (medido con Gemini real): pedir sala 3.4 s → 2.5 s (3 → 2 llamadas); pregunta nueva
