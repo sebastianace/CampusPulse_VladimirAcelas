@@ -15,7 +15,8 @@
     "embeddings": "node --env-file-if-exists=.env src/ai/rellenar-embeddings.js",
     "conocimiento": "node --env-file-if-exists=.env src/ai/ingestar-conocimiento.js",
     "evaluar-rag": "node --env-file-if-exists=.env src/ai/evaluar-rag.js",
-    "n8n:preparar": "node --env-file-if-exists=.env scripts/preparar-n8n.mjs"
+    "n8n:preparar": "node --env-file-if-exists=.env scripts/preparar-n8n.mjs",
+    "comparar-modelos": "node --env-file-if-exists=.env src/ai/comparar-modelos.js"
   },
   "keywords": [],
   "author": "",
