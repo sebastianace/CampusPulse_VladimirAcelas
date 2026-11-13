@@ -169,6 +169,7 @@ servicio `pulse-ai` con **RAG**:
 Si `pulse-ai` o Gemini fallan, solo falla esta función: reservas, préstamos e incidencias siguen igual.
 Los documentos son **de ejemplo**, no un reglamento oficial. Diseño, decisiones y problemas encontrados en
 [docs/rag.md](docs/rag.md); medición de las 15 preguntas de prueba en [docs/evaluacion-rag.md](docs/evaluacion-rag.md).
+Por qué RAG y no fine-tuning, y por qué pgvector y no Qdrant o Chroma: [docs/decisiones.md](docs/decisiones.md).
 
 ### 5. Voz (Web Speech API del navegador)
 
