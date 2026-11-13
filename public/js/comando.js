@@ -11,6 +11,8 @@ import { el, conCarga } from './dom.js';
 import { cambiarFecha, hoyISO, obtenerEstado } from './estado.js';
 import * as toasts from './toasts.js';
 import { avisoLlegada } from './formularios.js';
+import { agregarDictado, crearBotonEscuchar, detenerLectura } from './voz.js';
+import { textoDeRecomendacion } from './voz-texto.js';
 
 let mostrarPestana = () => {};
 
@@ -24,7 +26,10 @@ const resultado = () => document.getElementById('resultado-comando');
 export function iniciarComando(opciones) {
   mostrarPestana = opciones.mostrarPestana;
   document.getElementById('form-comando').addEventListener('submit', enviar);
-  dialogo().addEventListener('close', nuevaConversacion);
+  dialogo().addEventListener('close', () => { detenerLectura(); nuevaConversacion(); });
+  // Dictado por voz en la barra: escribe en el campo y la persona pulsa Enviar (si el navegador no lo soporta, no aparece).
+  const campo = document.querySelector('#form-comando input[name="texto"]');
+  agregarDictado(campo, campo);
 }
 
 function nuevaConversacion() {
@@ -50,6 +55,7 @@ async function enviar(evento) {
     return;
   }
 
+  detenerLectura();
   const boton = form.querySelector('button[type="submit"]');
   const aviso = el('p', { className: 'nota', role: 'status' }, 'Pulse está pensando…');
   if (turnos.length) resultado().append(aviso);
@@ -90,6 +96,7 @@ function crearTurno({ pregunta, respuesta }, esElUltimo) {
       el('p', { className: 'sello-ia' }, respondido ? 'Respuesta de Pulse' : 'Pulse no encontró la respuesta',
         el('span', { className: 'sello-ia__modelo' }, modelo ? ` · ${modelo}` : '')),
       el('p', { className: 'razon-ia' }, respuesta.respuesta),
+      crearBotonEscuchar(() => respuesta.respuesta),
       usados.some((f) => f.ejemplo)
         ? el('p', { className: 'nota' }, 'Basada en documentos de ejemplo del proyecto, no en un reglamento oficial.') : null,
       crearFuentes(fragmentos, respondido, esElUltimo)));
@@ -137,7 +144,8 @@ function dibujarRecomendacion({ solicitud, opciones = [], explicacion, modelo })
     explicacion ? el('div', { className: 'tarjeta-ia' },
       el('p', { className: 'sello-ia' }, 'Recomendación de la IA',
         el('span', { className: 'sello-ia__modelo' }, modelo ? ` · ${modelo}` : '')),
-      el('p', { className: 'razon-ia' }, explicacion)) : '', // '' y no null: replaceChildren pintaría "null"
+      el('p', { className: 'razon-ia' }, explicacion),
+      crearBotonEscuchar(() => textoDeRecomendacion({ explicacion, opciones }, nombreDeEspacio))) : '', // '' y no null: replaceChildren pintaría "null"
 
     opciones.length ? el('label', { className: 'campo' }, el('span', {}, 'Responsable de la reserva'), responsable) : '',
 
@@ -149,6 +157,8 @@ function dibujarRecomendacion({ solicitud, opciones = [], explicacion, modelo })
 
   responsable.focus();
 }
+
+const nombreDeEspacio = (id) => obtenerEstado().espacios.find((e) => e.id === id)?.nombre ?? id;
 
 function crearOpcion({ espacioId, motivo }, indice, solicitud, campoResponsable) {
   const espacio = obtenerEstado().espacios.find((e) => e.id === espacioId);

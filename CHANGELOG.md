@@ -6,6 +6,13 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Voz (Fase 3D)
+
+- **Dictado por voz** (Web Speech API) en el reporte de incidencias y en la barra Ctrl+K, y botón **Escuchar** en las
+  respuestas de Pulse y en las recomendaciones de salas. Sin soporte del navegador los botones no aparecen y todo sigue
+  por texto. Avisos de error en español (permiso denegado, sin micrófono, sin conexión). Lógica pura probada en
+  `tests/voz-texto.test.js`.
+
 ### Preguntas con fuentes: RAG (Fase 3C)
 
 - **Servicio `pulse-ai`** (Python, FastAPI y LangChain, en `compose.yaml`): ingesta de `knowledge/` con
