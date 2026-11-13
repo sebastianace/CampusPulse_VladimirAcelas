@@ -1,31 +1,96 @@
 # Campus Pulse
 
-MVP construido en la Hackatón de Campuslands (5 horas, equipo de 5) que unifica en un solo
-panel los **espacios** del campus, los **recursos tecnológicos** y las **incidencias**, con una
-IA que ayuda a clasificar reportes y a recomendar salas.
+**Un solo tablero para los espacios, los equipos y las incidencias del campus de Campuslands, con una IA que ayuda pero no
+decide.** Reservas sin cruces, préstamos con reglas, reportes que llegan al área correcta y un asistente que responde
+preguntas citando el reglamento.
 
-> Principio del proyecto: **la IA sugiere, las reglas deciden.**
+> Principio del proyecto: **la IA sugiere, las reglas deciden y la persona confirma.**
+
+| ¿Es la misma incidencia? (embeddings) | Preguntas con fuentes (RAG) | Triaje con IA |
+|---|---|---|
+| ![Detección de incidencias duplicadas](docs/capturas/10-es-la-misma.png) | ![Respuesta con fuentes](docs/capturas/08-rag-fuentes.png) | ![Triaje de una incidencia](docs/capturas/04-triaje-ia.png) |
+
+**v2.0.0** · Node 24 + Express 5 · PostgreSQL 16 + pgvector · Gemini · LangChain (Python) · n8n · Docker ·
+[CHANGELOG](CHANGELOG.md) · [Guion de la demo](docs/sustentacion.md)
 
 ## Problema
 
-Hoy la información del campus está repartida: qué sala está libre, qué equipo está prestado o
-dañado y qué incidencias hay abiertas se consultan en lugares distintos. Eso provoca reservas
-que se cruzan, salas con sobrecupo, equipos dañados que se vuelven a prestar y reportes que no
-llegan al área correcta.
+Hoy la información del campus está repartida: qué sala está libre, qué equipo está prestado o dañado y qué incidencias hay
+abiertas se consultan en lugares distintos (hojas de cálculo, mensajes, la memoria de alguien). Eso provoca reservas que se
+cruzan, salas con sobrecupo, equipos dañados que se vuelven a prestar, reportes repetidos y avisos que no llegan a quien
+tiene que arreglar el problema.
 
 ## Solución
 
-- **Mapa de espacios** con su aforo y estado en tiempo real (disponible, ocupado, inhabilitado o
-  inconsistente).
-- **Reservas** de espacios (crear, editar y cancelar) y **préstamos** de equipos, validados con
-  reglas de negocio.
-- **Incidencias en lenguaje natural**: la IA sugiere categoría, prioridad, área responsable y
-  espacio o equipo afectado. La persona confirma y, si es grave, el espacio o equipo queda
-  inhabilitado de inmediato.
-- **Asistente de reservas (Ctrl+K)**: "Necesito un salón para 30 personas mañana de 2 a 4 pm"
-  → opciones reales que cumplen todas las reglas, explicadas por la IA.
-- **Panel de calidad de datos**: muestra los registros del CSV oficial que son inconsistentes,
-  sin que rompan la aplicación.
+| Necesidad | Qué hace Campus Pulse |
+|---|---|
+| Saber qué está libre | **Mapa del campus** en vivo: cada sala con su aforo y estado (libre, ocupada, inhabilitada). |
+| Reservar sin cruces | **Reservas** con reglas de horario, aforo, duración y límite por persona; la base de datos impide reservas cruzadas aunque lleguen a la vez. |
+| Prestar equipos | **Préstamos** con límite por persona y estados del equipo (disponible, prestado, dañado, en reparación). |
+| Reportar sin saber a quién | **Incidencias en lenguaje natural**: la IA sugiere categoría, prioridad, área y lugar; la persona confirma. Lo crítico inhabilita la sala o el equipo al instante. |
+| Evitar reportes repetidos | **"¿Es la misma incidencia?"** con embeddings: si ya la reportaron, el reporte se suma en vez de duplicarse. |
+| Que el área se entere | **Automatización con n8n**: aviso por correo al área responsable de lo crítico y resumen diario con IA. |
+| Pedir sala o resolver dudas rápido | **Barra Ctrl+K** ("Pregúntale a Pulse"): pide una sala en lenguaje natural o pregunta por el reglamento y recibe la respuesta **con sus fuentes**, o un "no lo sé" honesto. También **por voz**. |
+| Que todo funcione aunque la IA falle | Cada función de IA tiene su **formulario manual**; si Gemini, `pulse-ai` o n8n caen, el resto sigue funcionando. |
+
+Más capturas: [mapa](docs/capturas/02-mapa.png) · [reserva rechazada por aforo](docs/capturas/03-reserva-rechazada.png) ·
+["no lo sé"](docs/capturas/09-no-se.png) · [aviso de n8n](docs/capturas/11-aviso-n8n.png) ·
+[en el celular](docs/capturas/12-movil.png) · [sin IA](docs/capturas/07-sin-ia.png).
+
+## Arquitectura
+
+```mermaid
+flowchart LR
+    U["Navegador<br/>HTML, CSS y JS sin frameworks<br/>(voz con Web Speech API)"] -->|HTTP + cookie de sesión| E
+
+    subgraph Campus Pulse
+        E["Express 5<br/>rutas y sesión"] --> R["Reglas de negocio<br/>src/domain + reglas.js"]
+        R --> DB[("PostgreSQL 16 + pgvector<br/>datos, cuentas, embeddings")]
+        E --> IA["Capa de IA<br/>prompts, validación,<br/>cuota y caché"]
+        IA -->|triaje, intención,<br/>reservas, embeddings| G(("Gemini"))
+        IA -->|HTTP con timeout| P["pulse-ai<br/>FastAPI + LangChain (RAG)"]
+        P -->|búsqueda vectorial| DB
+        P -->|respuesta con citas| G
+        K["knowledge/*.md"] -->|ingesta| P
+    end
+
+    E -->|webhook firmado HMAC| N["n8n<br/>6 flujos"]
+    N -->|"/api/integraciones (secreto)"| E
+    N -->|correo| M["Mailpit / correo"]
+    N -->|resumen diario| G
+```
+
+**Cómo leerlo:** la IA nunca escribe directo en la base. Todo lo que cambia datos pasa por las reglas de negocio, y las
+respuestas de la IA se validan antes de mostrarse. Si una caja de IA (Gemini, `pulse-ai`, n8n) se cae, el camino
+Navegador → Express → Reglas → PostgreSQL sigue funcionando.
+
+<details>
+<summary>Estructura del código</summary>
+
+```
+public/            Frontend: login, mapa, formularios, incidencias, Ctrl+K, voz
+src/server.js      Express: sirve public/ y monta /api/*; exige sesión; manejador global de errores
+src/routes/        Rutas HTTP (una por recurso). ia.js -> /api/ia/*, integraciones.js -> lo que llama n8n
+src/auth/          Cuentas (scrypt), sesiones y límite de intentos de login
+src/domain/        Reglas de negocio: reservas, préstamos, incidencias, similares, fechas, errores
+src/config/        reglas.js: TODAS las constantes de negocio y valores cerrados
+src/data/          PostgreSQL: almacen.js (foto + diferencias), repos/, migraciones, semilla
+src/ai/            Cliente de Gemini, triaje, asistente, intención, cuota, caché, embeddings, cliente de pulse-ai
+src/ai/prompts/    Un archivo por prompt del sistema, con la plantilla de la clase
+src/integraciones/ Webhook firmado hacia n8n
+pulse-ai/          Servicio Python (FastAPI + LangChain): RAG sobre knowledge/ con pgvector
+knowledge/         Documentos de ejemplo que Pulse usa para responder preguntas
+n8n/               Los 6 flujos de n8n exportados (JSON)
+db/migrations/     Esquema SQL
+evaluacion/        Conjuntos de prueba de la IA y sus resultados
+docs/              Documentación (ver "Documentación" más abajo)
+tests/             Pruebas (node:test) · pulse-ai/tests: pruebas de Python (pytest)
+```
+</details>
+
+El contrato completo de la API está en [docs/contrato-api.md](docs/contrato-api.md). Todos los errores responden
+`{error: {codigo, mensaje}}` con el mensaje en español: 422 datos mal formados, 409 regla de negocio violada, 404 ID
+inexistente, 401 sin sesión, 403 sin permiso, 429 límite de uso y 503 IA no disponible.
 
 ## Historia del proyecto
 
@@ -50,50 +115,32 @@ El resultado de la hackatón es la versión `v1.1.1` (ver [CHANGELOG.md](CHANGEL
 
 ### v2 — Desarrollo individual
 
-A partir de la `v1.1.1`, Sebastián Vladimir Acelas continúa el proyecto de forma individual como proyecto
-final del curso Inteligencia Artificial 2 (Campuslands). La v2 se enfoca en seguridad (roles y
-límites), una base de datos real y más uso de IA, siempre con el mismo principio: la IA sugiere,
-las reglas deciden. Los cambios de la v2 se registran en [CHANGELOG.md](CHANGELOG.md).
+A partir de la `v1.1.1`, Sebastián Vladimir Acelas continúa el proyecto de forma individual como proyecto final del curso
+Inteligencia Artificial 2 (Campuslands), del 31 de octubre al 27 de noviembre de 2026, con Gitflow y un pull request por
+tarea. Lo que agregó la v2:
+
+| Fase | Qué se hizo |
+|---|---|
+| 0–1 | Documentación, roles (admin, profesor, soporte técnico), límite de intentos de login, cookie segura, límite y caché de la IA |
+| 2 | PostgreSQL con pgvector en Docker, migraciones y reservas simultáneas a prueba de cruces |
+| 3A | Prompts con la plantilla de la clase, personalidad Big Five de Pulse y few-shot medido (no mejoró: se desactivó) |
+| 3B | Incidencias parecidas con embeddings ("¿Es la misma incidencia?") |
+| 3C | RAG con LangChain: preguntas con fuentes y "no lo sé" |
+| 3D | Voz: dictado y lectura en voz alta |
+| 3E | Decisiones documentadas (RAG frente a fine-tuning, pgvector frente a Qdrant y Chroma) |
+| 3F | n8n: webhook firmado, avisos por área, resumen diario con IA, ingesta y agente |
+| 4 | Rendimiento y cuota de la IA, revisión de seguridad, README, evidencias y `v2.0.0` |
+
+El detalle de cada cambio está en [CHANGELOG.md](CHANGELOG.md).
 
 ## Stack
 
-- **Node.js 24** + **Express 5**, módulos ES (`"type": "module"`).
-- **Frontend** en HTML, CSS y JavaScript nativo, sin frameworks ni build.
-- **Persistencia** en **PostgreSQL 16 con pgvector** (Docker): datos del campus, cuentas y
-  sesiones. Ver [docs/base-de-datos.md](docs/base-de-datos.md).
-- **IA**: Google Gemini mediante `@google/genai` (Node) y **LangChain** (Python, servicio `pulse-ai`
-  con FastAPI) para el RAG. Ver [docs/rag.md](docs/rag.md).
-- **Tests** con `node:test` (sin dependencias extra).
-
-## Arquitectura
-
-```
-public/            Frontend (P3): login, mapa, formularios, incidencias, Ctrl+K
-src/server.js      Express: sirve public/ y monta /api/*; exige sesión; manejador global de errores
-src/routes/        Rutas HTTP (una por recurso). ia.js -> /api/ia/*, auth.js -> /api/auth/*
-src/auth/          usuarios.js: cuentas (clave con hash scrypt) y sesiones
-src/domain/        Reglas de negocio: reservas, préstamos, incidencias, fechas, errores
-src/config/        reglas.js: TODAS las constantes de negocio y valores cerrados
-src/data/          almacen.js (lee y guarda en PostgreSQL), repos/ (una tabla por archivo), pg.js, migrar.js, semilla.js y arranque.js;
-                   loader.js (lee el CSV), estado-inicial.js (arma los datos iniciales) e importar-cuentas.js
-db/migrations/     Esquema SQL de PostgreSQL (ver docs/base-de-datos.md)
-src/integraciones/ Webhook firmado hacia n8n (n8n.js); las rutas que llama n8n están en src/routes/integraciones.js
-n8n/               Los 6 flujos de n8n exportados (JSON); se importan con npm run n8n:preparar
-scripts/           preparar-n8n.mjs
-src/ai/            cliente.js, validar.js, triaje.js, asistente.js, limite.js, cache.js, intencion.js, conocimiento.js
-pulse-ai/          Servicio Python (FastAPI + LangChain): RAG sobre knowledge/ con pgvector (ver docs/rag.md)
-knowledge/         Documentos de ejemplo que Pulse usa para responder preguntas con fuentes
-src/ai/prompts/    Un archivo por prompt del sistema, con la plantilla de la clase (ver docs/biblioteca-prompts.md)
-evaluacion/        Reportes de prueba del triaje y sus resultados (npm run medir-triaje)
-data/raw/          espacios.csv oficial (nunca se modifica)
-data/seed/         recursos.json con equipos ficticios
-docs/              contrato-api.md, demo.md, reto-en-vivo.md y capturas
-tests/             pruebas de reglas, datos, fechas y API (node:test)
-```
-
-El contrato completo de la API está en [docs/contrato-api.md](docs/contrato-api.md). Todos los
-errores responden `{error: {codigo, mensaje}}` con el mensaje en español: 422 datos mal formados,
-409 regla de negocio violada, 404 ID inexistente, 401 sin sesión y 503 IA no disponible.
+- **Node.js 24** + **Express 5**, módulos ES. **Frontend** en HTML, CSS y JavaScript nativo, sin frameworks ni build.
+- **PostgreSQL 16 con pgvector** (Docker): datos del campus, cuentas, sesiones, embeddings y base de conocimiento.
+  Ver [docs/base-de-datos.md](docs/base-de-datos.md).
+- **IA:** Google Gemini con `@google/genai` (Node) y **LangChain** en Python (`pulse-ai`, FastAPI) para el RAG.
+- **Automatización:** **n8n** (Community, autoalojado) y **Mailpit** como buzón de correo local.
+- **Pruebas:** `node:test` (Node) y `pytest` (Python).
 
 ## Inicio de sesión
 
@@ -121,8 +168,17 @@ errores responden `{error: {codigo, mensaje}}` con el mensaje en español: 422 d
 
 ## Rol de la IA y cómo se controla
 
-La IA solo **sugiere** en tres puntos. Nunca escribe en la base de datos ni decide si algo está
-permitido.
+La IA aparece en seis lugares y en todos **solo sugiere**: nunca escribe en la base de datos ni decide si algo está
+permitido. Resumen:
+
+| Función | Qué hace la IA | Qué deciden las reglas o la persona | Si la IA falla |
+|---|---|---|---|
+| Triaje de incidencias | Sugiere categoría, prioridad, área y lugar | La persona confirma; la salida se valida contra el catálogo | Formulario manual |
+| Asistente de reservas | Entiende el pedido y explica las opciones | Las reglas eligen las salas; reservar vuelve a validar todo | Formulario de reserva |
+| Incidencias parecidas | Convierte el texto en un vector | Umbral + filtro de lugar; la persona decide si es la misma | Se crea la incidencia igual |
+| Preguntas (RAG) | Responde con los fragmentos recuperados | Sin una cita válida, la respuesta es "no lo sé" | Mensaje claro; el resto sigue |
+| Voz | Dicta y lee en voz alta (navegador) | La persona revisa el texto antes de enviarlo | Sin botones; todo por texto |
+| n8n | Resume el día | Un Code node valida el JSON contra los datos reales | El Error Workflow avisa al admin |
 
 ### 1. Triaje de incidencias — `POST /api/ia/triaje`
 
@@ -212,8 +268,9 @@ Detalle, pruebas y límites en [docs/workflows.md](docs/workflows.md); los flujo
 - **Personalidad:** Pulse tiene una personalidad definida con el modelo Big Five (responsabilidad
   alta, amabilidad alta, extraversión media, apertura media, neuroticismo bajo), justificada en
   [docs/personalidad.md](docs/personalidad.md). Solo ajusta el tono; no cambia reglas ni límites.
-- **Few-shot:** el triaje lleva 4 ejemplos resueltos del campus y se mide contra la versión sin
-  ejemplos con 12 reportes distintos (ver [docs/biblioteca-prompts.md](docs/biblioteca-prompts.md)).
+- **Few-shot medido:** el triaje se midió con y sin 4 ejemplos sobre 12 reportes. El few-shot no mejoró (empate 10 a 10 tras
+  corregir una política ambigua) y costaba 420 tokens más por llamada, así que va sin ejemplos; el detalle está en
+  [docs/biblioteca-prompts.md](docs/biblioteca-prompts.md).
 - Cambiar de proveedor de IA solo exige tocar `src/ai/cliente.js`.
 
 ## Uso de IA en el desarrollo
@@ -232,8 +289,11 @@ Campus Pulse usa IA en dos lugares distintos, y conviene no confundirlos:
   requests. Todo el código publicado es responsabilidad suya y debe poder explicarlo.
 - **El asistente propone y escribe borradores** de código, pruebas y documentación en ramas
   locales, y explica cada decisión de diseño.
-- Las piezas que hay que defender en la sustentación (reglas de negocio, prompts y RAG) las
-  escribe el autor; el asistente las revisa y las explica.
+- **Lo que escribió cada uno, sin maquillarlo:** en las Fases 0 a 2 el asistente escribió borradores que el
+  autor integró por pull request. En la **Fase 3** (RAG con `pulse-ai`, sus prompts, la voz y los flujos de n8n), para
+  cumplir el plazo, el autor pidió al asistente que escribiera el código completo; el autor lo integró por
+  pull request y lo estudia con [docs/sustentacion.md](docs/sustentacion.md) para poder explicarlo y
+  modificarlo. Las decisiones de producto (alcance, roles, qué ve cada persona) son del autor.
 
 ### Controles
 
@@ -387,7 +447,9 @@ La primera vez que arranca, la app carga en PostgreSQL los datos de `data/raw/es
 
 ## Demo y reto en vivo
 
-- [Guion de la demo](docs/demo.md): los pasos de la demostración con capturas.
+- [Sustentación](docs/sustentacion.md): guion de la demo de 6 minutos de la v2, plan B si algo falla, preguntas difíciles y
+  plan de estudio de cada pieza.
+- [Guion de la demo de la v1](docs/demo.md): los pasos de la demostración de la hackatón con capturas.
 - [Guía del reto en vivo](docs/reto-en-vivo.md): qué valor de `src/config/reglas.js` cambiar para
   cada pedido del jurado y cómo comprobarlo.
 
@@ -410,3 +472,42 @@ Reglas de cada commit:
 
 En la hackatón (v1) cada integrante trabajó en su rama (`feature/backend`, `feature/ia`,
 `feature/frontend`) y se integró a `develop` por pull request.
+
+## Pruebas y calidad
+
+| Qué | Cómo se comprueba |
+|---|---|
+| Reglas, API, roles, base de datos, IA, n8n y voz | `npm test`: más de 300 pruebas con `node:test`, contra una base PostgreSQL temporal por archivo (necesita `docker compose up -d db`). Ninguna llama a Gemini: usan IA simulada. |
+| Servicio de RAG | `docker compose run --rm --no-deps -e POSTGRES_HOST=db -e POSTGRES_PUERTO=5432 pulse-ai python -m pytest` (más de 50 pruebas). |
+| Calidad de la IA con Gemini real | `npm run medir-triaje` (few-shot frente a zero-shot), `npm run evaluar-rag` (15 preguntas), `npm run comparar-modelos` (matriz de modelos). |
+| Que las pruebas detecten errores | Pruebas de mutación manuales durante el desarrollo: se rompió a propósito cada regla clave (cupo, firma, caché, presupuesto, reglas de intención…) y se comprobó que algún test fallara. |
+| Dependencias | `npm audit` y `pip-audit` sin vulnerabilidades conocidas en la revisión de la v2.0.0. |
+| Interfaz | Recorridos en Chrome real (escritorio y celular) durante el desarrollo. |
+
+## Documentación
+
+| Documento | De qué trata |
+|---|---|
+| [docs/decisiones.md](docs/decisiones.md) | Por qué RAG y no fine-tuning, pgvector y no Qdrant ni Chroma, la IA no escribe en la base, el no-solapamiento en la base, n8n frente a código |
+| [docs/rag.md](docs/rag.md) · [docs/evaluacion-rag.md](docs/evaluacion-rag.md) | Cómo funciona el RAG y su evaluación con 15 preguntas |
+| [docs/capacidad-ia.md](docs/capacidad-ia.md) | Cuántas personas atiende la IA gratis y cómo se cuida la cuota |
+| [docs/matriz-modelos.md](docs/matriz-modelos.md) | Comparación de modelos de Gemini: aciertos, tiempo, tokens y costo |
+| [docs/incidencias-parecidas.md](docs/incidencias-parecidas.md) | Embeddings, similitud coseno y el umbral |
+| [docs/biblioteca-prompts.md](docs/biblioteca-prompts.md) · [docs/personalidad.md](docs/personalidad.md) | Los prompts, sus versiones y la personalidad Big Five de Pulse |
+| [docs/workflows.md](docs/workflows.md) | Los 6 flujos de n8n, lo verificado y sus límites |
+| [docs/base-de-datos.md](docs/base-de-datos.md) · [docs/contrato-api.md](docs/contrato-api.md) | Esquema y API |
+| [docs/registro-depuracion.md](docs/registro-depuracion.md) | Fallos reales, cómo se encontró la causa y qué los evita |
+| [docs/sustentacion.md](docs/sustentacion.md) | Guion de la demo, plan B y plan de estudio |
+| [docs/hoja-de-ruta.md](docs/hoja-de-ruta.md) | Trabajo futuro: qué haría falta para usarlo en todo el campus |
+
+## Trabajo futuro
+
+Lo más importante para pasar de proyecto a herramienta del campus: un piloto medido en una torre, inicio de sesión con las
+cuentas de Campuslands, códigos QR en cada sala para reportar, liberar automáticamente las salas reservadas que nadie usa y un
+plan de pago de Gemini. Detalle, costos estimados y riesgos en [docs/hoja-de-ruta.md](docs/hoja-de-ruta.md).
+
+## Autor
+
+**Sebastián Vladimir Acelas** · Campuslands, curso Inteligencia Artificial 2 (2026). La v1 se hizo en equipo en la hackatón
+(ver "Historia del proyecto").
+
