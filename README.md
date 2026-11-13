@@ -170,6 +170,17 @@ Si `pulse-ai` o Gemini fallan, solo falla esta función: reservas, préstamos e 
 Los documentos son **de ejemplo**, no un reglamento oficial. Diseño, decisiones y problemas encontrados en
 [docs/rag.md](docs/rag.md); medición de las 15 preguntas de prueba en [docs/evaluacion-rag.md](docs/evaluacion-rag.md).
 
+### 5. Voz (Web Speech API del navegador)
+
+- **Dictado (STT):** un botón de micrófono en el reporte de incidencias y en la barra Ctrl+K convierte lo que dices en
+  texto dentro del campo. Solo escribe: revisas y envías como siempre, y el texto pasa por el triaje normal.
+- **Respuesta hablada (TTS):** las respuestas de Pulse y las recomendaciones de salas tienen un botón **Escuchar**
+  (`speechSynthesis`, con voz en español si el sistema tiene una).
+- **Sin soporte, sin problema:** si el navegador no tiene la API (Firefox no tiene reconocimiento de voz), los botones no
+  aparecen y todo sigue funcionando por texto.
+- **Privacidad:** en Chrome el reconocimiento lo hace el servicio de voz del navegador, que envía el audio a un servidor
+  del proveedor. No pasa por Campus Pulse ni se guarda aquí. Solo funciona con `localhost` o HTTPS.
+
 ### Controles
 
 - Salida JSON por schema, temperatura 0.2, timeout de 15 s y un reintento (`src/ai/cliente.js`).
