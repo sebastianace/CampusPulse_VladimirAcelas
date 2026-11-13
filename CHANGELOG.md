@@ -6,6 +6,18 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Rendimiento y cuota de la IA
+
+- **Más rápida y más barata en llamadas** (medido con Gemini real): pedir sala 3.4 s → 2.5 s (3 → 2 llamadas); pregunta nueva
+  4.1 s → 1.5 s (3 → 1 llamada); pregunta repetida 4 s → 0 s. La intención de Ctrl+K la decide el código cuando el mensaje es
+  claro (22 de 24 frases de prueba, sin errores) y solo los ambiguos van a Gemini; el reranking del RAG queda apagado por
+  defecto (no mejoró la exactitud y cuesta una llamada y ≈ 1.4 s); las preguntas respondidas se guardan 60 minutos.
+- **Presupuesto global de llamadas** (la cuota de Gemini es de todo el campus, no por persona): si no alcanza, `429 IA_OCUPADA`
+  al instante y sin cobrarle la consulta a la persona; y **modo ahorro** para las recomendaciones de sala. Capacidad por
+  minuto: de ≈ 5 a 8 reservas y de ≈ 5 a 12 preguntas nuevas. Ver `docs/capacidad-ia.md`.
+- **Interfaz:** botón para cerrar la conversación de Ctrl+K en el celular (donde no hay tecla Esc), cierre al tocar fuera y
+  texto de ayuda que ya no se corta.
+
 ### Automatización con n8n y webhooks (Fase 3F)
 
 - **n8n 2.47.4 y Mailpit** en `compose.yaml`. Seis flujos exportados en `n8n/`: **incidencia nueva** (webhook firmado con

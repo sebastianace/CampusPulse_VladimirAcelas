@@ -33,8 +33,10 @@ class Config:
     k_final: int = field(default_factory=lambda: _entero("RAG_K_FINAL", 4))
     # Fragmentos que se traen de la base antes de reordenarlos (solo cuando hay reranking).
     k_candidatos: int = field(default_factory=lambda: _entero("RAG_K_CANDIDATOS", 8))
-    # Reranking activado por defecto. Se puede apagar por petición para comparar (docs/evaluacion-rag.md).
-    reranking: bool = field(default_factory=lambda: os.getenv("RAG_RERANKING", "1") != "0")
+    # Reranking APAGADO por defecto: en la evaluación (docs/evaluacion-rag.md) no mejoró la exactitud y cuesta una
+    # llamada más a Gemini y ~1.4 s por pregunta, que con la capa gratis (15 llamadas por minuto para todo el campus)
+    # es lo más caro. Se enciende con RAG_RERANKING=1, o por petición con {"reranking": true} para comparar.
+    reranking: bool = field(default_factory=lambda: os.getenv("RAG_RERANKING", "0") == "1")
     # Puntaje (0 a 10) que debe tener el mejor fragmento tras el reranking; si ninguno lo alcanza,
     # Pulse dice que no lo sabe sin gastar la llamada que redacta la respuesta.
     puntaje_minimo: int = field(default_factory=lambda: _entero("RAG_PUNTAJE_MINIMO", 4))

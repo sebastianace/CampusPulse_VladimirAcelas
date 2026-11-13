@@ -27,6 +27,13 @@ export function iniciarComando(opciones) {
   mostrarPestana = opciones.mostrarPestana;
   document.getElementById('form-comando').addEventListener('submit', enviar);
   dialogo().addEventListener('close', () => { detenerLectura(); nuevaConversacion(); });
+  // Salidas que funcionan en el celular, donde no hay tecla Esc: el botón de cerrar y tocar fuera del cuadro.
+  document.getElementById('cerrar-comando').addEventListener('click', () => dialogo().close());
+  dialogo().addEventListener('click', (evento) => {
+    const caja = dialogo().getBoundingClientRect();
+    const fuera = evento.clientX < caja.left || evento.clientX > caja.right || evento.clientY < caja.top || evento.clientY > caja.bottom;
+    if (fuera) dialogo().close();
+  });
   // Dictado por voz en la barra: escribe en el campo y la persona pulsa Enviar (si el navegador no lo soporta, no aparece).
   const campo = document.querySelector('#form-comando input[name="texto"]');
   agregarDictado(campo, campo);
@@ -125,7 +132,7 @@ function crearFuentes(fragmentos, respondido, abierto) {
 
 // ---------- 2b. Mostrar lo que entendió la IA y las opciones (reserva) ----------
 
-function dibujarRecomendacion({ solicitud, opciones = [], explicacion, modelo }) {
+function dibujarRecomendacion({ solicitud, opciones = [], explicacion, modelo, modoAhorro }) {
   const responsable = el('input', {
     type: 'text', name: 'responsable', autocomplete: 'off', required: true, placeholder: 'Elige o escribe un nombre',
   });
@@ -146,6 +153,8 @@ function dibujarRecomendacion({ solicitud, opciones = [], explicacion, modelo })
         el('span', { className: 'sello-ia__modelo' }, modelo ? ` · ${modelo}` : '')),
       el('p', { className: 'razon-ia' }, explicacion),
       crearBotonEscuchar(() => textoDeRecomendacion({ explicacion, opciones }, nombreDeEspacio))) : '', // '' y no null: replaceChildren pintaría "null"
+
+    modoAhorro ? el('p', { className: 'nota', role: 'status' }, 'Hay mucha gente usando la IA: te muestro las salas que cumplen las reglas, sin la explicación redactada.') : '',
 
     opciones.length ? el('label', { className: 'campo' }, el('span', {}, 'Responsable de la reserva'), responsable) : '',
 
