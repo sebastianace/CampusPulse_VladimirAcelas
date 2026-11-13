@@ -14,7 +14,8 @@
     "importar-cuentas": "node --env-file-if-exists=.env src/data/importar-cuentas.js",
     "embeddings": "node --env-file-if-exists=.env src/ai/rellenar-embeddings.js",
     "conocimiento": "node --env-file-if-exists=.env src/ai/ingestar-conocimiento.js",
-    "evaluar-rag": "node --env-file-if-exists=.env src/ai/evaluar-rag.js"
+    "evaluar-rag": "node --env-file-if-exists=.env src/ai/evaluar-rag.js",
+    "n8n:preparar": "node --env-file-if-exists=.env scripts/preparar-n8n.mjs"
   },
   "keywords": [],
   "author": "",

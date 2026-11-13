@@ -1,0 +1,85 @@
+{
+  "id": "pulseErrores",
+  "name": "Pulse · Error Workflow (registra y avisa las fallas)",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "fc82edeb-eb41-413a-8262-9672deeb225a",
+      "name": "Cuando falla un flujo",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const e = $input.first().json;\nreturn [{ json: {\n  flujo: e.workflow?.name ?? 'desconocido',\n  nodo: e.execution?.lastNodeExecuted ?? 'desconocido',\n  mensaje: e.execution?.error?.message ?? 'sin mensaje',\n  ejecucion: e.execution?.id ?? '',\n  cuando: new Date().toISOString(),\n} }];"
+      },
+      "id": "11655639-d240-4445-8e24-aecc861baaa7",
+      "name": "Formatear la falla",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "Pulse <pulse@campus.local>",
+        "toEmail": "admin@campus.local",
+        "subject": "=[Pulse] Falló el flujo: {{ $json.flujo }}",
+        "emailFormat": "text",
+        "text": "=Un flujo de n8n falló.\n\nFlujo: {{ $json.flujo }}\nNodo: {{ $json.nodo }}\nMensaje: {{ $json.mensaje }}\nEjecución: {{ $json.ejecucion }}\nCuándo: {{ $json.cuando }}\n\nRevisa la ejecución en n8n (http://localhost:5678).",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "f1b1fd66-c504-4bf4-9518-aa1a2633e868",
+      "name": "Avisar la falla por correo",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        440,
+        0
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "pulse-smtp",
+          "name": "Pulse SMTP (Mailpit)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Cuando falla un flujo": {
+      "main": [
+        [
+          {
+            "node": "Formatear la falla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatear la falla": {
+      "main": [
+        [
+          {
+            "node": "Avisar la falla por correo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

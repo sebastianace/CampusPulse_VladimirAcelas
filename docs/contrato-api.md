@@ -16,7 +16,7 @@ sin esperar a que P1 termine.
 | `GET /api/prestamos` | — | `[{id, recursoId, persona, estado, fecha}]` | P1 |
 | `POST /api/prestamos` | `{recursoId, persona}` | `201` + el préstamo | P1 |
 | `POST /api/prestamos/:id/devolver` | `{estadoFinal: "disponible" \| "danado"}` | `200` + el préstamo | P1 |
-| `GET /api/incidencias` | — | `[{id, descripcion, categoria, prioridad, area, espacioId, recursoId, estado, origen, ia, reportesAdicionales}]` (`reportesAdicionales`: personas que confirmaron que era la misma) | P1 |
+| `GET /api/incidencias` | — | `[{id, descripcion, categoria, prioridad, area, espacioId, recursoId, estado, origen, ia, reportesAdicionales, notificaciones: [{canal, area, enviado}]}]` (`reportesAdicionales`: personas que confirmaron que era la misma) | P1 |
 | `POST /api/incidencias/:id/reportes` | `{descripcion}` | `201 {reporte: {id, incidenciaId, descripcion, reportadoPor, fecha}, totalReportes}`. Suma el reporte a una incidencia abierta; `404` si no existe, `409 INCIDENCIA_YA_RESUELTA` si ya se resolvió | P1 |
 | `GET /api/incidencias/:id/reportes` | — | `[{id, incidenciaId, descripcion, reportadoPor, fecha}]` | P1 |
 | `POST /api/incidencias` | `{descripcion, categoria, prioridad, area, espacioId, recursoId, inhabilitar, origen, ia}` | `201` + la incidencia (y cambia el estado del espacio o recurso) | P1 |
@@ -36,6 +36,8 @@ sin esperar a que P1 termine.
 | `POST /api/ia/preguntar` | `{pregunta, historial?: [{rol: "usuario" \| "pulse", texto}]}` | `{respondido, respuesta, areaSugerida, fragmentos: [{documento, seccion, archivo, texto, similitud, puntaje, usado, ejemplo}], consulta, reranking, modelo}`. Responde con los documentos de `knowledge/` (RAG en `pulse-ai`) y marca en `fragmentos` cuáles usó. Si no están en los documentos, `respondido: false` y no inventa. `503` si `pulse-ai` o Gemini fallan; `422` si el historial es inválido | P2 |
 | `POST /api/ia/asistente` | `{texto, historial?}` | La barra Ctrl+K. La IA decide la intención: `{intencion: "reservar", solicitud, opciones, explicacion, modelo}` (igual que `/recomendar`) o `{intencion: "preguntar", ...}` (igual que `/preguntar`). Gasta un solo cupo de IA | P2 |
 | `POST /api/ia/conocimiento/ingestar` | — | `200 {documentos, fragmentos, retirados}`. Vuelve a cargar `knowledge/` en la base vectorial. Solo `admin`; otro rol → `403` | P2 |
+| `GET /api/integraciones/incidencias?fecha=hoy\|YYYY-MM-DD&estado=abierta\|resuelta\|todas` | — | `[{id, descripcion, categoria, prioridad, area, espacioId, recursoId, estado, fecha, reportesAdicionales}]`, sin datos personales. **No usa sesión**: se autentica con el secreto `N8N_SECRETO` en la cabecera `x-pulse-token` (si no coincide, `401 SECRETO_INVALIDO`; sin `N8N_SECRETO` configurado, `503 INTEGRACION_NO_CONFIGURADA`). Lo llama n8n | P2 |
+| `POST /api/integraciones/incidencias/:id/notificada` | `{canal: "correo" \| "telegram", destinatario, area}` | `201 {registrada: true}`, o `200 {registrada: false}` si ese aviso ya estaba registrado (n8n reintenta). Mismo secreto en `x-pulse-token`. `404` si la incidencia no existe | P2 |
 
 Además de los 9 espacios del CSV oficial, `GET /api/espacios` incluye las mesas de ping-pong de
 Hunters (`ping-pong-1`, `ping-pong-2`, tipo `mesa_juego`, aforo 4) desde `data/seed/espacios-extra.json`.
@@ -118,3 +120,10 @@ Y lo que P1 importa de P2:
 | Archivo (dueño P2) | Export | Uso |
 |---|---|---|
 | `src/routes/ia.js` | `default` (un `express.Router`) | P1 lo monta en `src/server.js` con `app.use('/api/ia', iaRouter)` |
+
+## Webhook de incidencias hacia n8n
+
+Al crear una incidencia, Express envía `POST $N8N_WEBHOOK_URL` (por defecto `/webhook/incidencia-nueva` de n8n) con
+`{"evento": "incidencia.creada", "incidencia": {id, descripcion, categoria, prioridad, area, espacioId, recursoId, origen, fecha}}`
+y las cabeceras `x-pulse-timestamp` (segundos) y `x-pulse-firma` (`sha256=` + HMAC-SHA256 de `"<timestamp>.<cuerpo>"` con
+`N8N_SECRETO`). Es en segundo plano: un fallo de n8n nunca impide crear la incidencia. Ver `docs/workflows.md`.
