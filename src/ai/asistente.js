@@ -26,7 +26,7 @@ const MAX_OPCIONES = 3;
 
 // ---------- paso 1: extraer la solicitud ----------
 
-const SCHEMA_SOLICITUD = {
+export const SCHEMA_SOLICITUD = {
   type: 'OBJECT',
   properties: {
     asistentes: { type: 'INTEGER', nullable: true },

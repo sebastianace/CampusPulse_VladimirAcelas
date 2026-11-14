@@ -128,7 +128,44 @@ No comparé tiempos ni calidad entre las tres con datos de este proyecto. Con ta
 
 ---
 
-## 5. Preguntas que pueden hacerme y mi respuesta corta
+## 5. La IA sugiere, las reglas deciden y la persona confirma: la IA nunca escribe en la base
+
+- **Decisión:** ninguna respuesta de Gemini se guarda ni cambia datos por sí sola.
+  - El **triaje** propone categoría, prioridad, área y lugar; la persona los revisa (puede editarlos) y confirma. Lo que se
+    guarda pasa por las mismas validaciones que el formulario manual.
+  - La **recomendación de salas** solo explica opciones que las reglas ya filtraron; reservar vuelve a pasar por
+    `POST /api/reservas`, que aplica otra vez todas las reglas.
+  - El **RAG** solo lee documentos. El agente de n8n solo lee.
+  - n8n escribe una sola cosa (que avisó de una incidencia), por una ruta propia, autenticada y validada.
+- **Por qué:** un modelo de lenguaje se equivoca de formas difíciles de prever (inventa, malinterpreta una fecha, cambia una
+  prioridad). Si la IA escribiera directo, un error suyo sería un dato falso en la base, sin que nadie lo viera. Con la
+  confirmación humana y las reglas en medio, el peor caso es una sugerencia mala que la persona corrige o descarta.
+- **Evidencia:** la salida de la IA se valida contra los valores cerrados y el catálogo (`src/ai/validar.js`): una sala que
+  no existe o una prioridad inventada se descartan. Y la regla de la recomendación está probada: las salas son las mismas con
+  y sin la redacción de la IA (`tests/conocimiento.test.js`, modo ahorro).
+- **Costo:** un clic más para la persona (confirmar). Es un costo que vale la pena en un sistema que cambia el estado del campus.
+
+---
+
+## 6. El no-solapamiento de reservas vive en la base de datos, no solo en el código
+
+- **Decisión:** además de la regla en JavaScript (`src/domain/reservas.js`), PostgreSQL tiene una restricción
+  `EXCLUDE USING gist (espacio_id WITH =, tsrange(inicio, fin, '[)') WITH &&)`.
+- **Por qué:** la regla del código revisa y después guarda. Si dos profesores reservan la misma sala a la vez, las dos
+  peticiones pueden pasar la revisión antes de que cualquiera guarde, y quedarían dos reservas cruzadas (una **condición de
+  carrera**). La restricción de la base no tiene ese hueco: la segunda inserción falla con el error `23P01`, que la API
+  traduce a `409 RESERVA_SOLAPADA` con un mensaje claro.
+- **Dos defensas, no una:** las escrituras además van en una transacción con un bloqueo (`pg_advisory_xact_lock`), así que lo
+  normal es que la regla del código ya vea la reserva anterior. La restricción queda como la última defensa por si algo se
+  escapa (por ejemplo, un script que escriba directo en la base).
+- **Evidencia:** `tests/reservas-concurrentes.test.js` lanza reservas simultáneas a la misma franja y comprueba que queda
+  exactamente una. Detalle técnico (por qué `'[)'` y `btree_gist`) en `docs/base-de-datos.md`.
+- **Costo:** el esquema depende de una función de PostgreSQL (rangos y `EXCLUDE`) que no todas las bases tienen. Es un
+  precio razonable: PostgreSQL ya era necesario por pgvector.
+
+---
+
+## 7. Preguntas que pueden hacerme y mi respuesta corta
 
 **¿Por qué RAG y no fine-tuning?** Porque el conocimiento cambia, quiero citar fuentes y poder decir "no sé", y no tengo
 miles de ejemplos. Fine-tuning sirve para estilo o clasificación a gran escala, no para datos vigentes.
@@ -145,6 +182,13 @@ consulta, y tengo integridad referencial. Cambiaría a Qdrant con millones de ve
 
 **¿Qué es la similitud coseno?** El coseno del ángulo entre dos vectores: 1 si apuntan igual, 0 si no se parecen. Mide
 significado, no palabras. En pgvector el operador `<=>` da la distancia coseno y la similitud es `1 - distancia`.
+
+**¿Cómo evitas reservas duplicadas cuando dos personas reservan a la vez?** Con dos defensas: un bloqueo en la transacción
+y una restricción `EXCLUDE` en PostgreSQL que rechaza rangos cruzados de la misma sala. Hay un test que lo prueba con
+peticiones simultáneas.
+
+**¿La IA puede crear una reserva o una incidencia por su cuenta?** No. Solo sugiere; la persona confirma y las reglas
+validan otra vez. Ver la decisión 5.
 
 **¿Qué pasa si n8n se cae?** La incidencia se crea igual (el webhook va en segundo plano y falla en silencio). Se pierde la
 alerta inmediata de esa incidencia, pero el resumen diario la incluye. Es un límite conocido: no hay cola de reintentos.
