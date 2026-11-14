@@ -38,7 +38,7 @@
         <span id="conexion-texto">Conectando…</span>
       </span>
       <button class="btn btn--ia" id="abrir-comando" type="button">
-        Pedir sala con IA <kbd>Ctrl K</kbd>
+        Preguntar a Pulse <kbd>Ctrl K</kbd>
       </button>
       <span class="sesion" id="sesion" hidden>
         <span class="sesion__nombre" id="sesion-nombre"></span>
@@ -250,18 +250,25 @@
     </aside>
   </main>
 
-  <!-- Barra de comando Ctrl+K: recomendación de sala con IA -->
+  <!-- Barra de comando Ctrl+K: pedir una sala o hacerle una pregunta a Pulse (la IA decide cuál de las dos) -->
   <dialog class="comando" id="comando" aria-labelledby="titulo-comando">
     <form class="comando__form" id="form-comando" novalidate>
-      <h2 class="comando__titulo" id="titulo-comando">Pedir sala con IA</h2>
+      <div class="comando__cabeza">
+        <h2 class="comando__titulo" id="titulo-comando">Pregúntale a Pulse</h2>
+        <!-- En el celular no hay tecla Esc: este botón es la forma de salir -->
+        <button class="comando__cerrar" id="cerrar-comando" type="button" aria-label="Cerrar la conversación" title="Cerrar">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
       <div class="comando__entrada">
         <input name="texto" type="text" autocomplete="off" required
-          placeholder="Necesito un salón para 30 personas mañana de 2 a 4 pm">
-        <button class="btn btn--ia" type="submit">Buscar sala</button>
+          placeholder="Pide una sala o haz una pregunta">
+        <button class="btn btn--ia" type="submit">Enviar</button>
       </div>
+      <p class="nota comando__ejemplos">Ej.: "30 personas mañana de 2 a 4 pm" · "¿cuántas horas puedo reservar?"</p>
     </form>
     <div class="comando__resultado" id="resultado-comando"></div>
-    <p class="comando__pie">La IA interpreta el pedido. Las reglas del campus deciden qué salas se pueden usar. <kbd>Esc</kbd> para cerrar.</p>
+    <p class="comando__pie">La IA entiende el pedido y las reglas del campus deciden qué salas se pueden usar. Las respuestas a preguntas salen de los documentos de la base de conocimiento y citan sus fuentes. <span class="solo-teclado"><kbd>Esc</kbd> para cerrar.</span></p>
   </dialog>
 
   <!-- Modo Demo Jurado: solo llena formularios con los casos del guion (Alt+D) -->

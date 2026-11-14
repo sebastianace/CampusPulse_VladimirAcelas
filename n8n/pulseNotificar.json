@@ -1,0 +1,120 @@
+{
+  "id": "pulseNotificar",
+  "name": "Pulse · Notificar por correo (subworkflow)",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "f021d5d7-615d-4efc-ac75-b850b3338905",
+      "name": "Cuando lo llama otro flujo",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "Pulse <pulse@campus.local>",
+        "toEmail": "={{ $json.destinatario }}",
+        "subject": "=[Pulse] Incidencia crítica en {{ $json.incidencia.area }}: {{ $json.incidencia.descripcion.slice(0, 60) }}",
+        "emailFormat": "text",
+        "text": "=Se reportó una incidencia CRÍTICA.\n\nÁrea responsable: {{ $json.incidencia.area }}\nDescripción: {{ $json.incidencia.descripcion }}\nCategoría: {{ $json.incidencia.categoria }}\nLugar: {{ $json.incidencia.espacioId ?? 'sin espacio' }}{{ $json.incidencia.recursoId ? ' · equipo ' + $json.incidencia.recursoId : '' }}\nReportada: {{ $json.incidencia.fecha }}\nCódigo: {{ $json.incidencia.id }}\n\nEste aviso lo envía n8n desde Campus Pulse.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "9244f6c5-f0be-4ac6-838f-e34255675d9b",
+      "name": "Enviar correo",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        0
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "pulse-smtp",
+          "name": "Pulse SMTP (Mailpit)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0dd1471d-d48b-4705-a443-95646401a344",
+              "name": "canal",
+              "value": "correo",
+              "type": "string"
+            },
+            {
+              "id": "475fe236-b894-408a-b96a-5d077fb472c8",
+              "name": "destinatario",
+              "value": "={{ $('Cuando lo llama otro flujo').item.json.destinatario }}",
+              "type": "string"
+            },
+            {
+              "id": "b4619e84-ad1d-4ac8-a49c-30058eb4e539",
+              "name": "enviado",
+              "value": "={{ ($json.accepted ?? []).length > 0 }}",
+              "type": "boolean"
+            },
+            {
+              "id": "f416ceab-1542-49a6-bfce-e05b3d992073",
+              "name": "messageId",
+              "value": "={{ $json.messageId ?? '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "d3dbb08a-c9c1-4a2e-82a6-9e8f57411a83",
+      "name": "Resultado del envío",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        480,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Cuando lo llama otro flujo": {
+      "main": [
+        [
+          {
+            "node": "Enviar correo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar correo": {
+      "main": [
+        [
+          {
+            "node": "Resultado del envío",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "pulseErrores"
+  },
+  "pinData": {}
+}

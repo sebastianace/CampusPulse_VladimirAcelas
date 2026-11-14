@@ -6,6 +6,78 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+## [v2.0.0] — 2026-11-13
+
+Versión final del proyecto del curso Inteligencia Artificial 2. Sobre la `v1.1.1` de la hackatón agrega: roles y seguridad,
+PostgreSQL con pgvector, prompts con personalidad, incidencias parecidas con embeddings, preguntas con fuentes (RAG con
+LangChain), voz, automatización con n8n, control de la cuota de la IA y la documentación para sustentarlo. Se desarrolló con
+un asistente de programación (ver "Uso de IA en el desarrollo" en el README).
+
+### Revisión final y evidencias (Fase 4)
+
+- **Seguridad:** `body-parser` 2.3.0 → 2.4.0 por una vulnerabilidad alta de denegación de servicio (GHSA-27r3-jxmh-p828).
+  `npm audit` y `pip-audit` quedan sin vulnerabilidades conocidas.
+- **Triaje, prompt 1.3:** la medición pendiente mostró que el few-shot empeoraba (7/12 frente a 9/12) por una política ambigua
+  sobre cuándo inhabilitar. Con la política aclarada, 10/12 en los dos modos e "inhabilitar" 12/12; el few-shot quedó
+  desactivado porque no mejora y cuesta 420 tokens más por llamada.
+- **Matriz de modelos** (`npm run comparar-modelos`, `docs/matriz-modelos.md`): el modelo rápido acertó más, fue el doble de
+  rápido y costó de 2 a 4 veces menos que uno que razona. Costo estimado para el campus: entre 13 y 26 USD al mes.
+- **Documentación:** README nuevo con arquitectura en Mermaid y capturas; registro de depuración; guía de sustentación con
+  plan de estudio; hoja de ruta con piloto, costos y riesgos; decisiones sobre por qué la IA no escribe en la base y por qué
+  el no-solapamiento vive en la base.
+
+### Rendimiento y cuota de la IA
+
+- **Más rápida y más barata en llamadas** (medido con Gemini real): pedir sala 3.4 s → 2.5 s (3 → 2 llamadas); pregunta nueva
+  4.1 s → 1.5 s (3 → 1 llamada); pregunta repetida 4 s → 0 s. La intención de Ctrl+K la decide el código cuando el mensaje es
+  claro (22 de 24 frases de prueba, sin errores) y solo los ambiguos van a Gemini; el reranking del RAG queda apagado por
+  defecto (no mejoró la exactitud y cuesta una llamada y ≈ 1.4 s); las preguntas respondidas se guardan 60 minutos.
+- **Presupuesto global de llamadas** (la cuota de Gemini es de todo el campus, no por persona): si no alcanza, `429 IA_OCUPADA`
+  al instante y sin cobrarle la consulta a la persona; y **modo ahorro** para las recomendaciones de sala. Capacidad por
+  minuto: de ≈ 5 a 8 reservas y de ≈ 5 a 12 preguntas nuevas. Ver `docs/capacidad-ia.md`.
+- **Interfaz:** botón para cerrar la conversación de Ctrl+K en el celular (donde no hay tecla Esc), cierre al tocar fuera y
+  texto de ayuda que ya no se corta.
+
+### Automatización con n8n y webhooks (Fase 3F)
+
+- **n8n 2.47.4 y Mailpit** en `compose.yaml`. Seis flujos exportados en `n8n/`: **incidencia nueva** (webhook firmado con
+  HMAC-SHA256 y protección contra repetición, IF por prioridad, Switch por área, subworkflow de notificación, Merge y llamada
+  de vuelta), **notificar por correo**, **resumen diario con IA** (JSON validado en un Code node contra los datos reales),
+  **Error Workflow**, **ingesta de documentos** (formulario, Document Loader, Embeddings, PGVector) y **agente de
+  coordinación** (memoria, PGVector y HTTP como herramientas). `npm run n8n:preparar` los instala.
+- **Express:** webhook de incidencias en segundo plano (nunca impide crear una incidencia), rutas `/api/integraciones` con
+  autenticación por secreto compartido (`N8N_SECRETO`; apagadas si no está definido) y tabla `incidencias_notificaciones`
+  (migración 005). La lista de incidencias muestra *"Avisada: <área>"*.
+- Hallazgos documentados en `docs/workflows.md`: el nodo de embeddings de n8n no permite 768 dimensiones (tabla propia de 3072),
+  el Error Workflow debe estar activo para atrapar fallas, y si n8n está caído la alerta inmediata se pierde.
+
+### Decisiones documentadas (Fase 3E)
+
+- `docs/decisiones.md`: por qué RAG y no fine-tuning (y cuándo sí usaría fine-tuning), por qué pgvector y no Qdrant ni
+  Chroma, y qué aportó y qué no LangChain, con la evidencia del proyecto y lo que no se midió.
+
+### Voz (Fase 3D)
+
+- **Dictado por voz** (Web Speech API) en el reporte de incidencias y en la barra Ctrl+K, y botón **Escuchar** en las
+  respuestas de Pulse y en las recomendaciones de salas. Sin soporte del navegador los botones no aparecen y todo sigue
+  por texto. Avisos de error en español (permiso denegado, sin micrófono, sin conexión). Lógica pura probada en
+  `tests/voz-texto.test.js`.
+
+### Preguntas con fuentes: RAG (Fase 3C)
+
+- **Servicio `pulse-ai`** (Python, FastAPI y LangChain, en `compose.yaml`): ingesta de `knowledge/` con
+  `MarkdownHeaderTextSplitter` y `RecursiveCharacterTextSplitter`, embeddings de Gemini en pgvector (tabla
+  `conocimiento`, índice HNSW), reformulación con memoria, **reranking** con Gemini y respuesta con citas.
+  Si los documentos no tienen la respuesta, dice que no la sabe. Ver `docs/rag.md`.
+- **`POST /api/ia/preguntar`** y **`POST /api/ia/asistente`**: la barra Ctrl+K decide si la persona quiere reservar
+  una sala o hacer una pregunta, y las respuestas traen *Ver fuentes*. `POST /api/ia/conocimiento/ingestar` (solo
+  admin) recarga los documentos. Si `pulse-ai` cae, solo falla esta función.
+- **Documentos de ejemplo** en `knowledge/` (reglamento, espacios, préstamos, incidencias, preguntas frecuentes), con
+  un test que avisa si una cifra deja de coincidir con `reglas.js`.
+- **Evaluación**: 15 preguntas con y sin reranking (`npm run evaluar-rag`, `docs/evaluacion-rag.md`).
+- Corregidos durante las pruebas: la reformulación mezclaba temas distintos (2 de 4 intentos), el servicio fallaba al
+  reiniciar con la tabla ya creada y un fragmento "Introducción" ensuciaba la búsqueda.
+
 ### Incidencias parecidas (Fase 3B)
 
 - Al confirmar un reporte, la app busca incidencias **abiertas parecidas** con embeddings de Gemini

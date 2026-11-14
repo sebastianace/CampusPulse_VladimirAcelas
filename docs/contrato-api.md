@@ -16,7 +16,7 @@ sin esperar a que P1 termine.
 | `GET /api/prestamos` | — | `[{id, recursoId, persona, estado, fecha}]` | P1 |
 | `POST /api/prestamos` | `{recursoId, persona}` | `201` + el préstamo | P1 |
 | `POST /api/prestamos/:id/devolver` | `{estadoFinal: "disponible" \| "danado"}` | `200` + el préstamo | P1 |
-| `GET /api/incidencias` | — | `[{id, descripcion, categoria, prioridad, area, espacioId, recursoId, estado, origen, ia, reportesAdicionales}]` (`reportesAdicionales`: personas que confirmaron que era la misma) | P1 |
+| `GET /api/incidencias` | — | `[{id, descripcion, categoria, prioridad, area, espacioId, recursoId, estado, origen, ia, reportesAdicionales, notificaciones: [{canal, area, enviado}]}]` (`reportesAdicionales`: personas que confirmaron que era la misma) | P1 |
 | `POST /api/incidencias/:id/reportes` | `{descripcion}` | `201 {reporte: {id, incidenciaId, descripcion, reportadoPor, fecha}, totalReportes}`. Suma el reporte a una incidencia abierta; `404` si no existe, `409 INCIDENCIA_YA_RESUELTA` si ya se resolvió | P1 |
 | `GET /api/incidencias/:id/reportes` | — | `[{id, incidenciaId, descripcion, reportadoPor, fecha}]` | P1 |
 | `POST /api/incidencias` | `{descripcion, categoria, prioridad, area, espacioId, recursoId, inhabilitar, origen, ia}` | `201` + la incidencia (y cambia el estado del espacio o recurso) | P1 |
@@ -33,6 +33,11 @@ sin esperar a que P1 termine.
 | `POST /api/ia/triaje` | `{descripcion}` | `{categoria, prioridad, area, espacioId, recursoId, inhabilitar, razon, modelo}` | P2 |
 | `POST /api/ia/similares` | `{descripcion, espacioId?, recursoId?}` | `{candidatas: [{id, descripcion, categoria, prioridad, area, espacioId, recursoId, fecha, similitud, reportesAdicionales}], umbral, modelo}`. Incidencias **abiertas** parecidas, de la más a la menos parecida. `503` si el servicio de embeddings falla | P2 |
 | `POST /api/ia/recomendar` | `{texto}` | `{solicitud: {asistentes, inicio, fin, necesitaComputadores}, opciones: [{espacioId, motivo}], explicacion, modelo}` | P2 |
+| `POST /api/ia/preguntar` | `{pregunta, historial?: [{rol: "usuario" \| "pulse", texto}]}` | `{respondido, respuesta, areaSugerida, fragmentos: [{documento, seccion, archivo, texto, similitud, puntaje, usado, ejemplo}], consulta, reranking, modelo}`. Responde con los documentos de `knowledge/` (RAG en `pulse-ai`) y marca en `fragmentos` cuáles usó. Si no están en los documentos, `respondido: false` y no inventa. `503` si `pulse-ai` o Gemini fallan; `422` si el historial es inválido | P2 |
+| `POST /api/ia/asistente` | `{texto, historial?}` | La barra Ctrl+K. La IA decide la intención: `{intencion: "reservar", solicitud, opciones, explicacion, modelo}` (igual que `/recomendar`) o `{intencion: "preguntar", ...}` (igual que `/preguntar`). Gasta un solo cupo de IA | P2 |
+| `POST /api/ia/conocimiento/ingestar` | — | `200 {documentos, fragmentos, retirados}`. Vuelve a cargar `knowledge/` en la base vectorial. Solo `admin`; otro rol → `403` | P2 |
+| `GET /api/integraciones/incidencias?fecha=hoy\|YYYY-MM-DD&estado=abierta\|resuelta\|todas` | — | `[{id, descripcion, categoria, prioridad, area, espacioId, recursoId, estado, fecha, reportesAdicionales}]`, sin datos personales. **No usa sesión**: se autentica con el secreto `N8N_SECRETO` en la cabecera `x-pulse-token` (si no coincide, `401 SECRETO_INVALIDO`; sin `N8N_SECRETO` configurado, `503 INTEGRACION_NO_CONFIGURADA`). Lo llama n8n | P2 |
+| `POST /api/integraciones/incidencias/:id/notificada` | `{canal: "correo" \| "telegram", destinatario, area}` | `201 {registrada: true}`, o `200 {registrada: false}` si ese aviso ya estaba registrado (n8n reintenta). Mismo secreto en `x-pulse-token`. `404` si la incidencia no existe | P2 |
 
 Además de los 9 espacios del CSV oficial, `GET /api/espacios` incluye las mesas de ping-pong de
 Hunters (`ping-pong-1`, `ping-pong-2`, tipo `mesa_juego`, aforo 4) desde `data/seed/espacios-extra.json`.
@@ -56,12 +61,27 @@ listo para mostrar en un toast.
 
 ## Límite y caché de la IA
 
+- **Presupuesto global:** además del cupo por persona, hay un presupuesto de llamadas a Gemini por minuto para *todas* las
+  personas (`LIMITE_IA_GLOBAL_LLAMADAS_MINUTO`, porque la capa gratis tiene un límite por proyecto). Si una petición no cabe,
+  responde **`429 IA_OCUPADA`** al instante, con `Retry-After`, y no le cuenta como consulta a la persona. Ver
+  `docs/capacidad-ia.md`.
+- **Modo ahorro:** con poco presupuesto, `POST /api/ia/recomendar` y `POST /api/ia/asistente` (intención `reservar`) devuelven
+  las salas con `modoAhorro: true`: las reglas escriben el `motivo` de cada opción y `explicacion` viene vacía.
+- **Intención sin IA:** `POST /api/ia/asistente` decide con reglas cuando el mensaje es claro y solo le pregunta a Gemini si es
+  ambiguo. Una pregunta ya respondida (sin conversación previa) sale de la caché con `X-Cache: HIT`.
+
 - Cada usuario puede hacer `LIMITE_IA_PETICIONES` consultas a `/api/ia/*` cada
   `LIMITE_IA_VENTANA_MINUTOS` (valores en `src/config/reglas.js`). Una petición inválida (422) o
   respondida desde la caché no gasta cupo.
 - `POST /api/ia/triaje` guarda la respuesta `CACHE_IA_MINUTOS` minutos: un texto idéntico (sin
   importar mayúsculas ni espacios) se responde desde la caché con la cabecera `X-Cache: HIT`.
   `POST /api/ia/recomendar` no se cachea porque depende de la disponibilidad y de la fecha.
+- `POST /api/ia/preguntar` guarda en caché solo las preguntas **sin historial** y **respondidas** (un "no sé" puede
+  cambiar al agregar un documento, y con historial la respuesta depende de la conversación). Recargar los documentos
+  (`/conocimiento/ingestar`) vacía la caché. `POST /api/ia/asistente` no se cachea.
+- Una consulta a `/preguntar` o `/asistente` cuenta como **un** cupo, aunque por dentro haga hasta cuatro llamadas a
+  Gemini (intención, reformular, reordenar, responder). Ojo: el plan gratuito de Gemini permite 15 llamadas por minuto
+  por modelo en total, no por usuario (ver `docs/rag.md`).
 - `POST /api/ia/similares` cuenta como una consulta a la IA, salvo que el embedding del texto ya esté
   en la caché (o en camino, si llegan varias peticiones iguales a la vez).
 
@@ -101,7 +121,7 @@ Lo que P2 (IA) importa de P1. Si P1 cambia un nombre, avisa antes.
 |---|---|---|
 | `src/config/reglas.js` | `CATEGORIAS`, `PRIORIDADES`, `AREAS` | Arrays con los valores cerrados de arriba |
 | `src/config/reglas.js` | `REGLAS` | Objeto con las constantes (usa `PRIORIDADES_QUE_INHABILITAN`) |
-| `src/data/store.js` | `leerDB()` | `{espacios, recursos, ...}` (puede ser síncrona o `async`) |
+| `src/data/almacen.js` | `leerDB()` | `Promise<{espacios, recursos, reservas, prestamos, incidencias, ...}>`: la foto de PostgreSQL (siempre `async`) |
 | `src/domain/reservas.js` | `buscarEspaciosDisponibles({asistentes, inicio, fin})` | Espacios que cumplen todas las reglas, ordenados por mejor ajuste de aforo |
 
 Y lo que P1 importa de P2:
@@ -109,3 +129,10 @@ Y lo que P1 importa de P2:
 | Archivo (dueño P2) | Export | Uso |
 |---|---|---|
 | `src/routes/ia.js` | `default` (un `express.Router`) | P1 lo monta en `src/server.js` con `app.use('/api/ia', iaRouter)` |
+
+## Webhook de incidencias hacia n8n
+
+Al crear una incidencia, Express envía `POST $N8N_WEBHOOK_URL` (por defecto `/webhook/incidencia-nueva` de n8n) con
+`{"evento": "incidencia.creada", "incidencia": {id, descripcion, categoria, prioridad, area, espacioId, recursoId, origen, fecha}}`
+y las cabeceras `x-pulse-timestamp` (segundos) y `x-pulse-firma` (`sha256=` + HMAC-SHA256 de `"<timestamp>.<cuerpo>"` con
+`N8N_SECRETO`). Es en segundo plano: un fallo de n8n nunca impide crear la incidencia. Ver `docs/workflows.md`.

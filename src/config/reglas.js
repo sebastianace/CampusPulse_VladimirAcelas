@@ -75,6 +75,18 @@ export const REGLAS = {
   // Minutos que se guarda la respuesta del triaje para un texto idéntico.
   CACHE_IA_MINUTOS: 10,
 
+  // La capa gratis de Gemini permite 15 llamadas por minuto EN TOTAL (todas las personas juntas), no por usuario.
+  // Este es el presupuesto de llamadas por minuto que Campus Pulse se permite gastar entre todas las personas
+  // (se deja un margen bajo las 15). Cada petición a la IA declara cuántas llamadas estima que gasta; si no
+  // alcanza, responde enseguida 429 IA_OCUPADA en vez de esperar y fallar. Ver docs/capacidad-ia.md.
+  LIMITE_IA_GLOBAL_LLAMADAS_MINUTO: 12,
+  // Modo ahorro: si tras atender una petición quedarían menos de estas llamadas en el minuto, la recomendación de
+  // salas no gasta la llamada que redacta la explicación (las reglas siguen decidiendo igual).
+  UMBRAL_MODO_AHORRO: 4,
+  // Las respuestas del RAG dependen solo de los documentos (que casi no cambian): se guardan más tiempo que el
+  // triaje. Recargar los documentos vacía la caché.
+  CACHE_RAG_MINUTOS: 60,
+
   // Incidencias parecidas (embeddings). Similitud coseno (0 a 1) desde la cual una incidencia abierta
   // se sugiere como "¿es la misma?". PROVISIONAL: sale de una medición de 10 reportes (la misma
   // incidencia dio 0.96 a 0.98, y las distintas de la misma sala o equipo 0.84 a 0.90). Falta el notebook
@@ -82,6 +94,12 @@ export const REGLAS = {
   UMBRAL_SIMILITUD_INCIDENCIA: 0.93,
   // Cuántas incidencias parecidas se muestran como máximo.
   MAX_INCIDENCIAS_PARECIDAS: 3,
+
+  // Preguntas al asistente de conocimiento (RAG, servicio pulse-ai).
+  // Cuántos mensajes anteriores de la conversación se envían para entender preguntas de seguimiento.
+  MAX_MENSAJES_HISTORIAL: 6,
+  // Segundos que se espera a pulse-ai (reformular + buscar + reordenar + responder son varias llamadas a Gemini).
+  TIMEOUT_CONOCIMIENTO_SEGUNDOS: 40,
 };
 
 // =====================================================================
@@ -113,6 +131,9 @@ export const ESTADOS_INCIDENCIA = ['abierta', 'resuelta'];
 
 // Origen de una incidencia: sugerida por la IA y confirmada, o llenada a mano.
 export const ORIGENES_INCIDENCIA = ['ia', 'manual'];
+
+// Canales por los que n8n avisa de una incidencia al área responsable.
+export const CANALES_NOTIFICACION = ['correo', 'telegram'];
 
 // Estados de un préstamo: activo mientras el recurso no se ha devuelto.
 export const ESTADOS_PRESTAMO = ['activo', 'devuelto'];

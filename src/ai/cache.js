@@ -11,7 +11,6 @@
 
 import { REGLAS } from '../config/reglas.js';
 
-const DURACION_MS = REGLAS.CACHE_IA_MINUTOS * 60_000;
 const MAX_ENTRADAS = 200;
 
 // clave -> { valor, vence }
@@ -31,12 +30,15 @@ export function leerCache(texto, ahora = Date.now(), espacio = '') {
   return entrada.valor;
 }
 
-/** Guarda la respuesta de ese texto. Si se llena, descarta la entrada más antigua. */
-export function guardarCache(texto, valor, ahora = Date.now(), espacio = '') {
+/**
+ * Guarda la respuesta de ese texto. Si se llena, descarta la entrada más antigua.
+ * `minutos`: cuánto dura esta entrada (por defecto CACHE_IA_MINUTOS).
+ */
+export function guardarCache(texto, valor, ahora = Date.now(), espacio = '', minutos = REGLAS.CACHE_IA_MINUTOS) {
   const clave = claveDe(texto, espacio);
   guardadas.delete(clave); // así la entrada renovada queda como la más reciente
   if (guardadas.size >= MAX_ENTRADAS) guardadas.delete(guardadas.keys().next().value);
-  guardadas.set(clave, { valor, vence: ahora + DURACION_MS });
+  guardadas.set(clave, { valor, vence: ahora + minutos * 60_000 });
 }
 
 /** Vacía la caché (para los tests). */

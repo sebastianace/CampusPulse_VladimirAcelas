@@ -1,5 +1,5 @@
 // Rutas de incidencias.
-// GET   /api/incidencias      -> [{id, descripcion, categoria, prioridad, area, espacioId, recursoId, estado, origen, ia}]
+// GET   /api/incidencias      -> [{id, descripcion, categoria, prioridad, area, espacioId, recursoId, estado, origen, ia, reportesAdicionales, notificaciones}]
 // POST  /api/incidencias      {descripcion, categoria, prioridad, area, espacioId, recursoId, inhabilitar, origen, ia}
 //                             -> 201 + la incidencia (y cambia el estado del espacio o recurso)
 // POST  /api/incidencias/:id/reportes {descripcion} -> 201 {reporte, totalReportes}: suma el reporte de
@@ -11,21 +11,27 @@
 import { Router } from 'express';
 import { exigirRol } from './auth.js';
 import { guardarEmbeddingEnSegundoPlano } from '../ai/similares.js';
+import { notificacionesPorIncidencia } from '../data/notificaciones.js';
+import { notificarIncidenciaNueva } from '../integraciones/n8n.js';
 import { actualizarDB, leerDB } from '../data/almacen.js';
 import { agregarReporte, contarReportes, listarReportes } from '../data/similares.js';
 import { crearIncidencia, resolverIncidencia } from '../domain/incidencias.js';
 
 const router = Router();
 
-// Cada incidencia trae reportesAdicionales: cuántas personas más confirmaron que era la misma.
+// Cada incidencia trae reportesAdicionales (cuántas personas más confirmaron que era la misma) y
+// notificaciones (a qué área avisó n8n, por qué canal y cuándo).
 router.get('/', async (req, res) => {
-  const [db, reportes] = await Promise.all([leerDB(), contarReportes()]);
-  res.json(db.incidencias.map((i) => ({ ...i, reportesAdicionales: reportes.get(i.id) ?? 0 })));
+  const [db, reportes, notificaciones] = await Promise.all([leerDB(), contarReportes(), notificacionesPorIncidencia()]);
+  res.json(db.incidencias.map((i) => ({
+    ...i, reportesAdicionales: reportes.get(i.id) ?? 0, notificaciones: notificaciones.get(i.id) ?? [],
+  })));
 });
 
 router.post('/', async (req, res) => {
   const incidencia = await actualizarDB((db) => crearIncidencia(db, req.body));
   guardarEmbeddingEnSegundoPlano(incidencia); // para que se sugiera como parecida; no hace esperar la respuesta
+  notificarIncidenciaNueva(incidencia); // webhook firmado a n8n; no hace esperar la respuesta y nunca falla la creación
   res.status(201).json(incidencia);
 });
 
