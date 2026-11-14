@@ -21,11 +21,40 @@ schema JSON y se vuelve a validar en `src/ai/validar.js`.
 
 | Prompt | Archivo | Lo usa | Versión |
 |---|---|---|---|
-| Triaje de incidencias | `prompts/triaje.js` | `POST /api/ia/triaje` | 1.2 |
+| Triaje de incidencias | `prompts/triaje.js` | `POST /api/ia/triaje` | 1.3 |
 | Extracción de la solicitud de reserva | `prompts/solicitud.js` | `POST /api/ia/recomendar`, paso 1 | 1.0 |
 | Explicación de las salas recomendadas | `prompts/explicacion.js` | `POST /api/ia/recomendar`, paso 3 | 1.1 |
+| Intención del mensaje (reservar o preguntar) | `prompts/intencion.js` | `POST /api/ia/asistente` | 1.0 |
+| Reformular la pregunta con la conversación (few-shot) | `pulse-ai/app/prompts.py` | RAG, `pulse-ai` | 1.1 |
+| Reordenar fragmentos (reranking) | `pulse-ai/app/prompts.py` | RAG, `pulse-ai` | 1.0 |
+| Responder con citas o decir "no sé" | `pulse-ai/app/prompts.py` | RAG, `pulse-ai` | 1.1 |
+
+Los prompts del RAG viven en Python (`pulse-ai/`) porque ahí corre LangChain, con la misma plantilla de seis secciones
+y la misma personalidad de Pulse. Un test de Node comprueba que las conductas de la personalidad sean idénticas en los dos
+lugares (`tests/conocimiento-docs.test.js`).
 
 ## Historial de versiones
+
+### 1.3: el criterio de "inhabilitar" es el riesgo para las personas
+- La política decía "inhabilitar si el espacio o equipo no se puede usar con seguridad"; el modelo marcaba como inhabilitado
+  cualquier equipo que no funcionara. Ahora dice: **solo si usarlo pone en riesgo a las personas**; un equipo dañado sin
+  riesgo se reporta pero no se inhabilita; sin espacio ni equipo identificado, no se inhabilita nada.
+- Medido antes y después (ver "Medición"): "inhabilitar" pasó de 7 y 10 aciertos de 12 a 12 de 12 en los dos modos.
+- Con este resultado, el triaje queda **sin ejemplos few-shot** por defecto.
+
+### RAG 1.1: la reformulación decide antes de reescribir
+- **Problema encontrado probando con Gemini real** (`gemini-3.5-flash-lite`): con una conversación previa sobre
+  "domingos", la pregunta independiente *"¿Quién ganó el mundial de fútbol de 2014?"* se reescribía como *"¿Cuál es el
+  tiempo máximo de reserva los domingos?"* en 2 de 4 intentos, y Pulse respondía sobre domingos. La v1.0 del prompt pedía
+  "reescribe la pregunta para que se entienda sola", y el modelo la reescribía siempre, mezclando temas.
+- **Cambio:** el modelo primero decide en un campo `depende_del_historial` (true solo si la pregunta no se entiende
+  sin los mensajes anteriores); si es `false`, el código usa la pregunta original sin tocarla aunque el modelo la haya
+  reescrito. Además se agregó la sección de **ejemplos (few-shot)** con cuatro casos, entre ellos el del mundial.
+- **Resultado:** el mismo escenario, 8 de 8 intentos sin contaminar (antes 2 de 4). Los seguimientos legítimos
+  ("¿y los domingos?") siguen reformulándose bien (5 de 5 en una prueba directa).
+- Si la reformulación falla (Gemini caído), el código une la última pregunta de la persona con la nueva, sin IA.
+- **Prompt de respuesta 1.1:** se agregó "ve directo a la respuesta, sin saludar" porque la primera respuesta empezó con
+  "Hola.".
 
 ### 1.2: ejemplos few-shot en el triaje
 
@@ -92,14 +121,44 @@ npm run medir-triaje
 
 Guarda el detalle en `evaluacion/resultados/triaje-<fecha>.json`.
 
-**Resultado:** _pendiente de correr_. Cuando se corra, pegar aquí la tabla (aciertos por campo y
-casos exactos de 12 en cada modo) y la conclusión, aunque el few-shot no mejore.
+**Resultado** (13 nov 2026, `gemini-3.5-flash-lite`, dos rondas; detalle en `evaluacion/resultados/triaje-2026-11-13-prompt-v1.2.json`
+y `…-v1.3.json`):
+
+| Campo (de 12) | Zero-shot, prompt 1.2 | Few-shot, prompt 1.2 | Zero-shot, prompt 1.3 | Few-shot, prompt 1.3 |
+|---|---|---|---|---|
+| **Casos exactos (los 6 campos)** | **9** | **7** | **10** | **10** |
+| Categoría | 11 | 12 | 11 | 11 |
+| Prioridad | 11 | 10 | 11 | 11 |
+| Área | 11 | 12 | 11 | 11 |
+| Espacio | 12 | 12 | 12 | 12 |
+| Equipo | 12 | 12 | 12 | 12 |
+| Inhabilitar | 10 | **7** | **12** | **12** |
+
+**Qué pasó:**
+1. **Primera ronda (prompt 1.2): el few-shot salió peor** (7 frente a 9). Mejoraba la categoría y el área, pero marcaba
+   "inhabilitar" en un televisor sin imagen, un portátil con la pantalla rota y unas sillas rotas, que según el criterio del
+   autor no se inhabilitan.
+2. **Causa:** la política decía "inhabilitar si el espacio o equipo **no se puede usar** con seguridad". Un equipo que no
+   funciona "no se puede usar", y el modelo lo tomó literal. El criterio real es **riesgo para las personas**.
+3. **Corrección (prompt 1.3):** la política lo dice explícito, con ejemplos de lo que no se inhabilita, y agrega que sin
+   espacio ni equipo identificado no hay nada que inhabilitar.
+4. **Segunda ronda: empate** (10 y 10) y "inhabilitar" perfecto en los dos modos. Los 2 fallos que quedan en cada modo son
+   casos discutibles: el café derramado (ya marcado como discutible), el proyector de Cosmos ("alta" en vez de "media") y los
+   cables pelados (clasificados como seguridad o infraestructura en vez de tecnología).
+
+**Decisión:** el few-shot **no mejoró** y agrega **420 tokens por llamada** (1531 frente a 1111, +38 %), así que, por la regla
+de abajo, el triaje queda **sin ejemplos** (`USAR_EJEMPLOS_TRIAJE = false` en `src/ai/prompts/triaje.js`). Los ejemplos se
+conservan y se reactivan cambiando ese valor.
+
+**Lección:** el mayor cambio no lo dio el few-shot sino **redactar bien una política** (de 7 a 10 casos exactos). Los
+ejemplos no corrigen una instrucción ambigua; a veces la amplifican.
 
 **Cómo leerla con cuidado:**
 - 12 reportes son pocos: una diferencia de 1 o 2 casos puede ser ruido. Además la IA no es
   determinista aunque la temperatura sea baja (0.2).
 - Si el few-shot no mejora, se desactiva cambiando el valor por defecto de `conEjemplos`.
 
-## Pendiente de la Fase 3A
+## Pendiente
 
-- Correr la medición y registrar el resultado.
+- Repetir la medición con más reportes (12 son pocos: 1 o 2 casos de diferencia pueden ser ruido) y con otros modelos
+  (`npm run comparar-modelos`, ver `docs/matriz-modelos.md`).

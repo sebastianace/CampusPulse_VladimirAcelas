@@ -52,6 +52,27 @@ Diez tablas, más `schema_migrations` (qué migraciones ya se aplicaron):
 Las migraciones están en [`db/migrations/`](../db/migrations/): `001_extensiones.sql`,
 `002_esquema.sql`, `003_orden.sql` y `004_embeddings.sql`. Cada archivo corre en una transacción; lo aplicado queda en `schema_migrations`.
 
+### `incidencias_notificaciones` (migración 005)
+
+A quién avisó n8n de cada incidencia, por qué canal y cuándo (`incidencia_id`, `canal`, `destinatario`, `area`, `enviado`).
+`UNIQUE (incidencia_id, canal, destinatario)` evita duplicar el aviso cuando n8n reintenta, y `ON DELETE CASCADE` la borra con
+la incidencia. Ver `docs/workflows.md`.
+
+### Tablas que crea n8n (tampoco están en `db/migrations/`)
+
+Los flujos de n8n crean `n8n_conocimiento` (los fragmentos que ingiere por formulario, con vectores de **3072** dimensiones y
+sin índice: el nodo de embeddings de Gemini de n8n no deja elegir las dimensiones y HNSW no pasa de 2000) y
+`n8n_chat_historial` (la memoria del agente). Son tablas de n8n, no de la aplicación; `npm run semilla` no las toca.
+
+### La tabla `conocimiento` (RAG) no está en `db/migrations/`
+
+La tabla donde se guardan los fragmentos de `knowledge/` con su embedding (768 dimensiones, índice HNSW con
+`vector_cosine_ops`) la crea el servicio `pulse-ai` al arrancar, con `PGVectorStore` de `langchain-postgres`, solo si
+no existe (`pulse-ai/app/almacen.py`). Columnas: `id`, `contenido`, `embedding` y `metadatos` (jsonb con `archivo`,
+`documento`, `seccion`, `ejemplo`). Se hizo así porque la librería es dueña de ese esquema y un reinicio del contenedor
+no debe depender del orden en que arranque Node; el costo es que su esquema no se ve en las migraciones, y por eso queda
+documentado aquí. Ver `docs/rag.md`.
+
 ## Decisiones
 
 ### No solapamiento de reservas, en la base de datos

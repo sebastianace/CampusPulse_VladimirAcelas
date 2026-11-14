@@ -1,0 +1,745 @@
+{
+  "id": "pulseIncidenciaNueva",
+  "name": "Pulse · Incidencia nueva (webhook)",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "incidencia-nueva",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "ed926b2d-1431-4ff8-8c06-da57f7271dca",
+      "name": "Webhook de incidencias",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "8b51e696-a421-4fea-8f52-2271aab3703d"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Valida el webhook que envía Campus Pulse: firma HMAC-SHA256, antigüedad del mensaje y forma de los datos.\nconst crypto = require('crypto');\nconst AREAS = ['Infraestructura', 'Soporte TI', 'Servicios generales', 'Seguridad', 'Bienestar'];\nconst PRIORIDADES = ['baja', 'media', 'alta', 'critica'];\nconst TOLERANCIA_SEGUNDOS = 300;\n\nconst rechazar = (motivo) => [{ json: { valido: false, motivo } }];\n\nconst secreto = $env.N8N_SECRETO;\nif (!secreto) return rechazar('El secreto N8N_SECRETO no está configurado en n8n.');\n\nconst cabeceras = $input.first().json.headers ?? {};\nconst firma = cabeceras['x-pulse-firma'];\nconst marca = cabeceras['x-pulse-timestamp'];\nif (!firma || !marca) return rechazar('Faltan las cabeceras de firma.');\n\n// La firma se calcula sobre el cuerpo EXACTO que se envió (por eso el webhook guarda el cuerpo crudo).\nlet crudo;\ntry {\n  crudo = (await this.helpers.getBinaryDataBuffer(0, 'data')).toString('utf8');\n} catch (error) {\n  return rechazar('No llegó el cuerpo de la petición.');\n}\n\nconst esperada = Buffer.from('sha256=' + crypto.createHmac('sha256', secreto).update(`${marca}.${crudo}`).digest('hex'));\nconst recibida = Buffer.from(String(firma));\nif (esperada.length !== recibida.length || !crypto.timingSafeEqual(esperada, recibida)) return rechazar('Firma inválida.');\n\nconst edad = Math.abs(Math.floor(Date.now() / 1000) - Number(marca));\nif (!Number.isFinite(edad) || edad > TOLERANCIA_SEGUNDOS) return rechazar('El mensaje es demasiado viejo o viene del futuro.');\n\nlet datos;\ntry { datos = JSON.parse(crudo); } catch (error) { return rechazar('El cuerpo no es JSON.'); }\nconst i = datos?.incidencia;\nif (datos?.evento !== 'incidencia.creada' || typeof i?.id !== 'string' || !AREAS.includes(i?.area) || !PRIORIDADES.includes(i?.prioridad)) {\n  return rechazar('Los datos de la incidencia no tienen el formato esperado.');\n}\nreturn [{ json: { valido: true, incidencia: i } }];\n"
+      },
+      "id": "71429f33-b12d-462d-b54f-6a7faa1f0aad",
+      "name": "Validar firma y datos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3075cf4d-fd91-4b88-bda0-9fd35a194bfe",
+              "leftValue": "={{ $json.valido }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6e3eae64-9cb3-4b11-87a5-3bae34a68bde",
+      "name": "¿Firma y datos válidos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { error: { codigo: 'WEBHOOK_RECHAZADO', mensaje: $json.motivo } } }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "40b07a91-9dc2-4c28-b885-2e6ef8948eb7",
+      "name": "Responder 401",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        660,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { recibido: true } }}",
+        "options": {
+          "responseCode": 202
+        }
+      },
+      "id": "b7f82f23-f067-4438-9d66-f49d20346745",
+      "name": "Responder 202",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        660,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "11ae93db-22bd-41b2-ae18-4d9752fc9cc8",
+              "leftValue": "={{ $json.incidencia.prioridad }}",
+              "rightValue": "critica",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6318b583-f422-4669-9cf7-788872ab4324",
+      "name": "¿Es crítica?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        200
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "05dc3924-62a5-48ef-94b0-dc6399f5995e",
+      "name": "Va al resumen diario",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        400
+      ],
+      "notes": "Las incidencias que no son críticas no avisan al instante: las incluye el resumen diario (workflow Resumen diario con IA)."
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "12e4499e-856d-48b7-a961-acc0fb7be01b",
+                    "leftValue": "={{ $json.incidencia.area }}",
+                    "rightValue": "Infraestructura",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Infraestructura"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "626ab11a-0b0c-447c-8afb-8675503960aa",
+                    "leftValue": "={{ $json.incidencia.area }}",
+                    "rightValue": "Soporte TI",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Soporte TI"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "e774d58f-9387-460c-8780-9ce99ea55f57",
+                    "leftValue": "={{ $json.incidencia.area }}",
+                    "rightValue": "Servicios generales",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Servicios generales"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "d4e164ef-3d70-4d29-9e7a-08981e6bd0f4",
+                    "leftValue": "={{ $json.incidencia.area }}",
+                    "rightValue": "Seguridad",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Seguridad"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "d9867c73-9042-4d0e-9cc8-70baa54817a1",
+                    "leftValue": "={{ $json.incidencia.area }}",
+                    "rightValue": "Bienestar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Bienestar"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5392df33-3a03-4713-9932-286942068cbd",
+      "name": "Área responsable",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1100,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "05ef69b1-266a-49f2-bf20-291d901592b2",
+              "name": "destinatario",
+              "value": "infraestructura@campus.local",
+              "type": "string"
+            },
+            {
+              "id": "4c2939f1-9c4c-4f0f-8e23-acb74f906f32",
+              "name": "canal",
+              "value": "correo",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "642fee5c-09a1-45c7-af98-35230e440e16",
+      "name": "Destinatario: Infraestructura",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1340,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7a8f1c82-215c-4f44-a23e-9c6a70ac7695",
+              "name": "destinatario",
+              "value": "soporte-ti@campus.local",
+              "type": "string"
+            },
+            {
+              "id": "18351a6d-0ead-4fd5-bfe6-e56725d788ba",
+              "name": "canal",
+              "value": "correo",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "5b8f718e-18b5-44ab-a05c-750a936879fd",
+      "name": "Destinatario: Soporte TI",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1340,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cb150dc5-c04c-445b-b143-5c9e507a1121",
+              "name": "destinatario",
+              "value": "servicios-generales@campus.local",
+              "type": "string"
+            },
+            {
+              "id": "796a0d0a-24a3-45b8-9ca9-c5cc2f09919e",
+              "name": "canal",
+              "value": "correo",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "a9fed038-9c41-49f3-8528-6b20e97b554e",
+      "name": "Destinatario: Servicios generales",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1340,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c6d709b6-fc02-497d-a549-ca5a8013b28f",
+              "name": "destinatario",
+              "value": "seguridad@campus.local",
+              "type": "string"
+            },
+            {
+              "id": "49339a84-ddf6-4292-b74b-b9e749bff212",
+              "name": "canal",
+              "value": "correo",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "7311b55f-6c7a-4833-ac5d-efbc48fbcee6",
+      "name": "Destinatario: Seguridad",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1340,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "96d019f5-4585-4bad-bec8-f68139a9a919",
+              "name": "destinatario",
+              "value": "bienestar@campus.local",
+              "type": "string"
+            },
+            {
+              "id": "8f0bc35b-3a98-4401-b73e-b8208f373f51",
+              "name": "canal",
+              "value": "correo",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "91bda745-5294-47fe-93f5-134512fe3152",
+      "name": "Destinatario: Bienestar",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "pulseNotificar",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "931dd1a4-3e05-4507-ac1b-7882d22fda76",
+      "name": "Notificar por correo",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1600,
+        0
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "fcd28348-9cd5-4386-ac3f-0ede6a4b71e2",
+      "name": "Datos de la incidencia",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1600,
+        200
+      ],
+      "notes": "El subworkflow devuelve solo el resultado del envío: aquí se conservan los datos de la incidencia para unirlos con él en el Merge."
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "id": "3bd57959-efe2-4872-9330-c3aa2e2ddad5",
+      "name": "Unir resultado con la incidencia",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1840,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CAMPUS_URL }}/api/integraciones/incidencias/{{ $json.incidencia.id }}/notificada",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-pulse-token",
+              "value": "={{ $env.N8N_SECRETO }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ canal: $json.canal, destinatario: $json.destinatario, area: $json.incidencia.area }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "0631f9a6-75a7-403b-826b-f6918d30e237",
+      "name": "Registrar aviso en Campus Pulse",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2080,
+        100
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    }
+  ],
+  "connections": {
+    "Webhook de incidencias": {
+      "main": [
+        [
+          {
+            "node": "Validar firma y datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar firma y datos": {
+      "main": [
+        [
+          {
+            "node": "¿Firma y datos válidos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Firma y datos válidos?": {
+      "main": [
+        [
+          {
+            "node": "Responder 202",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Responder 202": {
+      "main": [
+        [
+          {
+            "node": "¿Es crítica?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es crítica?": {
+      "main": [
+        [
+          {
+            "node": "Área responsable",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Va al resumen diario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Área responsable": {
+      "main": [
+        [
+          {
+            "node": "Destinatario: Infraestructura",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Destinatario: Soporte TI",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Destinatario: Servicios generales",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Destinatario: Seguridad",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Destinatario: Bienestar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Destinatario: Infraestructura": {
+      "main": [
+        [
+          {
+            "node": "Notificar por correo",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Datos de la incidencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Destinatario: Soporte TI": {
+      "main": [
+        [
+          {
+            "node": "Notificar por correo",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Datos de la incidencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Destinatario: Servicios generales": {
+      "main": [
+        [
+          {
+            "node": "Notificar por correo",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Datos de la incidencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Destinatario: Seguridad": {
+      "main": [
+        [
+          {
+            "node": "Notificar por correo",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Datos de la incidencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Destinatario: Bienestar": {
+      "main": [
+        [
+          {
+            "node": "Notificar por correo",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Datos de la incidencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notificar por correo": {
+      "main": [
+        [
+          {
+            "node": "Unir resultado con la incidencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Datos de la incidencia": {
+      "main": [
+        [
+          {
+            "node": "Unir resultado con la incidencia",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Unir resultado con la incidencia": {
+      "main": [
+        [
+          {
+            "node": "Registrar aviso en Campus Pulse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "pulseErrores"
+  },
+  "pinData": {}
+}

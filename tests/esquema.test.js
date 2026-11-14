@@ -16,7 +16,7 @@ import {
   AREAS, CATEGORIAS, ESTADOS_ESPACIO, ESTADOS_INCIDENCIA, ESTADOS_PRESTAMO, ESTADOS_RECURSO, ORIGENES_INCIDENCIA, PRIORIDADES,
 } from '../src/config/reglas.js';
 
-const TABLAS = ['calidad_datos', 'espacios', 'incidencias', 'incidencias_embeddings', 'incidencias_reportes', 'prestamos', 'recursos', 'reservas', 'schema_migrations', 'sesiones', 'usuarios'];
+const TABLAS = ['calidad_datos', 'espacios', 'incidencias', 'incidencias_embeddings', 'incidencias_notificaciones', 'incidencias_reportes', 'prestamos', 'recursos', 'reservas', 'schema_migrations', 'sesiones', 'usuarios'];
 
 let bd;
 let pool;
@@ -52,7 +52,7 @@ describe('Migraciones', () => {
   test('volver a migrar no repite nada', async () => {
     assert.deepEqual(await migrar(pool), []);
     const { rows } = await pool.query('SELECT version FROM schema_migrations ORDER BY version');
-    assert.deepEqual(rows.map((f) => f.version), ['001_extensiones.sql', '002_esquema.sql', '003_orden.sql', '004_embeddings.sql']);
+    assert.deepEqual(rows.map((f) => f.version), ['001_extensiones.sql', '002_esquema.sql', '003_orden.sql', '004_embeddings.sql', '005_notificaciones.sql']);
   });
 });
 

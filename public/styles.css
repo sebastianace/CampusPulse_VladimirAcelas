@@ -630,6 +630,11 @@ option { color: var(--texto); background: var(--placa-alta); }
 
 .tarjeta-manual__titulo { font-weight: 700; }
 
+/* "¿Es la misma incidencia?": se muestra debajo de los botones del formulario, con aire arriba */
+.parecidas { display: grid; gap: 12px; margin-top: 18px; }
+.parecidas .tarjeta-manual__titulo { margin: 0; }
+.parecidas .item__acciones { flex-wrap: wrap; }
+
 .nota { font-size: 12.5px; color: var(--tenue); }
 
 /* Campo que la IA no pudo decidir: la persona debe elegirlo */
@@ -723,7 +728,18 @@ option { color: var(--texto); background: var(--placa-alta); }
 .comando::backdrop { background: rgb(6 8 12 / 0.7); backdrop-filter: blur(2px); }
 
 .comando__form { padding: 18px 18px 0; }
-.comando__titulo { font-size: 13px; color: var(--ia); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+.comando__cabeza { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.comando__titulo { font-size: 13px; color: var(--ia); text-transform: uppercase; letter-spacing: 0.06em; margin: 0; }
+/* 44 x 44 px: el tamaño mínimo cómodo para un dedo */
+.comando__cerrar {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; margin: -8px -8px -8px 0;
+  background: transparent; border: 1px solid transparent; border-radius: var(--radio-sm);
+  color: var(--tenue); cursor: pointer;
+}
+.comando__cerrar:hover { color: var(--texto); border-color: var(--linea); }
+/* La pista "Esc" solo tiene sentido con teclado: en pantallas táctiles se oculta */
+@media (hover: none) { .solo-teclado { display: none; } }
 .comando__entrada { display: flex; gap: 8px; }
 .comando__entrada input { font-size: 16px; min-height: 46px; }
 .comando__resultado { padding: 0 18px; display: grid; gap: 12px; }
@@ -731,6 +747,37 @@ option { color: var(--texto); background: var(--placa-alta); }
 .comando__pie { padding: 14px 18px; font-size: 12px; color: var(--tenue); border-top: 1px solid var(--linea); margin-top: 16px; }
 
 .solicitud { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Voz: dictado (micrófono) y lectura en voz alta. Los botones solo existen si el navegador los soporta */
+.btn--voz { gap: 6px; justify-self: end; }
+.btn--voz-icono { min-width: 46px; min-height: 46px; padding: 0; justify-self: auto; }
+.btn--voz-activo { border-color: var(--inhabilitado); color: var(--inhabilitado); animation: latido 1.2s ease-in-out infinite; }
+.tarjeta-ia .btn--voz { justify-self: start; }
+@keyframes latido { 50% { box-shadow: 0 0 0 4px rgb(239 83 80 / 0.25); } }
+@media (prefers-reduced-motion: reduce) { .btn--voz-activo { animation: none; } }
+
+/* Conversación de preguntas a Pulse */
+.turno { display: grid; gap: 8px; }
+.turno__pregunta {
+  justify-self: end;
+  max-width: 85%;
+  padding: 8px 12px;
+  border-radius: var(--radio-sm);
+  background: var(--placa-alta);
+  border: 1px solid var(--linea);
+  font-size: 14px;
+}
+.turno .tarjeta-ia { margin-top: 0; }
+.tarjeta-ia--sin-respuesta { border-color: var(--linea); background: var(--placa-alta); }
+.tarjeta-ia--sin-respuesta .sello-ia { color: var(--tenue); }
+.tarjeta-ia--sin-respuesta .razon-ia { background: transparent; color: var(--texto); padding-left: 0; padding-right: 0; }
+
+.fuentes summary { cursor: pointer; font-size: 13px; color: var(--ia); }
+.fuentes__lista { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 10px; }
+.fuente { padding: 10px 12px; border: 1px solid var(--linea); border-radius: var(--radio-sm); display: grid; gap: 6px; }
+.fuente--usada { border-color: rgb(154 140 255 / 0.55); }
+.fuente__titulo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; }
+.fuente__texto { font-size: 13px; color: var(--tenue); border-left: 2px solid var(--linea); padding-left: 10px; }
 
 .opcion {
   display: flex;
@@ -770,7 +817,11 @@ option { color: var(--texto); background: var(--placa-alta); }
 }
 .enlace:hover { text-decoration-color: var(--texto); }
 
-.comando { overflow-y: auto; }
+/* El campo de texto y el pie se quedan fijos; solo el área de resultados se desplaza (conversaciones largas) */
+.comando[open] { display: flex; flex-direction: column; overflow: hidden; }
+.comando__form, .comando__pie { flex: none; }
+.comando__ejemplos { margin-top: 8px; }
+.comando__resultado { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
 
 @media (max-width: 640px) {
   .opcion { flex-direction: column; align-items: stretch; }

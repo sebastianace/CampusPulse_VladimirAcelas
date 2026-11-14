@@ -14,7 +14,7 @@ import { join } from 'node:path';
 const { crearEstadoInicial } = await import('../src/data/estado-inicial.js');
 const { AREAS, CATEGORIAS, PRIORIDADES, REGLAS } = await import('../src/config/reglas.js');
 const { EJEMPLOS_TRIAJE } = await import('../src/ai/prompts/ejemplos-triaje.js');
-const { promptTriaje } = await import('../src/ai/prompts/triaje.js');
+const { USAR_EJEMPLOS_TRIAJE, promptTriaje } = await import('../src/ai/prompts/triaje.js');
 const { construirPrompt } = await import('../src/ai/prompts/estructura.js');
 const { CASOS_TRIAJE } = await import('../evaluacion/triaje-casos.js');
 const { CAMPOS, compararTriaje, resumir } = await import('../src/ai/medir-triaje.js');
@@ -66,8 +66,13 @@ describe('Conjunto de prueba', () => {
 });
 
 describe('Prompt con y sin ejemplos', () => {
-  test('por defecto incluye los ejemplos entre el procedimiento y la entrada', () => {
-    const prompt = promptTriaje('algo', CATALOGO);
+  test('por defecto va sin ejemplos: la medición no mostró mejora y cuestan tokens', () => {
+    assert.equal(USAR_EJEMPLOS_TRIAJE, false);
+    assert.doesNotMatch(promptTriaje('algo', CATALOGO), /## Ejemplos/);
+  });
+
+  test('con conEjemplos: true incluye los ejemplos entre el procedimiento y la entrada', () => {
+    const prompt = promptTriaje('algo', CATALOGO, { conEjemplos: true });
     const [procedimiento, ejemplos, entrada] = ['## Procedimiento', '## Ejemplos', '## Entrada'].map((t) => prompt.indexOf(t));
     assert.ok(procedimiento < ejemplos && ejemplos < entrada);
     for (const { reporte } of EJEMPLOS_TRIAJE) assert.ok(prompt.includes(`Reporte: "${reporte}"`), reporte);
@@ -81,7 +86,7 @@ describe('Prompt con y sin ejemplos', () => {
   });
 
   test('el reporte real sigue siendo el único entre <reporte>, también con ejemplos', () => {
-    const prompt = promptTriaje('Reporte de prueba', CATALOGO);
+    const prompt = promptTriaje('Reporte de prueba', CATALOGO, { conEjemplos: true });
     assert.equal(prompt.split('<reporte>').length - 1, 2, 'una mención en los límites y el delimitador real; los ejemplos usan otro formato');
     assert.match(prompt, /<reporte>\nReporte de prueba\n<\/reporte>/);
   });
