@@ -690,33 +690,6 @@ option { color: var(--texto); background: var(--placa-alta); }
 .etiqueta--ia { color: var(--ia); border-color: currentColor; }
 .etiqueta--resuelta { color: var(--disponible); border-color: currentColor; }
 
-/* ---------- Calidad de datos ---------- */
-.metricas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
-.metrica { padding: 10px 12px; background: var(--placa-alta); border-radius: var(--radio-sm); }
-.metrica__valor { font-family: var(--f-dato); font-size: 24px; }
-.metrica__nombre { font-size: 12px; color: var(--tenue); }
-
-.metrica--alerta .metrica__valor { color: var(--ocupada); }
-.calidad__fuente { margin-bottom: 12px; }
-
-.tabla { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 16px; }
-.tabla__titulo { text-align: left; font-size: 12px; font-weight: 600; color: var(--tenue); padding-bottom: 6px; }
-
-#tab-datos > .btn { margin-top: 8px; }
-
-.confirmacion {
-  margin-top: 8px;
-  padding: 14px;
-  border: 1px solid rgb(239 83 80 / 0.45);
-  border-radius: var(--radio-sm);
-  background: rgb(239 83 80 / 0.08);
-  display: grid;
-  gap: 10px;
-  font-size: 14px;
-}
-.tabla th, .tabla td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--linea); }
-.tabla th { color: var(--tenue); font-weight: 600; font-size: 12px; }
-
 /* ---------- Barra de comando (Ctrl+K) ---------- */
 .comando {
   width: min(680px, calc(100vw - 32px));
@@ -981,5 +954,4 @@ option { color: var(--texto); background: var(--placa-alta); }
   .mapa-juego { height: 300px; }
   .mapa-juego__ayuda { display: none; }
   .mapa-juego__hud { white-space: normal; right: 10px; }
-  .metricas { grid-template-columns: 1fr 1fr 1fr; }
 }

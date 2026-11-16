@@ -12,6 +12,11 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
   cambia a mano (se resuelve la incidencia) y los préstamos siguen en la pestaña Prestar. `GET /api/recursos` trae
   `cambiosPermitidos`, así los botones salen de `TRANSICIONES_RECURSO`.
 
+### Quitado
+- La pestaña **Datos** y el botón "Restaurar". La validación del CSV oficial sigue igual (la sala inválida queda en gris
+  en el plano y aparece en Inventario) y el reporte sigue en `GET /api/calidad-datos`. Restaurar los datos iniciales
+  pasa a la terminal: `npm run restaurar` (sin borrar cuentas). Se quita `POST /api/restaurar`.
+
 ### Cambiado
 - **Toda incidencia va a Soporte TI** (`REGLAS.AREA_RESPONSABLE`): en el campus, TI es el único equipo que resuelve los
   problemas técnicos y de infraestructura. El campo "Área responsable" sale del formulario, la IA ya no lo decide (prompt

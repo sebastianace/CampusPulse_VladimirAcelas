@@ -5,9 +5,10 @@
 // src/data/estado-inicial.js: data/raw/espacios.csv (oficial, nunca se modifica),
 // data/seed/espacios-extra.json y data/seed/recursos.json.
 // - Borra y vuelve a cargar espacios, recursos, reservas, préstamos e
-//   incidencias, todo en una transacción. NO toca usuarios ni sesiones
-//   (igual que "Restaurar datos", que no borra las cuentas).
-// Uso:  npm run semilla
+//   incidencias, todo en una transacción. NO toca usuarios ni sesiones.
+// Uso:  npm run restaurar   (o npm run semilla: es el mismo script)
+// Antes había un botón "Restaurar datos" en la app; se quitó porque borrar todo
+// con un clic es un riesgo sin beneficio para el campus: ahora es una tarea de terminal.
 // =====================================================================
 
 import { crearEstadoInicial } from './estado-inicial.js';

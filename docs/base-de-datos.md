@@ -116,7 +116,7 @@ ejecutor propio de unas 40 líneas (`src/data/migrar.js`).
 
 `npm run semilla` carga desde los mismos orígenes que `db.json` (`data/raw/espacios.csv`,
 `data/seed/`). Borra y recarga espacios, recursos, reservas, préstamos e incidencias, pero **no
-toca usuarios ni sesiones**, como "Restaurar datos".
+toca usuarios ni sesiones**. `npm run restaurar` es el mismo script con un nombre más claro.
 
 ### Orden de las filas
 
