@@ -42,7 +42,7 @@ Doce tablas, más `schema_migrations` (qué migraciones ya se aplicaron):
 | `recursos` | Equipos; `espacio_id` puede ser `NULL` si no tienen sala |
 | `reservas` | Reservas de espacios, con la restricción de no solapamiento y quién la creó (`creada_por`) |
 | `solicitudes_salon` | Pedidos de un salón con reserva en curso, y la decisión del admin |
-| `prestamos` | Préstamos de equipos |
+| `prestamos` | Historial de préstamos de equipos. El campus ya no presta equipos: desde `010_sin_prestamos.sql` no hay préstamos activos ni equipos "prestado" |
 | `incidencias` | Incidencias; `ia` (jsonb) guarda lo que sugirió la IA |
 | `usuarios` | Cuentas, con rol `admin`, `profesor` o `soporte_tecnico`, quién la creó (`creado_por`) y si tiene contraseña temporal |
 | `sesiones` | Sesiones activas (se guarda el hash del token, no el token) |
@@ -53,8 +53,9 @@ Doce tablas, más `schema_migrations` (qué migraciones ya se aplicaron):
 
 Las migraciones están en [`db/migrations/`](../db/migrations/): `001_extensiones.sql`,
 `002_esquema.sql`, `003_orden.sql`, `004_embeddings.sql`, `005_notificaciones.sql`, `006_inhabilito_espacio.sql`,
-`007_solicitudes_salon.sql`, `008_atencion_incidencias.sql` (quién atiende cada incidencia) y `009_cuentas.sql` (quién creó
-cada cuenta y contraseñas temporales). Cada archivo corre en una transacción; lo aplicado queda en `schema_migrations`.
+`007_solicitudes_salon.sql`, `008_atencion_incidencias.sql` (quién atiende cada incidencia), `009_cuentas.sql` (quién creó
+cada cuenta y contraseñas temporales) y `010_sin_prestamos.sql` (cierra los préstamos activos, devuelve a disponible lo
+prestado y quita el estado "prestado"). Cada archivo corre en una transacción; lo aplicado queda en `schema_migrations`.
 
 ### `solicitudes_salon` y `reservas.creada_por` (migración 007)
 

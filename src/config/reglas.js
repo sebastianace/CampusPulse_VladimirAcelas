@@ -32,9 +32,6 @@ export const REGLAS = {
   // Cuántas reservas puede tener un mismo responsable en un mismo día.
   MAX_RESERVAS_POR_PERSONA_DIA: 3,
 
-  // Cuántos préstamos activos (sin devolver) puede tener una persona a la vez.
-  MAX_PRESTAMOS_POR_PERSONA: 2,
-
   // Espacios (por id) que tienen computadores. Si un pedido los necesita,
   // solo se recomiendan estos. Para agregar una sala basta con sumar su id.
   ESPACIOS_CON_COMPUTADORES: ['apolo', 'spooki', 'artemis', 'skilab'],
@@ -64,9 +61,9 @@ export const REGLAS = {
   // Un equipo dañado puede volver directo a disponible: TI a veces lo
   // arregla en el momento (un cable suelto) sin pasar por reparación.
   // Un equipo disponible se puede marcar dañado desde Inventario.
+  // En el campus no se prestan equipos: no hay estado "prestado" (migración 010).
   TRANSICIONES_RECURSO: {
-    disponible: ['prestado', 'en_reparacion', 'danado'],
-    prestado: ['disponible', 'danado'],
+    disponible: ['en_reparacion', 'danado'],
     danado: ['en_reparacion', 'disponible'],
     en_reparacion: ['disponible'],
   },
@@ -119,7 +116,7 @@ export const REGLAS = {
 export const ESTADOS_ESPACIO = ['disponible', 'inhabilitado', 'inconsistente'];
 
 // Estados posibles de un recurso tecnológico (portátil, video beam, etc.).
-export const ESTADOS_RECURSO = ['disponible', 'prestado', 'danado', 'en_reparacion'];
+export const ESTADOS_RECURSO = ['disponible', 'danado', 'en_reparacion'];
 
 // Categorías de una incidencia.
 export const CATEGORIAS = ['infraestructura', 'tecnologia', 'aseo', 'seguridad', 'bienestar', 'otro'];
@@ -141,5 +138,6 @@ export const ORIGENES_INCIDENCIA = ['ia', 'manual'];
 // Canales por los que n8n avisa de una incidencia al área responsable.
 export const CANALES_NOTIFICACION = ['correo', 'telegram'];
 
-// Estados de un préstamo: activo mientras el recurso no se ha devuelto.
+// Estados de un préstamo. El campus ya no presta equipos (migración 010): la tabla "prestamos"
+// queda solo como historial y todos sus préstamos están devueltos.
 export const ESTADOS_PRESTAMO = ['activo', 'devuelto'];

@@ -42,7 +42,7 @@ async function pedir(ruta, metodo = 'GET', cuerpo) {
 }
 
 test('las rutas GET responden 200 con listas', async () => {
-  for (const ruta of ['/api/espacios', '/api/recursos', '/api/reservas', '/api/prestamos', '/api/incidencias']) {
+  for (const ruta of ['/api/espacios', '/api/recursos', '/api/reservas', '/api/incidencias']) {
     const { status, cuerpo } = await pedir(ruta);
     assert.equal(status, 200, ruta);
     assert.ok(Array.isArray(cuerpo), ruta);
@@ -63,14 +63,9 @@ test('JSON inválido -> 422 y ruta inexistente -> 404', async () => {
   assert.equal(cuerpo.error.codigo, 'RUTA_NO_ENCONTRADA');
 });
 
-test('regla de negocio violada -> 409', async () => {
-  // Un recurso semilla dañado no se puede prestar (si el seed tiene alguno).
-  const recursos = (await pedir('/api/recursos')).cuerpo;
-  const danado = recursos.find((r) => r.estado === 'danado');
-  if (!danado) return; // sin recursos dañados en el seed no hay caso que probar
-  const { status, cuerpo } = await pedir('/api/prestamos', 'POST', { recursoId: danado.id, persona: 'Ana' });
-  assert.equal(status, 409);
-  assert.equal(cuerpo.error.codigo, 'TRANSICION_INVALIDA');
+test('el campus no presta equipos: /api/prestamos ya no existe (404)', async () => {
+  assert.equal((await pedir('/api/prestamos')).status, 404);
+  assert.equal((await pedir('/api/prestamos', 'POST', { recursoId: 'rec-01', persona: 'Ana' })).status, 404);
 });
 
 test('una incidencia del video beam deja fuera de servicio solo el equipo, también guardado en la base', async () => {

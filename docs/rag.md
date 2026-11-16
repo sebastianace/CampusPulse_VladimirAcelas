@@ -41,7 +41,7 @@ flowchart LR
 ### Un servicio aparte en Python (`pulse-ai/`)
 El plan y el curso piden **LangChain**, y la versión madura es la de Python. Se separó en un servicio con FastAPI, y
 Express lo llama por HTTP con timeout (`src/ai/conocimiento.js`). La ventaja es el aislamiento: **si `pulse-ai` cae, solo
-falla la parte de preguntas**; reservas, préstamos e incidencias siguen igual (hay un test que lo comprueba). El costo es
+falla la parte de preguntas**; reservas e incidencias siguen igual (hay un test que lo comprueba). El costo es
 un contenedor más y un salto de red por pregunta.
 
 ### La misma PostgreSQL, tabla `conocimiento`

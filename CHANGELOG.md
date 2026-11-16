@@ -30,6 +30,12 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
   `GET /api/recursos` trae `cambiosPermitidos`, así los botones salen de `TRANSICIONES_RECURSO`.
 
 ### Quitado
+- **Préstamos de equipos:** en el campus no se prestan equipos. Sale la pestaña **Prestar**, las rutas `/api/prestamos`,
+  las reglas de préstamo (`MAX_PRESTAMOS_POR_PERSONA`) y el estado "prestado" de los equipos. La migración
+  `010_sin_prestamos.sql` cierra los préstamos activos, devuelve a disponible lo que figuraba prestado y quita "prestado"
+  del `CHECK`; la tabla `prestamos` se queda como historial. La base de conocimiento ahora dice que el campus no presta
+  equipos, y las preguntas 5 y 11 de la evaluación del RAG cambian en consecuencia (hay que volver a correr
+  `npm run evaluar-rag` para actualizar `docs/evaluacion-rag.md`).
 - La pestaña **Datos** y el botón "Restaurar". La validación del CSV oficial sigue igual (la sala inválida queda en gris
   en el plano) y el reporte sigue en `GET /api/calidad-datos`. Restaurar los datos iniciales
   pasa a la terminal: `npm run restaurar` (sin borrar cuentas). Se quita `POST /api/restaurar`.

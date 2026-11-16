@@ -1,7 +1,7 @@
 # Campus Pulse
 
 **Un solo tablero para los espacios, los equipos y las incidencias del campus de Campuslands, con una IA que ayuda pero no
-decide.** Reservas sin cruces, préstamos con reglas, reportes que llegan a Soporte TI y un asistente que responde
+decide.** Reservas sin cruces, salones ocupados que se piden a un admin, reportes que llegan a Soporte TI y un asistente que responde
 preguntas citando el reglamento.
 
 > Principio del proyecto: **la IA sugiere, las reglas deciden y la persona confirma.**
@@ -26,7 +26,7 @@ tiene que arreglar el problema.
 |---|---|
 | Saber qué está libre | **Mapa del campus** en vivo: cada sala con su aforo y estado (libre, ocupada, inhabilitada). |
 | Reservar sin cruces | **Reservas** con reglas de horario, aforo, duración y límite por persona; la base de datos impide reservas cruzadas aunque lleguen a la vez. |
-| Prestar equipos | **Préstamos** con límite por persona y estados del equipo (disponible, prestado, dañado, en reparación). |
+| Saber qué equipo falla | **Inventario** para Soporte TI: solo los equipos dañados o en reparación, que salen de la lista al quedar disponibles. (El campus no presta equipos: no hay préstamos.) |
 | Reportar sin saber a quién | **Incidencias en lenguaje natural**: la IA sugiere categoría, prioridad y lugar; la persona confirma y la incidencia va a Soporte TI. Lo crítico deja fuera de servicio el equipo (o la sala) al instante. |
 | Evitar reportes repetidos | **"¿Es la misma incidencia?"** con embeddings: si ya la reportaron, el reporte se suma en vez de duplicarse. |
 | Que TI se entere | **Automatización con n8n**: aviso por correo a Soporte TI de lo crítico y resumen diario con IA. |
@@ -72,7 +72,7 @@ public/            Frontend: login, mapa, formularios, incidencias, Ctrl+K, voz
 src/server.js      Express: sirve public/ y monta /api/*; exige sesión; manejador global de errores
 src/routes/        Rutas HTTP (una por recurso). ia.js -> /api/ia/*, integraciones.js -> lo que llama n8n
 src/auth/          Cuentas (scrypt), sesiones y límite de intentos de login
-src/domain/        Reglas de negocio: reservas, préstamos, incidencias, similares, fechas, errores
+src/domain/        Reglas de negocio: reservas, solicitudes de salón, inventario, incidencias, similares, fechas, errores
 src/config/        reglas.js: TODAS las constantes de negocio y valores cerrados
 src/data/          PostgreSQL: almacen.js (foto + diferencias), repos/, migraciones, semilla
 src/ai/            Cliente de Gemini, triaje, asistente, intención, cuota, caché, embeddings, cliente de pulse-ai
@@ -158,7 +158,7 @@ El detalle de cada cambio está en [CHANGELOG.md](CHANGELOG.md).
   el botón **Contraseña** de la barra superior.
 - La interfaz oculta lo que el rol no puede hacer ("Atender", "Marcar como resuelta" y las pestañas
   Soporte TI, Inventario y Usuarios); aun así, quien impide las acciones es el servidor, con 403.
-- **Tres roles:** `admin` (crea cuentas), `profesor` (reserva, presta y reporta)
+- **Tres roles:** `admin` (crea cuentas), `profesor` (reserva, pide salones ocupados y reporta)
   y `soporte_tecnico` (además trabaja desde el panel **Soporte TI**: todas las incidencias abiertas,
   de la más urgente a la menos, con aviso de las nuevas; las toma "en atención", las resuelve (lo que
   rehabilita espacios y equipos) y trabaja el **Inventario**: los equipos dañados o en reparación, que marca disponibles cuando quedan arreglados). La
@@ -237,7 +237,7 @@ servicio `pulse-ai` con **RAG**:
 Con la capa gratis hay un **presupuesto global de llamadas**, **modo ahorro** y respuestas en caché para que alcance para varias
 personas a la vez: ver [docs/capacidad-ia.md](docs/capacidad-ia.md).
 
-Si `pulse-ai` o Gemini fallan, solo falla esta función: reservas, préstamos e incidencias siguen igual.
+Si `pulse-ai` o Gemini fallan, solo falla esta función: reservas e incidencias siguen igual.
 Los documentos son **de ejemplo**, no un reglamento oficial. Diseño, decisiones y problemas encontrados en
 [docs/rag.md](docs/rag.md); medición de las 15 preguntas de prueba en [docs/evaluacion-rag.md](docs/evaluacion-rag.md).
 Por qué RAG y no fine-tuning, y por qué pgvector y no Qdrant o Chroma: [docs/decisiones.md](docs/decisiones.md).
@@ -431,7 +431,7 @@ error claro y el formulario manual, nunca con una respuesta inventada.
 | `npm run conocimiento` | Recarga `knowledge/` en la base vectorial (necesita `pulse-ai` levantado) |
 | `npm run evaluar-rag` | Hace las 15 preguntas de prueba del RAG, con y sin reranking (gasta cuota de Gemini, ~8 min) |
 | `npm run restablecer-admin -- <usuario>` | Contraseña temporal para un admin que olvidó la suya (sin argumento, lista los admins). Se muestra una sola vez |
-| `npm run restaurar` (o `npm run semilla`) | Vuelve a los datos iniciales: carga espacios, recursos y calidad de datos en PostgreSQL y borra reservas, préstamos e incidencias. No toca las cuentas |
+| `npm run restaurar` (o `npm run semilla`) | Vuelve a los datos iniciales: carga espacios, recursos y calidad de datos en PostgreSQL y borra reservas, solicitudes, préstamos antiguos e incidencias. No toca las cuentas |
 | `npm run medir-triaje` | Mide el triaje sin ejemplos y con ellos (24 llamadas a Gemini, ~5 min; gasta cuota) |
 
 Abre `http://localhost:3000` y crea una cuenta con **Crear una cuenta** (solo la primera vez).

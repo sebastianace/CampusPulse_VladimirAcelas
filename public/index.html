@@ -107,7 +107,6 @@
     <aside class="panel tablero__acciones">
       <nav class="pestanas" role="tablist" aria-label="Acciones">
         <button role="tab" class="pestana" aria-selected="true" aria-controls="tab-reservar" id="p-reservar">Reservar</button>
-        <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-prestar" id="p-prestar">Prestar</button>
         <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-reportar" id="p-reportar">Reportar</button>
         <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-incidencias" id="p-incidencias">
           Incidencias <span class="contador" id="contador-incidencias" hidden></span>
@@ -163,26 +162,6 @@
         <h3 class="subtitulo" id="titulo-reservas">Reservas del día</h3>
         <ul class="lista" id="lista-reservas">
           <li class="vacio">Cargando reservas…</li>
-        </ul>
-      </section>
-
-      <!-- Prestar y devolver equipos -->
-      <section class="pestana__cuerpo" role="tabpanel" id="tab-prestar" aria-labelledby="p-prestar" hidden>
-        <form class="formulario" id="form-prestamo" novalidate>
-          <label class="campo">
-            <span>Equipo</span>
-            <select name="recursoId" required></select>
-          </label>
-          <label class="campo">
-            <span>Persona</span>
-            <input name="persona" type="text" autocomplete="name" required>
-          </label>
-          <button class="btn btn--primario" type="submit">Prestar equipo</button>
-        </form>
-
-        <h3 class="subtitulo">Préstamos activos</h3>
-        <ul class="lista" id="lista-prestamos">
-          <li class="vacio">Cargando préstamos…</li>
         </ul>
       </section>
 

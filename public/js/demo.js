@@ -42,11 +42,6 @@ const CASOS = [
     llenar: () => llenarReserva('Apolo', { responsable: 'Dani Mendoza', asistentes: 20, desde: '16:00', hasta: '18:00' }),
   },
   {
-    titulo: 'Prestar un equipo dañado',
-    esperado: 'Se rechaza: el equipo no está disponible',
-    llenar: llenarPrestamoDanado,
-  },
-  {
     titulo: 'Pedir sala con IA (Ctrl+K)',
     esperado: 'Recomienda la sala de mejor ajuste',
     llenar: () => llenarComando(`Necesito un salón para 30 personas ${textoDia(proximoDiaHabil())} de 2 a 4 pm`),
@@ -117,20 +112,6 @@ function llenarIncidencia(texto) {
   const form = document.getElementById('form-triaje');
   mostrarPestana('p-reportar');
   form.descripcion.value = texto;
-  enfocarEnvio(form);
-}
-
-// Toma un equipo que la API reporte como dañado (no un ID escrito a mano)
-function llenarPrestamoDanado() {
-  // Se prefiere un equipo para llevar (sin sala): es el caso típico de préstamo
-  const fuera = obtenerEstado().recursos.filter((r) => r.estado === 'danado' || r.estado === 'en_reparacion');
-  const equipo = fuera.find((r) => !r.espacioId) ?? fuera[0];
-  if (!equipo) throw new Error('No hay equipos dañados en este momento. Devuelve uno "con daño" para probar este caso.');
-  const form = document.getElementById('form-prestamo');
-  mostrarPestana('p-prestar');
-  form.recursoId.value = equipo.id;
-  form.persona.value = 'Valentina Ortiz';
-  form.dispatchEvent(new Event('input'));
   enfocarEnvio(form);
 }
 

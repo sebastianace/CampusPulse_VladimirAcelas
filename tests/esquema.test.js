@@ -52,7 +52,7 @@ describe('Migraciones', () => {
   test('volver a migrar no repite nada', async () => {
     assert.deepEqual(await migrar(pool), []);
     const { rows } = await pool.query('SELECT version FROM schema_migrations ORDER BY version');
-    assert.deepEqual(rows.map((f) => f.version), ['001_extensiones.sql', '002_esquema.sql', '003_orden.sql', '004_embeddings.sql', '005_notificaciones.sql', '006_inhabilito_espacio.sql', '007_solicitudes_salon.sql', '008_atencion_incidencias.sql', '009_cuentas.sql']);
+    assert.deepEqual(rows.map((f) => f.version), ['001_extensiones.sql', '002_esquema.sql', '003_orden.sql', '004_embeddings.sql', '005_notificaciones.sql', '006_inhabilito_espacio.sql', '007_solicitudes_salon.sql', '008_atencion_incidencias.sql', '009_cuentas.sql', '010_sin_prestamos.sql']);
   });
 });
 
@@ -109,6 +109,8 @@ describe('Valores cerrados: la base y src/config/reglas.js coinciden', () => {
     for (const [i, estado] of ESTADOS_RECURSO.entries()) {
       await pool.query('INSERT INTO recursos (id, nombre, tipo, estado) VALUES ($1, $1, $2, $3)', [`rec-estado-${i}`, 'video_beam', estado]);
     }
+    // El campus no presta equipos (010_sin_prestamos.sql): "prestado" ya no es un estado válido
+    await assert.rejects(pool.query("INSERT INTO recursos (id, nombre, tipo, estado) VALUES ('rec-prestado', 'x', 'video_beam', 'prestado')"), { code: '23514' });
   });
 
   test('categorías, prioridades, áreas, orígenes y estados de incidencia', async () => {

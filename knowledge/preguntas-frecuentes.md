@@ -10,8 +10,8 @@ cuenta del sistema es la del administrador y, después de ella, nadie más puede
 ## ¿Qué puede hacer cada rol?
 
 El administrador crea cuentas, resuelve incidencias y actualiza el inventario. El soporte técnico resuelve
-incidencias y actualiza el inventario (el estado de equipos y salas). El profesor reserva salas, pide préstamos y
-reporta incidencias, pero no puede resolverlas, ni cambiar el inventario, ni crear cuentas.
+incidencias y actualiza el inventario (los equipos dañados o en reparación). El profesor reserva salas, pide un salón
+ocupado y reporta incidencias, pero no puede resolverlas, ni cambiar el inventario, ni crear cuentas.
 
 ## ¿Qué hago si olvidé mi contraseña?
 
@@ -35,7 +35,7 @@ se puede seguir usando el formulario manual, que no depende de la IA.
 
 ## ¿Qué pasa si la IA no funciona?
 
-La aplicación sigue funcionando sin IA: se puede reservar, pedir préstamos y reportar incidencias con los
+La aplicación sigue funcionando sin IA: se puede reservar, pedir un salón ocupado y reportar incidencias con los
 formularios manuales. La IA solo sugiere y la persona decide.
 
 ## ¿La IA decide qué sala está libre?

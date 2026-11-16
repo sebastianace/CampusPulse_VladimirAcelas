@@ -87,7 +87,7 @@
     {
       "parameters": {
         "mode": "retrieve-as-tool",
-        "toolDescription": "Busca en los documentos de políticas y reglamentos del campus (reservas, préstamos, incidencias, roles). Devuelve fragmentos con el archivo del que salieron.",
+        "toolDescription": "Busca en los documentos de políticas y reglamentos del campus (reservas, equipos, incidencias, roles). Devuelve fragmentos con el archivo del que salieron.",
         "tableName": "n8n_conocimiento",
         "topK": 4,
         "includeDocumentMetadata": true,

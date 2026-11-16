@@ -10,7 +10,6 @@ export const ESTADOS_ESPACIO = {
 
 export const ESTADOS_RECURSO = {
   disponible: 'Disponible',
-  prestado: 'Prestado',
   danado: 'Dañado',
   en_reparacion: 'En reparación',
 };

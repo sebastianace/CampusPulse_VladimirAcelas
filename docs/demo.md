@@ -49,7 +49,6 @@ quedaría en reparación y Apolo se seguiría reservando.
 | Acción | Resultado esperado |
 |---|---|
 | Reservar **Apolo** | Se rechaza: está inhabilitado |
-| Prestar un equipo **dañado** | Se rechaza: no puede pasar de dañado a prestado |
 
 ## 6. Asistente de reservas (Ctrl+K)
 

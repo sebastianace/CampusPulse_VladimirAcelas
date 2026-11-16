@@ -1,11 +1,11 @@
-// Formularios de reserva (crear, editar y cancelar), préstamo y devolución.
+// Formularios de reserva (crear, editar y cancelar) y solicitud de un salón ocupado.
 // El navegador solo revisa que los campos estén completos; las reglas
 // del campus (aforo, solapamiento, horario, límites…) las decide el
 // backend y su mensaje se muestra tal cual.
 
 import { pedir } from './api.js';
 import { el, conCarga } from './dom.js';
-import { ESTADOS_ESPACIO, ESTADOS_RECURSO, etiqueta } from './catalogos.js';
+import { ESTADOS_ESPACIO, etiqueta } from './catalogos.js';
 import { ahoraBogota, cambiarFecha, obtenerEstado } from './estado.js';
 import { puedeTocarReserva, sesionActual } from './sesion.js';
 import * as toasts from './toasts.js';
@@ -25,25 +25,21 @@ export function iniciarFormularios(opciones) {
   mostrarPestana = opciones.mostrarPestana;
 
   const formReserva = document.getElementById('form-reserva');
-  const formPrestamo = document.getElementById('form-prestamo');
 
   formReserva.fecha.value = obtenerEstado().fecha;
   // El responsable por defecto es quien inició sesión; las sugerencias son las cuentas reales
   formReserva.responsable.value = sesionActual()?.nombre ?? '';
   cargarResponsables();
   formReserva.addEventListener('submit', enviarReserva);
-  formPrestamo.addEventListener('submit', enviarPrestamo);
   document.getElementById('btn-descartar-edicion').addEventListener('click', terminarEdicion);
 
   // Clic en un bloque de la línea de tiempo -> editar esa reserva
   document.addEventListener('reserva-seleccionada', ({ detail }) => empezarEdicion(detail));
 
   // Al editar un campo se limpian sus errores
-  [formReserva, formPrestamo].forEach((form) => {
-    form.addEventListener('input', (evento) => {
-      limpiarErrorCampo(evento.target);
-      mostrarAviso(form, null);
-    });
+  formReserva.addEventListener('input', (evento) => {
+    limpiarErrorCampo(evento.target);
+    mostrarAviso(formReserva, null);
   });
 
   // Clic en una sala del plano o en una franja de la línea de tiempo
@@ -60,12 +56,10 @@ export function iniciarFormularios(opciones) {
   });
 }
 
-/** Redibuja selects y las listas de reservas y préstamos con los datos nuevos. */
-export function actualizarFormularios({ espacios, recursos, prestamos, reservas, fecha }) {
+/** Redibuja el select de espacios y la lista de reservas con los datos nuevos. */
+export function actualizarFormularios({ espacios, reservas, fecha }) {
   llenarSelectEspacios(espacios);
-  llenarSelectRecursos(recursos);
   dibujarReservas(reservas, fecha);
-  dibujarPrestamos(prestamos, recursos);
 }
 
 // ---------- Reserva ----------
@@ -292,86 +286,6 @@ function llenarSelectEspacios(espacios) {
   reemplazarOpciones(select, opciones, 'Elige un espacio');
 }
 
-// ---------- Préstamo ----------
-
-async function enviarPrestamo(evento) {
-  evento.preventDefault();
-  const form = evento.currentTarget;
-  if (!validarCompletos(form)) return;
-
-  const cuerpo = { recursoId: form.recursoId.value, persona: form.persona.value.trim() };
-  const boton = form.querySelector('button[type="submit"]');
-  try {
-    await conCarga(boton, 'Prestando…', () => pedir('/api/prestamos', { metodo: 'POST', cuerpo }));
-    toasts.exito(`Equipo prestado: ${nombreRecurso(cuerpo.recursoId)} a ${cuerpo.persona}.`);
-    form.reset();
-    await refrescar();
-  } catch (error) {
-    mostrarAviso(form, error.message);
-    toasts.error(error);
-  }
-}
-
-function llenarSelectRecursos(recursos) {
-  const select = document.querySelector('#form-prestamo select[name="recursoId"]');
-  const opcion = (r) => el('option', { value: r.id }, `${r.nombre} · ${etiqueta(ESTADOS_RECURSO, r.estado)}`);
-
-  // Separar equipos que se llevan (sin sala) de los fijos de cada sala
-  const moviles = recursos.filter((r) => !r.espacioId);
-  const fijos = recursos.filter((r) => r.espacioId);
-  const grupos = [
-    moviles.length && el('optgroup', { label: 'Equipos para llevar' }, moviles.map(opcion)),
-    fijos.length && el('optgroup', { label: 'Equipos fijos de sala' }, fijos.map(opcion)),
-  ].filter(Boolean);
-
-  reemplazarOpciones(select, grupos, 'Elige un equipo');
-}
-
-// ---------- Devolución ----------
-
-function dibujarPrestamos(prestamos, recursos) {
-  const lista = document.getElementById('lista-prestamos');
-  const activos = prestamos.filter((p) => p.estado === 'activo');
-
-  if (!activos.length) {
-    lista.replaceChildren(el('li', { className: 'vacio' }, 'No hay préstamos activos. Presta un equipo con el formulario de arriba.'));
-    return;
-  }
-
-  lista.replaceChildren(...activos.map((prestamo) => {
-    const recurso = recursos.find((r) => r.id === prestamo.recursoId);
-    return el('li', { className: 'item' },
-      el('div', { className: 'item__cabeza' },
-        el('span', { className: 'item__titulo' }, recurso?.nombre ?? prestamo.recursoId),
-        el('span', { className: 'item__meta dato' }, fechaCorta(prestamo.fecha))),
-      el('span', { className: 'item__meta' }, `Lo tiene ${prestamo.persona}`),
-      el('div', { className: 'item__acciones' },
-        el('button', {
-          type: 'button', className: 'btn btn--secundario btn--chico',
-          onClick: (e) => devolver(prestamo, 'disponible', e.currentTarget),
-        }, 'Devolver en buen estado'),
-        el('button', {
-          type: 'button', className: 'btn btn--peligro btn--chico',
-          onClick: (e) => devolver(prestamo, 'danado', e.currentTarget),
-        }, 'Devolver con daño')),
-    );
-  }));
-}
-
-async function devolver(prestamo, estadoFinal, boton) {
-  try {
-    await conCarga(boton, 'Registrando…', () =>
-      pedir(`/api/prestamos/${encodeURIComponent(prestamo.id)}/devolver`, { metodo: 'POST', cuerpo: { estadoFinal } }));
-    const nombre = nombreRecurso(prestamo.recursoId);
-    toasts.exito(estadoFinal === 'danado'
-      ? `Devolución registrada: ${nombre} quedó marcado como dañado.`
-      : `Devolución registrada: ${nombre} vuelve a estar disponible.`);
-    await refrescar();
-  } catch (error) {
-    toasts.error(error);
-  }
-}
-
 // ---------- Utilidades de formulario ----------
 
 // Revisa los campos obligatorios; marca el primero vacío y le da el foco
@@ -431,10 +345,6 @@ function reemplazarOpciones(select, opciones, textoVacio) {
 
 function nombreEspacio(id) {
   return obtenerEstado().espacios.find((e) => e.id === id)?.nombre ?? id;
-}
-
-function nombreRecurso(id) {
-  return obtenerEstado().recursos.find((r) => r.id === id)?.nombre ?? id;
 }
 
 const hora = (fechaHora) => fechaHora?.slice(11, 16) ?? '';

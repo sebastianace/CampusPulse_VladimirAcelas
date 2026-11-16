@@ -49,15 +49,13 @@ export function dibujarInventario({ espacios, recursos, incidencias }) {
   }
   lista.replaceChildren(...equipos.map((recurso) => {
     const bloqueo = abiertas.find((i) => i.inhabilito && i.recursoId === recurso.id);
-    const acciones = recurso.estado === 'prestado'
-      ? [el('span', { className: 'item__meta' }, 'Prestado: se devuelve en la pestaña Prestar.')]
-      : bloqueo ? [botonIncidencia()]
-        : (recurso.cambiosPermitidos ?? []).map((estado) => el('button', {
-          type: 'button', className: `btn btn--chico ${estado === 'danado' ? 'btn--peligro' : 'btn--secundario'}`,
-          onClick: (e) => cambiar(`/api/recursos/${encodeURIComponent(recurso.id)}`, estado, recurso.nombre, ESTADOS_RECURSO, e.currentTarget),
-        }, ACCION_RECURSO[estado] ?? etiqueta(ESTADOS_RECURSO, estado)));
+    const acciones = bloqueo ? [botonIncidencia()]
+      : (recurso.cambiosPermitidos ?? []).map((estado) => el('button', {
+        type: 'button', className: `btn btn--chico ${estado === 'danado' ? 'btn--peligro' : 'btn--secundario'}`,
+        onClick: (e) => cambiar(`/api/recursos/${encodeURIComponent(recurso.id)}`, estado, recurso.nombre, ESTADOS_RECURSO, e.currentTarget),
+      }, ACCION_RECURSO[estado] ?? etiqueta(ESTADOS_RECURSO, estado)));
     return item(recurso.nombre, etiqueta(ESTADOS_RECURSO, recurso.estado), recurso.estado,
-      recurso.espacioId ? `En ${nombreSala(recurso.espacioId) ?? recurso.espacioId}` : 'Para préstamo', bloqueo, acciones);
+      recurso.espacioId ? `En ${nombreSala(recurso.espacioId) ?? recurso.espacioId}` : 'Equipo portátil (sin sala fija)', bloqueo, acciones);
   }));
 }
 

@@ -2,24 +2,21 @@
 
 > Documento de ejemplo redactado para Campus Pulse. No es un reglamento oficial de Campuslands.
 
-## Cuántos equipos puedo tener prestados
+## ¿Se pueden pedir equipos prestados?
 
-Cada persona puede tener como máximo 2 préstamos activos al mismo tiempo. Un préstamo está activo hasta que el
-equipo se devuelve. Para pedir un tercer equipo hay que devolver antes uno de los dos.
+No. El campus no presta equipos: ni portátiles, ni cámaras, ni parlantes, ni video beams. Cada persona trabaja con
+su propio equipo, y los equipos de cada sala (video beam, televisor, micrófonos, consola de sonido, pantalla
+interactiva) se usan dentro de esa sala mientras dura la reserva; no se sacan de ella.
 
-## Qué equipos se pueden prestar
+## Equipos sin sala fija
 
-Solo se pueden prestar los equipos que están disponibles. Un equipo prestado, dañado o en reparación no se puede
-prestar. Los portátiles, la cámara web y el parlante son equipos de préstamo.
-
-## Devolver un equipo
-
-Al devolver un equipo, queda disponible de nuevo para otra persona. Si se devuelve dañado, hay que reportar una
-incidencia indicando el equipo para que Soporte TI lo revise.
+Los portátiles Lenovo y HP, la cámara web Logitech y el parlante Bluetooth JBL son equipos del campus sin sala fija.
+Los administra Soporte TI y tampoco se prestan.
 
 ## Equipos dañados o en reparación
 
-Soporte TI actualiza el estado de los equipos en la pestaña Inventario. Un equipo dañado pasa a reparación o, si
-Soporte TI lo arregla en el momento, vuelve directo a disponible. Un equipo en reparación vuelve a disponible cuando lo
-arreglan. Si una incidencia abierta tiene el equipo fuera de servicio, vuelve a estar disponible cuando se resuelve
-la incidencia.
+Si un equipo falla, se reporta una incidencia en la pestaña Reportar y le llega a Soporte TI. Soporte TI ve en la
+pestaña Inventario los equipos dañados o en reparación: un equipo dañado pasa a reparación o, si Soporte TI lo arregla
+en el momento, vuelve directo a disponible. Un equipo en reparación vuelve a disponible cuando lo arreglan, y entonces
+sale de la lista. Si una incidencia abierta tiene el equipo fuera de servicio, vuelve a estar disponible cuando se
+resuelve la incidencia.

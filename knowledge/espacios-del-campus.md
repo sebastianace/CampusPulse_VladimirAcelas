@@ -23,7 +23,7 @@ Los equipos de prueba registrados en las salas son: un video beam Epson en Apolo
 una consola de sonido y dos micrófonos inalámbricos en el Auditorio, un televisor de 55 pulgadas en Skilab y una
 pantalla interactiva en Artemis. Esta lista es de ejemplo y puede cambiar.
 
-## Equipos que se prestan
+## Equipos sin sala fija
 
-Hay equipos sin sala fija que se pueden prestar: portátiles Lenovo, una cámara web Logitech y un parlante
-Bluetooth JBL. Ver el documento de préstamo de equipos.
+Hay equipos del campus sin sala fija: portátiles Lenovo y HP, una cámara web Logitech y un parlante Bluetooth JBL.
+El campus no presta equipos: ver el documento de préstamo de equipos.

@@ -25,7 +25,6 @@ function crearDB() {
     recursos: [
       { id: 'mic', nombre: 'Micrófono', espacioId: 'apolo', estado: 'danado' },
       { id: 'vb', nombre: 'Video beam', espacioId: 'apolo', estado: 'disponible' },
-      { id: 'pc', nombre: 'Portátil', espacioId: null, estado: 'prestado' },
     ],
     reservas: [], prestamos: [], incidencias: [],
   };
@@ -44,9 +43,8 @@ describe('Inventario: reglas', () => {
     }
   });
 
-  test('"prestado" no se pone a mano y un equipo prestado no se toca aquí (409 USAR_PRESTAMOS)', () => {
-    assert.throws(() => actualizarEstadoRecurso(crearDB(), 'vb', { estado: 'prestado' }), { codigo: 'USAR_PRESTAMOS', status: 409 });
-    assert.throws(() => actualizarEstadoRecurso(crearDB(), 'pc', { estado: 'disponible' }), { codigo: 'USAR_PRESTAMOS', status: 409 });
+  test('"prestado" ya no es un estado: el campus no presta equipos (422)', () => {
+    assert.throws(() => actualizarEstadoRecurso(crearDB(), 'vb', { estado: 'prestado' }), { status: 422 });
   });
 
   test('respeta TRANSICIONES_RECURSO: en reparación no pasa a dañado (409)', () => {
@@ -82,10 +80,10 @@ describe('Inventario: reglas', () => {
     assert.throws(() => actualizarEstadoEspacio(crearDB(), 'apolo', { estado: 'inconsistente' }), { status: 422 });
   });
 
-  test('cambiosManuales sale de las transiciones, sin "prestado"', () => {
+  test('cambiosManuales sale de las transiciones', () => {
     assert.deepEqual(cambiosManuales({ estado: 'danado' }), ['en_reparacion', 'disponible']);
     assert.deepEqual(cambiosManuales({ estado: 'disponible' }), ['en_reparacion', 'danado']);
-    assert.deepEqual(cambiosManuales({ estado: 'prestado' }), []);
+    assert.deepEqual(cambiosManuales({ estado: 'en_reparacion' }), ['disponible']);
   });
 });
 

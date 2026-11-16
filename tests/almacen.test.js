@@ -16,7 +16,6 @@ const { crearEstadoInicial } = await import('../src/data/estado-inicial.js');
 const { REGLAS } = await import('../src/config/reglas.js');
 const { cancelarReserva, crearReserva, editarReserva } = await import('../src/domain/reservas.js');
 const { crearIncidencia, resolverIncidencia } = await import('../src/domain/incidencias.js');
-const { crearPrestamo, devolverPrestamo } = await import('../src/domain/prestamos.js');
 
 after(async () => { await bd.cerrar(); });
 
@@ -119,17 +118,6 @@ describe('Incidencias y préstamos: cambios en varias tablas a la vez', () => {
     assert.equal(db.recursos.find((r) => r.id === 'rec-01').estado, 'disponible');
     assert.equal(db.incidencias[0].estado, 'resuelta');
     assert.match(db.incidencias[0].fechaResolucion, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
-  });
-
-  test('un préstamo cambia el estado del equipo y devolverlo agrega fechaDevolucion', async () => {
-    const prestamo = await actualizarDB((db) => crearPrestamo(db, { recursoId: 'rec-08', persona: 'Ana' }));
-    assert.equal((await leerDB()).recursos.find((r) => r.id === 'rec-08').estado, 'prestado');
-    assert.ok(!('fechaDevolucion' in prestamo));
-    await actualizarDB((db) => devolverPrestamo(db, prestamo.id, { estadoFinal: 'disponible' }));
-    const db = await leerDB();
-    assert.equal(db.recursos.find((r) => r.id === 'rec-08').estado, 'disponible');
-    assert.equal(db.prestamos[0].estado, 'devuelto');
-    assert.ok(db.prestamos[0].fechaDevolucion);
   });
 });
 
