@@ -19,7 +19,7 @@ Guion de la demo, plan B, preguntas difíciles y plan de estudio. Pensado para u
 | 0:00 | Portada del README | **Problema:** reservas en hojas sueltas, incidencias por WhatsApp, nadie sabe qué sala está libre ni qué está dañado. **Solución:** un tablero en vivo con reglas claras y una IA que ayuda, pero no decide. |
 | 0:40 | Mapa del campus | Los colores salen de las reglas: libre, ocupada, inhabilitada. Datos oficiales del CSV con su reporte de calidad. |
 | 1:10 | Reservar Skilab para 40 personas | **Rechazada por la regla de aforo** (20 puestos). Luego dos reservas que se cruzan: la base de datos también lo impide. |
-| 1:50 | Reportar "El video beam de Apolo no prende y huele a quemado" | **Triaje con IA:** sugiere categoría, prioridad crítica, área y equipo, y explica por qué. **Yo confirmo**: la IA no guarda nada sola. Apolo se pone en rojo. |
+| 1:50 | Reportar "El video beam de Apolo no prende y huele a quemado" | **Triaje con IA:** sugiere categoría, prioridad crítica, área y equipo, y explica por qué. **Yo confirmo**: la IA no guarda nada sola. Solo el video beam queda en reparación y **Apolo se sigue reservando**: se inhabilita lo más específico (la sala completa solo si hay riesgo de la sala, como una gotera cerca de los enchufes). |
 | 2:40 | Reportar "El proyector de Apolo no enciende, sale olor a quemado" | **Embeddings:** "¿Es la misma incidencia?" con ~97 % de parecido. Sumo el reporte en vez de duplicar. |
 | 3:10 | Mailpit | **n8n:** llegó el correo a Soporte TI (webhook firmado → Switch por área → subworkflow). En la lista: "Avisada: Soporte TI". |
 | 3:40 | Ctrl+K: "¿Cuántas horas puedo reservar una sala?" | **RAG:** responde y muestra **Ver fuentes** (documento y sección). |

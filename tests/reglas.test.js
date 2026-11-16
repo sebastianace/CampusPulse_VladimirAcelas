@@ -290,11 +290,63 @@ describe('Incidencias', () => {
     assert.equal(estadoEspacio(db, 'grande'), 'disponible');
   });
 
-  test('inhabilitar: true inhabilita el espacio y el recurso con cualquier prioridad', () => {
+  const estadoRecurso = (db, id) => db.recursos.find((r) => r.id === id).estado;
+
+  // Bug encontrado en las pruebas del 15 nov: reportar el video beam de Apolo dejaba fuera de servicio todo el salón.
+  test('inhabilitar con equipo y sala: solo el equipo queda fuera de servicio y la sala se sigue reservando', () => {
     const db = crearDB();
-    crearIncidencia(db, incidencia({ recursoId: 'vb', inhabilitar: true }));
+    const creada = crearIncidencia(db, incidencia({ recursoId: 'vb', inhabilitar: true }));
+    assert.equal(estadoRecurso(db, 'vb'), REGLAS.ESTADO_RECURSO_INHABILITADO);
+    assert.equal(estadoEspacio(db, 'grande'), 'disponible');
+    assert.equal(creada.inhabilito, true);
+    assert.equal(creada.inhabilitoEspacio, false);
+    assert.doesNotThrow(() => crearReserva(db, reserva({ espacioId: 'grande' })));
+  });
+
+  test('una prioridad que inhabilita, con equipo, también apaga solo el equipo', () => {
+    const db = crearDB();
+    crearIncidencia(db, incidencia({ recursoId: 'vb', prioridad: REGLAS.PRIORIDADES_QUE_INHABILITAN[0] }));
+    assert.equal(estadoRecurso(db, 'vb'), REGLAS.ESTADO_RECURSO_INHABILITADO);
+    assert.equal(estadoEspacio(db, 'grande'), 'disponible');
+  });
+
+  test('inhabilitarEspacio: true deja fuera de servicio la sala y el equipo', () => {
+    const db = crearDB();
+    const creada = crearIncidencia(db, incidencia({ recursoId: 'vb', inhabilitarEspacio: true }));
     assert.equal(estadoEspacio(db, 'grande'), 'inhabilitado');
-    assert.equal(db.recursos.find((r) => r.id === 'vb').estado, REGLAS.ESTADO_RECURSO_INHABILITADO);
+    assert.equal(estadoRecurso(db, 'vb'), REGLAS.ESTADO_RECURSO_INHABILITADO);
+    assert.equal(creada.inhabilitoEspacio, true);
+  });
+
+  test('inhabilitar sin equipo deja fuera de servicio la sala', () => {
+    const db = crearDB();
+    crearIncidencia(db, incidencia({ inhabilitar: true }));
+    assert.equal(estadoEspacio(db, 'grande'), 'inhabilitado');
+  });
+
+  test('sin sala ni equipo no hay nada que inhabilitar', () => {
+    const db = crearDB();
+    const creada = crearIncidencia(db, incidencia({ espacioId: null, inhabilitar: true }));
+    assert.equal(creada.inhabilito, false);
+  });
+
+  test('resolver la incidencia del equipo no rehabilita una sala que apagó otra incidencia', () => {
+    const db = crearDB();
+    const sala = crearIncidencia(db, incidencia({ inhabilitar: true }));
+    const equipo = crearIncidencia(db, incidencia({ recursoId: 'vb', inhabilitar: true }));
+    resolverIncidencia(db, equipo.id, { estado: 'resuelta' });
+    assert.equal(estadoRecurso(db, 'vb'), 'disponible');
+    assert.equal(estadoEspacio(db, 'grande'), 'inhabilitado');
+    resolverIncidencia(db, sala.id, { estado: 'resuelta' });
+    assert.equal(estadoEspacio(db, 'grande'), 'disponible');
+  });
+
+  test('resolver una incidencia de sala y equipo rehabilita los dos', () => {
+    const db = crearDB();
+    const creada = crearIncidencia(db, incidencia({ recursoId: 'vb', inhabilitarEspacio: true }));
+    resolverIncidencia(db, creada.id, { estado: 'resuelta' });
+    assert.equal(estadoEspacio(db, 'grande'), 'disponible');
+    assert.equal(estadoRecurso(db, 'vb'), 'disponible');
   });
 
   test('resolver rehabilita, salvo que otra incidencia abierta lo mantenga inhabilitado', () => {

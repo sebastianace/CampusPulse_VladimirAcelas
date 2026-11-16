@@ -72,3 +72,24 @@ test('regla de negocio violada -> 409', async () => {
   assert.equal(status, 409);
   assert.equal(cuerpo.error.codigo, 'TRANSICION_INVALIDA');
 });
+
+test('una incidencia del video beam deja fuera de servicio solo el equipo, también guardado en la base', async () => {
+  const videoBeam = (await pedir('/api/recursos')).cuerpo.find((r) => r.tipo === 'video_beam' && r.espacioId && r.estado === 'disponible');
+  const { status, cuerpo: creada } = await pedir('/api/incidencias', 'POST', {
+    descripcion: 'El video beam no prende', categoria: 'tecnologia', prioridad: 'media', area: 'Soporte TI',
+    espacioId: videoBeam.espacioId, recursoId: videoBeam.id, inhabilitar: true, origen: 'manual',
+  });
+  assert.equal(status, 201);
+  const estadoSala = async () => (await pedir('/api/espacios')).cuerpo.find((e) => e.id === videoBeam.espacioId).estado;
+  const estadoEquipo = async () => (await pedir('/api/recursos')).cuerpo.find((r) => r.id === videoBeam.id).estado;
+  assert.equal(await estadoSala(), 'disponible');
+  assert.equal(await estadoEquipo(), 'en_reparacion');
+  // La columna inhabilito_espacio se guarda y se lee de PostgreSQL
+  const guardada = (await pedir('/api/incidencias')).cuerpo.find((i) => i.id === creada.id);
+  assert.equal(guardada.inhabilito, true);
+  assert.equal(guardada.inhabilitoEspacio, false);
+
+  assert.equal((await pedir(`/api/incidencias/${creada.id}`, 'PATCH', { estado: 'resuelta' })).status, 200);
+  assert.equal(await estadoEquipo(), 'disponible');
+  assert.equal(await estadoSala(), 'disponible');
+});

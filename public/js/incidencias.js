@@ -87,10 +87,8 @@ function abrirFormulario({ modo, descripcion, sugerencia = {}, motivoFallo }) {
     campoSelect('area', 'Área responsable', AREAS.map((a) => [a, a]), sugerencia.area, esIA),
     campoSelect('espacioId', 'Espacio afectado', espacios.map((e) => [e.id, e.nombre]), sugerencia.espacioId, false, 'Ninguno'),
     campoSelect('recursoId', 'Equipo afectado', recursos.map((r) => [r.id, r.nombre]), sugerencia.recursoId, false, 'Ninguno'),
-    el('label', { className: 'interruptor' },
-      el('input', { type: 'checkbox', name: 'inhabilitar', checked: Boolean(sugerencia.inhabilitar) }),
-      'Dejar fuera de servicio el espacio o equipo afectado'),
-    el('p', { className: 'nota' }, 'Según las reglas del campus, algunas prioridades lo dejan fuera de servicio aunque no marques la casilla.'),
+    campoFueraDeServicio(sugerencia),
+    el('p', { className: 'nota' }, 'Según las reglas del campus, algunas prioridades dejan fuera de servicio el equipo afectado (o la sala, si no hay equipo) aunque elijas "Nada".'),
     el('div', { className: 'item__acciones' },
       el('button', { type: 'submit', className: 'btn btn--primario' }, esIA ? 'Confirmar y registrar' : 'Registrar incidencia'),
       el('button', { type: 'button', className: 'btn btn--secundario', onClick: cerrarFormularios }, 'Descartar')),
@@ -100,7 +98,11 @@ function abrirFormulario({ modo, descripcion, sugerencia = {}, motivoFallo }) {
     e.preventDefault();
     registrar(form, esIA ? sugerencia : null);
   });
-  form.addEventListener('change', (e) => e.target.closest('.campo')?.classList.remove('campo--pendiente'));
+  form.addEventListener('change', (e) => {
+    e.target.closest('.campo')?.classList.remove('campo--pendiente');
+    if (e.target.name === 'espacioId' || e.target.name === 'recursoId') ajustarFueraDeServicio(form);
+  });
+  ajustarFueraDeServicio(form);
 
   const destino = esIA ? contenedorSugerencia() : contenedorManual();
   destino.replaceChildren(form);
@@ -134,7 +136,9 @@ async function registrar(form, sugerencia, { omitirParecidas = false } = {}) {
     area: datos.area,
     espacioId: datos.espacioId || null,
     recursoId: datos.recursoId || null,
-    inhabilitar: form.inhabilitar.checked,
+    // "Solo el equipo" -> inhabilitar; "Toda la sala" -> inhabilitar y inhabilitarEspacio (ver src/domain/incidencias.js)
+    inhabilitar: form.alcance.value !== 'ninguno',
+    inhabilitarEspacio: form.alcance.value === 'espacio',
     origen: sugerencia ? 'ia' : 'manual',
     // Trazabilidad: qué propuso la IA y si la persona lo cambió
     ia: sugerencia ? {
@@ -244,9 +248,18 @@ async function sumarAExistente(parecida, cuerpo, boton) {
 }
 
 function mensajeRegistro(incidencia) {
-  if (!incidencia.inhabilito) return 'Incidencia registrada.';
-  const afectados = [nombreEspacio(incidencia.espacioId), nombreRecurso(incidencia.recursoId)].filter(Boolean);
+  const afectados = fueraDeServicio(incidencia);
+  if (!afectados.length) return 'Incidencia registrada.';
   return `Incidencia registrada. Fuera de servicio: ${afectados.join(' y ')}.`;
+}
+
+// Nombres de lo que la incidencia dejó fuera de servicio: el equipo, la sala o los dos.
+function fueraDeServicio(incidencia) {
+  if (!incidencia.inhabilito) return [];
+  return [
+    incidencia.inhabilitoEspacio ? nombreEspacio(incidencia.espacioId) : '',
+    nombreRecurso(incidencia.recursoId),
+  ].filter(Boolean);
 }
 
 // ---------- Lista de incidencias ----------
@@ -290,7 +303,9 @@ function crearItemIncidencia(incidencia) {
       ...(incidencia.notificaciones ?? []).map((n) => el('span', { className: 'etiqueta', title: `Aviso enviado por ${n.canal}` }, `Avisada: ${n.area}`)),
       resuelta ? el('span', { className: 'etiqueta etiqueta--resuelta' }, 'Resuelta') : null),
     el('span', { className: 'item__meta' }, [incidencia.area, lugar].filter(Boolean).join(' · ')),
-    incidencia.inhabilito && !resuelta ? el('span', { className: 'item__alerta' }, `Fuera de servicio: ${lugar}`) : null,
+    !resuelta && fueraDeServicio(incidencia).length
+      ? el('span', { className: 'item__alerta' }, `Fuera de servicio: ${fueraDeServicio(incidencia).join(' · ')}`)
+      : null,
     resuelta || !puede('resolverIncidencias') ? null : el('div', { className: 'item__acciones' },
       el('button', {
         type: 'button', className: 'btn btn--secundario btn--chico',
@@ -303,9 +318,9 @@ async function resolver(incidencia, boton) {
   try {
     await conCarga(boton, 'Resolviendo…', () =>
       pedir(`/api/incidencias/${encodeURIComponent(incidencia.id)}`, { metodo: 'PATCH', cuerpo: { estado: 'resuelta' } }));
-    const afectados = [nombreEspacio(incidencia.espacioId), nombreRecurso(incidencia.recursoId)].filter(Boolean);
+    const afectados = fueraDeServicio(incidencia);
     const verbo = afectados.length > 1 ? 'vuelven' : 'vuelve';
-    toasts.exito(incidencia.inhabilito && afectados.length
+    toasts.exito(afectados.length
       ? `Incidencia resuelta. ${afectados.join(' y ')} ${verbo} a estar en servicio.`
       : 'Incidencia resuelta.');
     await refrescar();
@@ -340,6 +355,31 @@ function campoSelect(nombre, rotulo, opciones, valor, marcarSiFalta, textoNingun
     el('span', {}, rotulo),
     select,
     pendiente ? el('small', { className: 'campo__ayuda' }, 'La IA no pudo determinarlo. Elígelo tú.') : null);
+}
+
+/**
+ * "¿Qué queda fuera de servicio?": Nada / Solo el equipo / Toda la sala.
+ * Si la IA sugiere inhabilitar, se preselecciona lo más específico: el equipo si lo hay; si no, la sala.
+ */
+function campoFueraDeServicio(sugerencia) {
+  const inicial = !sugerencia.inhabilitar ? 'ninguno' : sugerencia.recursoId ? 'equipo' : 'espacio';
+  const opcion = (valor, texto) => el('label', { className: 'interruptor' },
+    el('input', { type: 'radio', name: 'alcance', value: valor, checked: valor === inicial }),
+    el('span', {}, texto));
+  return el('fieldset', { className: 'campo opciones-alcance' },
+    el('legend', {}, '¿Qué queda fuera de servicio?'),
+    opcion('ninguno', 'Nada: se sigue usando mientras lo reparan'),
+    opcion('equipo', 'Solo el equipo afectado'),
+    opcion('espacio', 'Toda la sala (por ejemplo, si hay riesgo para las personas)'));
+}
+
+// "Solo el equipo" necesita un equipo y "Toda la sala" una sala: si falta, la opción se deshabilita.
+function ajustarFueraDeServicio(form) {
+  const disponibles = { ninguno: true, equipo: Boolean(form.recursoId.value), espacio: Boolean(form.espacioId.value) };
+  for (const radio of form.querySelectorAll('input[name="alcance"]')) {
+    radio.disabled = !disponibles[radio.value];
+    if (radio.disabled && radio.checked) form.querySelector('input[name="alcance"][value="ninguno"]').checked = true;
+  }
 }
 
 function nombreEspacio(id) {

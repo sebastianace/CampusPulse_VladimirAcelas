@@ -6,6 +6,13 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Corregido
+- Una incidencia de un equipo ya no deja fuera de servicio toda la sala. Se inhabilita **lo más específico**: el equipo si
+  lo hay; la sala completa solo si se elige "Toda la sala" (`inhabilitarEspacio: true`) o si no hay equipo. Al resolverla
+  se rehabilita exactamente lo que se apagó. El formulario cambia la casilla por tres opciones: "Nada", "Solo el equipo"
+  y "Toda la sala". La migración `006_inhabilito_espacio.sql` agrega la columna `inhabilito_espacio` y conserva el
+  comportamiento de las incidencias que ya existían.
+
 ## [v2.0.0] — 2026-11-13
 
 Versión final del proyecto del curso Inteligencia Artificial 2. Sobre la `v1.1.1` de la hackatón agrega: roles y seguridad,

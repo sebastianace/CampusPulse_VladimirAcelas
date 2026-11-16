@@ -32,8 +32,9 @@ const CASOS = [
   },
   {
     titulo: 'Incidencia con IA',
-    esperado: 'La IA la clasifica y la sala se pone roja',
-    llenar: () => llenarIncidencia('El video beam de Apolo no prende y huele a quemado'),
+    // Un riesgo de la sala completa: un equipo dañado (un video beam) solo apagaría el equipo, no la sala.
+    esperado: 'La IA la clasifica, propone "Toda la sala" y la sala se pone roja',
+    llenar: () => llenarIncidencia('Hay una gotera en el techo de Apolo y el agua cae cerca de los enchufes'),
   },
   {
     titulo: 'Reservar la sala inhabilitada',

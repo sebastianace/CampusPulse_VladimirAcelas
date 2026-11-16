@@ -31,11 +31,15 @@ ocupada, rojo inhabilitada y gris dato inconsistente.
 
 ## 4. Incidencia con IA
 
-Reportar: _"El video beam de Apolo no prende y huele a quemado"_.
+Reportar: _"Hay una gotera en el techo de Apolo y el agua cae cerca de los enchufes"_.
 
-1. La IA sugiere categoría, prioridad, área, espacio y equipo, con su razón (**"Sugerido por IA"**).
-2. La persona revisa, puede editar y confirma.
-3. Por ser crítica, **Apolo se pone rojo** y su video beam queda en reparación.
+1. La IA sugiere categoría, prioridad, área y espacio, con su razón (**"Sugerido por IA"**).
+2. La persona revisa, puede editar y elige **qué queda fuera de servicio**: nada, solo el equipo o toda la sala.
+   Como el riesgo es de la sala, viene marcado "Toda la sala".
+3. Al confirmar, **Apolo se pone rojo**.
+
+Se inhabilita **lo más específico**: si el reporte fuera _"El video beam de Apolo no prende"_, solo el video beam
+quedaría en reparación y Apolo se seguiría reservando.
 
 ![Sugerencia de la IA](capturas/04-triaje-ia.png)
 ![Apolo inhabilitado](capturas/05-apolo-inhabilitado.png)
