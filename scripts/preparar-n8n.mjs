@@ -60,11 +60,24 @@ if (!importarCredenciales.ok) fallar(`No se pudieron importar las credenciales:\
 console.log(`✔ ${credenciales.length} credenciales creadas en n8n`);
 
 // ---------- 2. flujos ----------
+// Los JSON se copian al contenedor (docker compose cp) en vez de leerlos del volumen ./n8n:/workflows: en macOS, si
+// Docker no tiene permiso sobre la carpeta del proyecto (por ejemplo, en Descargas), el volumen aparece VACÍO y n8n
+// se quedaba con los flujos viejos sin avisar. Por eso, además, se comprueba cuántos importó.
 // Al importar, n8n deja todos los flujos desactivados; después se publican los que el JSON marca como activos.
-const importarFlujos = compose(['exec', '-T', 'n8n', 'n8n', 'import:workflow', '--separate', '--input=/workflows']);
-if (!importarFlujos.ok) fallar(`No se pudieron importar los flujos:\n${importarFlujos.salida.slice(-800)}`);
 const carpeta = fileURLToPath(new URL('../n8n/', import.meta.url));
-const flujos = readdirSync(carpeta).filter((f) => f.endsWith('.json')).map((f) => JSON.parse(readFileSync(carpeta + f, 'utf8')));
+const archivos = readdirSync(carpeta).filter((f) => f.endsWith('.json'));
+const flujos = archivos.map((f) => JSON.parse(readFileSync(carpeta + f, 'utf8')));
+const TEMPORAL = '/tmp/pulse-flujos';
+if (!compose(['exec', '-T', 'n8n', 'sh', '-c', `rm -rf ${TEMPORAL} && mkdir -p ${TEMPORAL}`]).ok) fallar('No se pudo preparar la carpeta temporal en n8n.');
+for (const archivo of archivos) {
+  const copia = compose(['cp', carpeta + archivo, `n8n:${TEMPORAL}/${archivo}`]);
+  if (!copia.ok) fallar(`No se pudo copiar ${archivo} a n8n:\n${copia.salida.slice(-400)}`);
+}
+const importarFlujos = compose(['exec', '-T', 'n8n', 'n8n', 'import:workflow', '--separate', `--input=${TEMPORAL}`]);
+compose(['exec', '-T', 'n8n', 'rm', '-rf', TEMPORAL]);
+if (!importarFlujos.ok) fallar(`No se pudieron importar los flujos:\n${importarFlujos.salida.slice(-800)}`);
+const importados = Number(importarFlujos.salida.match(/imported (\d+) workflow/)?.[1] ?? 0);
+if (importados !== flujos.length) fallar(`n8n importó ${importados} de ${flujos.length} flujos:\n${importarFlujos.salida.slice(-800)}`);
 console.log(`✔ ${flujos.length} flujos importados desde n8n/`);
 // n8n no deja publicar un flujo si los subworkflows que llama no están publicados: primero los subworkflows.
 const esSubworkflow = (f) => f.nodes.some((n) => n.type === 'n8n-nodes-base.executeWorkflowTrigger');

@@ -29,8 +29,9 @@ sin esperar a que P1 termine.
 | `POST /api/auth/registro` | `{usuario, nombre, clave}` | `201 {usuario, nombre, rol}` y abre sesión (cookie). Solo crea la primera cuenta (`admin`); después `403 REGISTRO_CERRADO` | P2 |
 | `GET /api/auth/estado` | — | `200 {registroAbierto}`; es público. El login lo usa para ocultar "Crear una cuenta" | P2 |
 | `GET /api/usuarios` | — | `200 [{usuario, nombre, rol, creado, creadoPor, creadoPorNombre, debeCambiarClave}]` (nunca trae las claves). `creadoPor: null` = la primera cuenta o una anterior a la migración 009. Solo `admin` | P2 |
-| `POST /api/usuarios` | `{usuario, nombre, clave, rol: "admin" \| "profesor" \| "soporte_tecnico"}` | `201 {usuario, nombre, rol}`. Solo `admin`; no abre sesión. Guarda qué admin la creó | P2 |
+| `POST /api/usuarios` | `{usuario, nombre, clave, correo?, rol: "admin" \| "profesor" \| "soporte_tecnico"}` | `201 {usuario, nombre, rol}`. Solo `admin`; no abre sesión. Guarda qué admin la creó | P2 |
 | `GET /api/usuarios/nombres` | — | `200 [{usuario, nombre}]`. Cualquier sesión: sugerencias para el responsable de una reserva | P2 |
+| `PATCH /api/usuarios/:usuario` | `{correo}` (`""` lo quita) | `200 {usuario, correo}`: el correo al que le llegan los avisos de sus reservas y solicitudes (n8n). `422` si no tiene formato de correo; `404` si la cuenta no existe. Solo `admin` | P1 |
 | `POST /api/usuarios/:usuario/clave` | — | `200 {usuario, claveTemporal}`: contraseña temporal para quien olvidó la suya; cierra sus sesiones y la obliga a cambiarla. `409 USA_CAMBIAR_CLAVE` para la propia. Solo `admin` | P2 |
 | `POST /api/auth/clave` | `{claveActual, claveNueva}` | `200`: "Cambiar mi contraseña". Cierra las demás sesiones. `401` si la actual no es correcta; `422` si la nueva tiene menos de 8 caracteres | P2 |
 | `POST /api/auth/login` | `{usuario, clave}` | `200 {usuario, nombre, rol}` y abre sesión (cookie) | P2 |

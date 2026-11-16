@@ -735,6 +735,7 @@ option { color: var(--texto); background: var(--placa-alta); }
 }
 .dialogo::backdrop { background: rgb(6 8 12 / 0.7); backdrop-filter: blur(2px); }
 .dialogo__titulo { font-size: 16px; margin: 0 0 4px; }
+.form-correo { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--linea); }
 .clave-temporal { display: grid; gap: 6px; margin-top: 6px; padding: 10px; border: 1px dashed var(--ocupada); border-radius: var(--radio-sm); }
 .clave-temporal code { font-family: var(--f-dato); font-size: 18px; letter-spacing: 0.08em; user-select: all; }
 

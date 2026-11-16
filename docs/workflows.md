@@ -16,7 +16,7 @@ Los flujos están exportados como JSON en [`n8n/`](../n8n/) y se importan con un
 2. Levanta todo y carga los flujos:
    ```bash
    docker compose up -d --build
-   npm run n8n:preparar      # crea las credenciales, importa y activa los 6 flujos, y reinicia n8n
+   npm run n8n:preparar      # crea las credenciales, importa y activa los 7 flujos, y reinicia n8n
    ```
 3. Abre el editor en <http://localhost:5678> (la primera vez n8n pide crear una cuenta de dueño local) y el buzón de
    correos de prueba en <http://localhost:8025> (Mailpit: los correos **no salen a Internet**). El formulario de ingesta
@@ -51,6 +51,7 @@ flowchart TD
     ERR[Cualquier flujo falla] --> EW[4 · Error Workflow] --> MAIL2[Correo al admin]
     F[Formulario] --> ING[5 · Ingesta: Loader + Embeddings + PGVector]
     CH[Chat] --> AG[6 · Agente: memoria + PGVector + HTTP]
+    C -->|webhook firmado: aviso de reserva| AV[7 · Aviso de reserva] --> VA{¿firma y datos válidos?} -- sí --> MAIL3[Correo a la persona]
 ```
 
 | # | Flujo | Qué hace | Temas del curso que cubre |
@@ -60,6 +61,7 @@ flowchart TD
 | 3 | **Resumen diario con IA** (`pulseResumenDiario`) | Todos los días a las 6 p. m. (hora de Bogotá), o a mano, lee las incidencias abiertas de hoy, le pide a Gemini un resumen en JSON y **lo valida en un Code node** antes de enviarlo | Schedule Trigger, HTTP Request, IA dentro de un workflow con salida estructurada, validación |
 | 4 | **Error Workflow** (`pulseErrores`) | Cuando cualquier flujo falla, avisa al admin con el flujo, el nodo, el mensaje y el ID de la ejecución | Error Trigger, manejo de errores |
 | 5 | **Ingesta de documentos** (`pulseIngesta`) | Un formulario recibe un `.md` o `.txt`, lo parte, calcula sus embeddings con Gemini y los guarda en PostgreSQL (pgvector) | Form Trigger, Extract From File, **Document Loader**, **Text Splitter**, **Embeddings**, **PGVector Store** |
+| 7 | **Aviso de cambio en una reserva** (`pulseAvisoReserva`) | Recibe un aviso firmado de Campus Pulse (`{correo, nombre, asunto, mensaje}`), lo valida, responde 202 y lo entrega por correo. Campus Pulse decide a quién avisar y qué decir (`src/domain/avisos.js`): le pidieron el salón a alguien, le aprobaron o rechazaron una solicitud, o un admin le cambió o canceló una reserva. Cambiar de canal (por ejemplo, WhatsApp) es cambiar el nodo "Enviar correo" | Webhook, Code, IF, Respond to Webhook, Send Email, reintentos |
 | 6 | **Agente de coordinación** (`pulseAgente`) | Un chat (<http://localhost:5678/webhook/4a2647d3-21f1-4ac0-8468-3eed27fdcfa9/chat>) con un **AI Agent** con **memoria** (PostgreSQL) y dos herramientas: `consultar_politicas` (PGVector, 4 resultados con metadata) y `listar_incidencias_abiertas` (HTTP) | Chat Trigger, AI Agent, memoria, vector store como herramienta, HTTP como herramienta |
 
 ### El webhook firmado (flujo 1)
@@ -125,6 +127,10 @@ nodes, la firma, la autenticación y el registro (sin necesitar n8n).
 
 - **Si n8n está caído, el aviso se pierde:** Express hace un solo intento (5 s) y no hay cola. La incidencia se crea igual y
   el resumen diario la incluye, pero la alerta inmediata no. Una cola o un reintento desde Campus Pulse sería la mejora.
+- **El volumen `./n8n:/workflows` puede aparecer vacío.** En macOS, si Docker no tiene permiso sobre la carpeta del
+  proyecto (por ejemplo, en Descargas), el contenedor ve la carpeta vacía y `n8n:preparar` "importaba" cero flujos sin
+  avisar: n8n se quedaba con los viejos. Ahora el script copia los JSON con `docker compose cp` y comprueba cuántos
+  importó (caso 17 de `docs/registro-depuracion.md`).
 - **Un solo canal real: correo.** Va a Mailpit, un buzón local. El plan mencionaba también Telegram; no se construyó porque
   exige crear un bot y no se podía verificar sin cuenta. Los destinatarios (`soporte-ti@campus.local`, etc.) son de ejemplo.
 - **Dos bases vectoriales de conocimiento, con dimensiones distintas.** El nodo de embeddings de Gemini de n8n **no permite
@@ -147,7 +153,7 @@ nodes, la firma, la autenticación y el registro (sin necesitar n8n).
 
 | Archivo | Qué es |
 |---|---|
-| `n8n/*.json` | Los 6 flujos exportados |
+| `n8n/*.json` | Los 7 flujos exportados |
 | `scripts/preparar-n8n.mjs` | Crea credenciales, importa y activa los flujos (`npm run n8n:preparar`) |
 | `src/integraciones/n8n.js` | Firma y envío del webhook, comprobación del secreto |
 | `src/routes/integraciones.js` | Rutas que llama n8n |

@@ -30,6 +30,7 @@ tiene que arreglar el problema.
 | Reportar sin saber a quién | **Incidencias en lenguaje natural**: la IA sugiere categoría, prioridad y lugar; la persona confirma y la incidencia va a Soporte TI. Lo crítico deja fuera de servicio el equipo (o la sala) al instante. |
 | Evitar reportes repetidos | **"¿Es la misma incidencia?"** con embeddings: si ya la reportaron, el reporte se suma en vez de duplicarse. |
 | Que TI se entere | **Automatización con n8n**: aviso por correo a Soporte TI de lo crítico y resumen diario con IA. |
+| Que nadie se lleve una sorpresa | **Avisos por correo** cuando cambia algo que le toca a una persona: le pidieron su salón, le aprobaron o rechazaron una solicitud, o un admin le cambió o canceló una reserva. La app decide a quién y qué; n8n lo entrega. |
 | Pedir sala o resolver dudas rápido | **Barra Ctrl+K** ("Pregúntale a Pulse"): pide una sala en lenguaje natural o pregunta por el reglamento y recibe la respuesta **con sus fuentes**, o un "no lo sé" honesto. También **por voz**. |
 | Que todo funcione aunque la IA falle | Cada función de IA tiene su **formulario manual**; si Gemini, `pulse-ai` o n8n caen, el resto sigue funcionando. |
 
@@ -54,7 +55,7 @@ flowchart LR
         K["knowledge/*.md"] -->|ingesta| P
     end
 
-    E -->|webhook firmado HMAC| N["n8n<br/>6 flujos"]
+    E -->|webhook firmado HMAC| N["n8n<br/>7 flujos"]
     N -->|"/api/integraciones (secreto)"| E
     N -->|correo| M["Mailpit / correo"]
     N -->|resumen diario| G
@@ -80,7 +81,7 @@ src/ai/prompts/    Un archivo por prompt del sistema, con la plantilla de la cla
 src/integraciones/ Webhook firmado hacia n8n
 pulse-ai/          Servicio Python (FastAPI + LangChain): RAG sobre knowledge/ con pgvector
 knowledge/         Documentos de ejemplo que Pulse usa para responder preguntas
-n8n/               Los 6 flujos de n8n exportados (JSON)
+n8n/               Los 7 flujos de n8n exportados (JSON)
 db/migrations/     Esquema SQL
 evaluacion/        Conjuntos de prueba de la IA y sus resultados
 docs/              Documentación (ver "Documentación" más abajo)
@@ -518,7 +519,7 @@ En la hackatón (v1) cada integrante trabajó en su rama (`feature/backend`, `fe
 | [docs/matriz-modelos.md](docs/matriz-modelos.md) | Comparación de modelos de Gemini: aciertos, tiempo, tokens y costo |
 | [docs/incidencias-parecidas.md](docs/incidencias-parecidas.md) | Embeddings, similitud coseno y el umbral |
 | [docs/biblioteca-prompts.md](docs/biblioteca-prompts.md) · [docs/personalidad.md](docs/personalidad.md) | Los prompts, sus versiones y la personalidad Big Five de Pulse |
-| [docs/workflows.md](docs/workflows.md) | Los 6 flujos de n8n, lo verificado y sus límites |
+| [docs/workflows.md](docs/workflows.md) | Los 7 flujos de n8n, lo verificado y sus límites |
 | [docs/base-de-datos.md](docs/base-de-datos.md) · [docs/contrato-api.md](docs/contrato-api.md) | Esquema y API |
 | [docs/registro-depuracion.md](docs/registro-depuracion.md) | Fallos reales, cómo se encontró la causa y qué los evita |
 | [docs/sustentacion.md](docs/sustentacion.md) | Guion de la demo, plan B y plan de estudio |

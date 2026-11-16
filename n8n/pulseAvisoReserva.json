@@ -1,0 +1,194 @@
+{
+  "id": "pulseAvisoReserva",
+  "name": "Pulse · Aviso de cambio en una reserva (webhook)",
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "pulseErrores"
+  },
+  "pinData": {},
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aviso-reserva",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "dffe7b76-1f97-4c1d-85b8-e909c5e70627",
+      "name": "Webhook de avisos",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "006fd362-5d23-4538-af14-ec045e21cf85"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Valida el webhook de avisos que envía Campus Pulse: firma HMAC-SHA256, antigüedad y forma de los datos.\n// Campus Pulse decide a quién avisar y qué decir; este flujo solo entrega el aviso (hoy por correo).\nconst crypto = require('crypto');\nconst TOLERANCIA_SEGUNDOS = 300;\nconst CORREO = /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/;\n\nconst rechazar = (motivo) => [{ json: { valido: false, motivo } }];\n\nconst secreto = $env.N8N_SECRETO;\nif (!secreto) return rechazar('El secreto N8N_SECRETO no está configurado en n8n.');\n\nconst cabeceras = $input.first().json.headers ?? {};\nconst firma = cabeceras['x-pulse-firma'];\nconst marca = cabeceras['x-pulse-timestamp'];\nif (!firma || !marca) return rechazar('Faltan las cabeceras de firma.');\n\n// La firma se calcula sobre el cuerpo EXACTO que se envió (por eso el webhook guarda el cuerpo crudo).\nlet crudo;\ntry {\n  crudo = (await this.helpers.getBinaryDataBuffer(0, 'data')).toString('utf8');\n} catch (error) {\n  return rechazar('No llegó el cuerpo de la petición.');\n}\n\nconst esperada = Buffer.from('sha256=' + crypto.createHmac('sha256', secreto).update(`${marca}.${crudo}`).digest('hex'));\nconst recibida = Buffer.from(String(firma));\nif (esperada.length !== recibida.length || !crypto.timingSafeEqual(esperada, recibida)) return rechazar('Firma inválida.');\n\nconst edad = Math.abs(Math.floor(Date.now() / 1000) - Number(marca));\nif (!Number.isFinite(edad) || edad > TOLERANCIA_SEGUNDOS) return rechazar('El mensaje es demasiado viejo o viene del futuro.');\n\nlet datos;\ntry { datos = JSON.parse(crudo); } catch (error) { return rechazar('El cuerpo no es JSON.'); }\nconst a = datos?.aviso;\nif (datos?.evento !== 'aviso.reserva' || !CORREO.test(a?.correo ?? '') || typeof a?.asunto !== 'string' || typeof a?.mensaje !== 'string') {\n  return rechazar('Los datos del aviso no tienen el formato esperado.');\n}\nreturn [{ json: { valido: true, aviso: { correo: a.correo, nombre: String(a.nombre ?? ''), asunto: a.asunto.slice(0, 150), mensaje: a.mensaje.slice(0, 2000) } } }];\n"
+      },
+      "id": "2bc1e8ee-6278-4af0-b8a0-36dd2282f17e",
+      "name": "Validar firma y datos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b7fc9796-0fdd-4e23-8cc3-87de298e3657",
+              "leftValue": "={{ $json.valido }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f1204f0f-7f3d-469d-8b5f-9efb40ba7714",
+      "name": "¿Firma y datos válidos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { error: { codigo: 'WEBHOOK_RECHAZADO', mensaje: $json.motivo } } }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "beccf768-5608-4f30-8338-b1aa6ef0f623",
+      "name": "Responder 401",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        660,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { recibido: true } }}",
+        "options": {
+          "responseCode": 202
+        }
+      },
+      "id": "170bd07d-a1d2-4a5b-8c6b-b67e45f2db16",
+      "name": "Responder 202",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        660,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "Pulse <pulse@campus.local>",
+        "toEmail": "={{ $json.aviso.correo }}",
+        "subject": "=[Pulse] {{ $json.aviso.asunto }}",
+        "emailFormat": "text",
+        "text": "=Hola, {{ $json.aviso.nombre }}:\n\n{{ $json.aviso.mensaje }}\n\nEste aviso lo envía n8n desde Campus Pulse.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "8ccdc120-26eb-47a3-94b0-f11186c6c26f",
+      "name": "Enviar correo",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        880,
+        200
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "pulse-smtp",
+          "name": "Pulse SMTP (Mailpit)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    }
+  ],
+  "connections": {
+    "Webhook de avisos": {
+      "main": [
+        [
+          {
+            "node": "Validar firma y datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar firma y datos": {
+      "main": [
+        [
+          {
+            "node": "¿Firma y datos válidos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Firma y datos válidos?": {
+      "main": [
+        [
+          {
+            "node": "Responder 202",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Responder 202": {
+      "main": [
+        [
+          {
+            "node": "Enviar correo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

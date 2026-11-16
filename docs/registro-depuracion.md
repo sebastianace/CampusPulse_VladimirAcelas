@@ -167,6 +167,21 @@ sigue el mismo método: **síntoma → hipótesis → experimento → causa raí
 - **Lección.** Probar con quien usa el sistema encuentra lo que los tests no buscan: los tests cubrían bien la regla
   equivocada.
 
+### 17. n8n seguía con el flujo viejo aunque `npm run n8n:preparar` decía "importado"
+- **Síntoma.** Al activar el flujo nuevo de avisos, n8n respondió `Workflow "pulseAvisoReserva" not found`, aunque el
+  script había dicho "✔ 7 flujos importados".
+- **Hipótesis.** (a) El JSON nuevo tenía un error; (b) n8n no estaba leyendo los archivos.
+- **Experimento.** Importado a mano con `docker compose cp`, el mismo JSON entró bien: descartada (a). `ls /workflows`
+  dentro del contenedor salió **vacío**, y el flujo de incidencias guardado en n8n todavía tenía el Switch por área que se
+  había quitado días antes.
+- **Causa raíz.** En macOS, Docker no tenía permiso sobre la carpeta del proyecto (en Descargas): el volumen
+  `./n8n:/workflows` se montaba vacío, n8n importaba cero flujos sin error y el script contaba los archivos del disco,
+  no los que importó n8n.
+- **Corrección.** El script copia cada JSON con `docker compose cp` y compara cuántos importó n8n con cuántos hay. Se
+  verificó exportando el flujo de incidencias desde n8n: ya no tiene el Switch.
+- **Lección.** Un "✔" que cuenta lo que se quiso hacer, y no lo que pasó, esconde fallas. Verificar el resultado en el
+  sistema de destino.
+
 ## Qué se aprendió en general
 1. **Reproducir fuera de la interfaz** (curl, un script) separa los errores del navegador de los del servidor o del modelo.
 2. **Leer el log antes de adivinar:** en los casos 2, 4, 6 y 7 la causa estaba escrita en el log.

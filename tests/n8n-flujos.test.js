@@ -13,7 +13,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { readFileSync, readdirSync } from 'node:fs';
 import { PRIORIDADES, REGLAS } from '../src/config/reglas.js';
-import { firmar } from '../src/integraciones/n8n.js';
+import { firmar, urlDeAvisos } from '../src/integraciones/n8n.js';
 
 const requerir = createRequire(import.meta.url);
 const carpeta = new URL('../n8n/', import.meta.url);
@@ -22,9 +22,9 @@ const flujos = new Map(readdirSync(carpeta).filter((f) => f.endsWith('.json'))
 const nodoDe = (flujo, nombre) => flujos.get(flujo).nodes.find((n) => n.name === nombre);
 
 describe('estructura de los flujos exportados', () => {
-  test('están los 6 flujos y todos quedan activos', () => {
+  test('están los 7 flujos y todos quedan activos', () => {
     assert.deepEqual([...flujos.keys()].sort(),
-      ['pulseAgente', 'pulseErrores', 'pulseIncidenciaNueva', 'pulseIngesta', 'pulseNotificar', 'pulseResumenDiario']);
+      ['pulseAgente', 'pulseAvisoReserva', 'pulseErrores', 'pulseIncidenciaNueva', 'pulseIngesta', 'pulseNotificar', 'pulseResumenDiario']);
     for (const [id, flujo] of flujos) {
       assert.equal(flujo.id, id, `el archivo y el id de ${id} coinciden`);
       assert.equal(flujo.active, true, `${id} activo (el Error Workflow y los subworkflows también deben estarlo)`);
@@ -192,6 +192,42 @@ describe('Code node "Validar firma y datos" (el mismo contrato que firma Express
     const t = ahora();
     const [{ json }] = await ejecutar('pulseIncidenciaNueva', 'Validar firma y datos', { env: {}, ...peticion(t, `sha256=${firmar(SECRETO, t, cuerpo)}`) });
     assert.equal(json.valido, false);
+  });
+});
+
+describe('Flujo de avisos de reservas (pulseAvisoReserva)', () => {
+  const SECRETO = 'secreto-de-prueba';
+  const aviso = { correo: 'ana@campus.local', nombre: 'Ana', asunto: 'Cancelaron tu reserva de Cosmos', mensaje: 'Un admin canceló tu reserva.' };
+  const validar = (datos, secreto = SECRETO) => {
+    const t = String(Math.floor(Date.now() / 1000));
+    const texto = JSON.stringify(datos);
+    return ejecutar('pulseAvisoReserva', 'Validar firma y datos', {
+      env: { N8N_SECRETO: SECRETO }, items: [{ json: { headers: { 'x-pulse-timestamp': t, 'x-pulse-firma': `sha256=${firmar(secreto, t, texto)}` } } }], cuerpoCrudo: texto,
+    });
+  };
+
+  test('escucha en la ruta que calcula Express y entrega el correo al destinatario del aviso', () => {
+    const webhook = nodoDe('pulseAvisoReserva', 'Webhook de avisos');
+    assert.deepEqual([webhook.parameters.path, webhook.parameters.httpMethod, webhook.parameters.options.rawBody], ['aviso-reserva', 'POST', true]);
+    assert.equal(urlDeAvisos('http://n8n:5678/webhook/incidencia-nueva'), 'http://n8n:5678/webhook/aviso-reserva');
+    const correo = nodoDe('pulseAvisoReserva', 'Enviar correo');
+    assert.equal(correo.parameters.toEmail, '={{ $json.aviso.correo }}');
+    assert.equal(correo.retryOnFail, true);
+    assert.deepEqual(flujos.get('pulseAvisoReserva').connections['Responder 202'].main[0].map((c) => c.node), ['Enviar correo'],
+      'responde 202 antes de enviar: Express no espera el correo');
+  });
+
+  test('acepta el aviso que firma Express y rechaza otra firma, otro evento o un correo inválido', async () => {
+    const [{ json: bueno }] = await validar({ evento: 'aviso.reserva', aviso });
+    assert.deepEqual([bueno.valido, bueno.aviso], [true, aviso]);
+    for (const [datos, secreto] of [
+      [{ evento: 'aviso.reserva', aviso }, 'otro-secreto'],
+      [{ evento: 'incidencia.creada', aviso }, SECRETO],
+      [{ evento: 'aviso.reserva', aviso: { ...aviso, correo: 'no-es-correo' } }, SECRETO],
+    ]) {
+      const [{ json }] = await validar(datos, secreto);
+      assert.equal(json.valido, false, JSON.stringify(datos).slice(0, 60));
+    }
   });
 });
 
