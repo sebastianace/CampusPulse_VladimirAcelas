@@ -7,6 +7,7 @@ const PERMISOS = {
   restaurar: ['admin'],
   resolverIncidencias: ['admin', 'soporte_tecnico'],
   gestionarUsuarios: ['admin'],
+  gestionarInventario: ['admin', 'soporte_tecnico'],
 };
 
 const NOMBRES_ROL = {

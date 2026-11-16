@@ -6,6 +6,16 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Agregado
+- Pestaña **Inventario** (admin y soporte técnico) para poner cada equipo y sala en su estado real:
+  `PATCH /api/recursos/:id` y `PATCH /api/espacios/:id`. Lo que una incidencia abierta tiene fuera de servicio no se
+  cambia a mano (se resuelve la incidencia) y los préstamos siguen en la pestaña Prestar. `GET /api/recursos` trae
+  `cambiosPermitidos`, así los botones salen de `TRANSICIONES_RECURSO`.
+
+### Cambiado
+- Un equipo dañado puede volver directo a disponible y uno disponible se puede marcar dañado (`TRANSICIONES_RECURSO`).
+- Semilla más realista: todos los equipos empiezan disponibles salvo el Portátil HP 03 (dañado), que usa el Modo demo.
+
 ### Corregido
 - Una incidencia de un equipo ya no deja fuera de servicio toda la sala. Se inhabilita **lo más específico**: el equipo si
   lo hay; la sala completa solo si se elige "Toda la sala" (`inhabilitarEspacio: true`) o si no hay equipo. Al resolverla

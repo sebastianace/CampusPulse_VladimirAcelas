@@ -1,0 +1,88 @@
+// Pestaña "Inventario" (admin y soporte técnico): poner cada equipo y sala
+// en su estado real (PATCH /api/recursos/:id y PATCH /api/espacios/:id).
+// Los botones de cada equipo salen de cambiosPermitidos (lo calcula el
+// servidor con TRANSICIONES_RECURSO), así nunca se ofrece un cambio prohibido.
+
+import { pedir } from './api.js';
+import { el, conCarga } from './dom.js';
+import { ESTADOS_ESPACIO, ESTADOS_RECURSO, etiqueta } from './catalogos.js';
+import { puede } from './sesion.js';
+import * as toasts from './toasts.js';
+
+let refrescar = async () => {};
+let mostrarPestana = () => {};
+
+// Texto del botón que lleva un equipo a cada estado.
+const ACCION_RECURSO = {
+  disponible: 'Marcar disponible',
+  en_reparacion: 'Enviar a reparación',
+  danado: 'Marcar dañado',
+};
+
+// Color de la etiqueta de estado.
+const CLASE_ESTADO = { danado: 'etiqueta--critica', en_reparacion: 'etiqueta--alta', inhabilitado: 'etiqueta--critica', disponible: 'etiqueta--resuelta' };
+
+export function iniciarInventario(dependencias) {
+  if (!puede('gestionarInventario')) return; // la pestaña sigue oculta
+  ({ refrescar, mostrarPestana } = dependencias);
+  document.getElementById('p-inventario').hidden = false;
+}
+
+/** Se redibuja con cada carga de datos (suscrito al estado). */
+export function dibujarInventario({ espacios, recursos, incidencias }) {
+  if (!puede('gestionarInventario')) return;
+  const nombreSala = (id) => espacios.find((e) => e.id === id)?.nombre;
+  const abiertas = incidencias.filter((i) => i.estado === 'abierta');
+
+  const equipos = [...recursos].sort((a, b) => Number(a.estado === 'disponible') - Number(b.estado === 'disponible'));
+  document.getElementById('lista-inventario-equipos').replaceChildren(...equipos.map((recurso) => {
+    const bloqueo = abiertas.find((i) => i.inhabilito && i.recursoId === recurso.id);
+    const acciones = recurso.estado === 'prestado'
+      ? [el('span', { className: 'item__meta' }, 'Prestado: se devuelve en la pestaña Prestar.')]
+      : bloqueo ? [botonIncidencia()]
+        : (recurso.cambiosPermitidos ?? []).map((estado) => el('button', {
+          type: 'button', className: `btn btn--chico ${estado === 'danado' ? 'btn--peligro' : 'btn--secundario'}`,
+          onClick: (e) => cambiar(`/api/recursos/${encodeURIComponent(recurso.id)}`, estado, recurso.nombre, ESTADOS_RECURSO, e.currentTarget),
+        }, ACCION_RECURSO[estado] ?? etiqueta(ESTADOS_RECURSO, estado)));
+    return item(recurso.nombre, etiqueta(ESTADOS_RECURSO, recurso.estado), recurso.estado,
+      recurso.espacioId ? `En ${nombreSala(recurso.espacioId) ?? recurso.espacioId}` : 'Para préstamo', bloqueo, acciones);
+  }));
+
+  document.getElementById('lista-inventario-salas').replaceChildren(...espacios.map((espacio) => {
+    const bloqueo = abiertas.find((i) => i.inhabilitoEspacio && i.espacioId === espacio.id);
+    const acciones = espacio.estado === 'inconsistente'
+      ? [el('span', { className: 'item__meta' }, 'Dato inconsistente en el CSV oficial: se corrige en el archivo.')]
+      : bloqueo ? [botonIncidencia()]
+        : [el('button', {
+          type: 'button', className: `btn btn--chico ${espacio.estado === 'disponible' ? 'btn--peligro' : 'btn--secundario'}`,
+          onClick: (e) => cambiar(`/api/espacios/${encodeURIComponent(espacio.id)}`,
+            espacio.estado === 'disponible' ? 'inhabilitado' : 'disponible', espacio.nombre, ESTADOS_ESPACIO, e.currentTarget),
+        }, espacio.estado === 'disponible' ? 'Inhabilitar sala' : 'Habilitar sala')];
+    return item(espacio.nombre, etiqueta(ESTADOS_ESPACIO, espacio.estado), espacio.estado, `Aforo ${espacio.aforo}`, bloqueo, acciones);
+  }));
+}
+
+function item(titulo, textoEstado, estado, meta, bloqueo, acciones) {
+  return el('li', { className: 'item' },
+    el('div', { className: 'item__cabeza' },
+      el('span', { className: 'item__titulo' }, titulo),
+      el('span', { className: `etiqueta ${CLASE_ESTADO[estado] ?? ''}` }, textoEstado)),
+    el('span', { className: 'item__meta' }, meta),
+    bloqueo && el('span', { className: 'item__meta' }, `Fuera de servicio por la incidencia: "${bloqueo.descripcion}"`),
+    el('div', { className: 'item__acciones' }, acciones));
+}
+
+function botonIncidencia() {
+  return el('button', { type: 'button', className: 'btn btn--secundario btn--chico', onClick: () => mostrarPestana('p-incidencias') },
+    'Ver la incidencia');
+}
+
+async function cambiar(ruta, estado, nombre, catalogo, boton) {
+  try {
+    await conCarga(boton, 'Guardando…', () => pedir(ruta, { metodo: 'PATCH', cuerpo: { estado } }));
+    toasts.exito(`${nombre} quedó ${etiqueta(catalogo, estado).toLowerCase()}.`);
+    await refrescar();
+  } catch (error) {
+    toasts.error(error);
+  }
+}
