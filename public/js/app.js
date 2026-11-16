@@ -14,6 +14,7 @@ import { iniciarUsuarios } from './usuarios.js';
 import { iniciarInventario, dibujarInventario } from './inventario.js';
 import { iniciarSolicitudes, dibujarSolicitudes } from './solicitudes.js';
 import { iniciarSoporte, dibujarSoporte } from './soporte.js';
+import { iniciarClave } from './clave.js';
 import * as toasts from './toasts.js';
 
 // Pestañas del panel de acciones
@@ -123,6 +124,9 @@ async function mostrarSesion() {
   document.getElementById('sesion-nombre').title = `Usuario: ${datos.usuario} · Rol: ${nombreDeRol(datos.rol)}`;
   document.getElementById('sesion').hidden = false;
   document.getElementById('cerrar-sesion').addEventListener('click', cerrarSesion);
+  // Con una contraseña temporal el diálogo se abre solo y el servidor bloquea lo demás hasta cambiarla
+  iniciarClave({ obligatorio: datos.debeCambiarClave === true });
+  return datos;
 }
 
 function iniciarTablero() {
@@ -153,6 +157,6 @@ function iniciarTablero() {
 // Primero se comprueba la sesión y luego arranca el tablero.
 // Sin sesión, pedir() ya lleva al login; si el servidor no responde,
 // el tablero arranca igual y muestra "Sin conexión · reintentando".
-mostrarSesion().then(iniciarTablero, (error) => {
+mostrarSesion().then((datos) => { if (!datos.debeCambiarClave) iniciarTablero(); }, (error) => {
   if (error.codigo !== 'SESION_REQUERIDA') iniciarTablero();
 });

@@ -7,13 +7,16 @@
 //                                                     (429 tras 5 fallos en 15 min, ver intentos.js)
 // GET  /api/auth/estado                            -> 200 {registroAbierto} (para que el login oculte "Crear una cuenta")
 // POST /api/auth/logout                            -> 200 y cierra la sesión
-// GET  /api/auth/yo                                -> 200 {usuario, nombre, rol} o 401
+// GET  /api/auth/yo                                -> 200 {usuario, nombre, rol, debeCambiarClave?} o 401
+// POST /api/auth/clave    {claveActual, claveNueva} -> 200: "Cambiar mi contraseña". Cierra las demás sesiones.
+// Con una contraseña temporal (debeCambiarClave), el resto de /api responde 403 CAMBIO_DE_CLAVE_REQUERIDO
+// hasta que se cambie.
 // La sesión viaja en la cookie "sesion" (HttpOnly: el JavaScript de la
 // página no la puede leer).
 // =====================================================================
 
 import { Router } from 'express';
-import { HORAS_SESION, NoAutorizadoError, autenticar, cerrarSesion, crearSesion, registrar, registroAbierto, usuarioDeSesion } from '../auth/usuarios.js';
+import { HORAS_SESION, NoAutorizadoError, autenticar, cambiarClave, cerrarSesion, crearSesion, registrar, registroAbierto, usuarioDeSesion } from '../auth/usuarios.js';
 import { limpiarFallos, registrarFallo, segundosDeBloqueo } from '../auth/intentos.js';
 import { DemasiadasPeticionesError, ProhibidoError } from '../domain/errors.js';
 
@@ -82,10 +85,24 @@ router.get('/yo', async (req, res) => {
   res.json(usuario);
 });
 
-/** Middleware: deja pasar solo peticiones con sesión válida (si no, 401). */
+router.post('/clave', async (req, res) => {
+  const token = tokenDe(req);
+  const usuario = await usuarioDeSesion(token);
+  if (!usuario) throw new NoAutorizadoError('Inicia sesión para continuar');
+  await cambiarClave(usuario.usuario, req.body, token);
+  res.json({ mensaje: 'Contraseña cambiada. Se cerraron tus otras sesiones.' });
+});
+
+/**
+ * Middleware: deja pasar solo peticiones con sesión válida (si no, 401).
+ * Con una contraseña temporal sin cambiar, 403: primero hay que cambiarla (POST /api/auth/clave).
+ */
 export async function exigirSesion(req, res, next) {
   const usuario = await usuarioDeSesion(tokenDe(req));
   if (!usuario) throw new NoAutorizadoError('Inicia sesión para continuar');
+  if (usuario.debeCambiarClave) {
+    throw new ProhibidoError('Tu contraseña es temporal: cámbiala para seguir usando Campus Pulse', 'CAMBIO_DE_CLAVE_REQUERIDO');
+  }
   req.usuario = usuario;
   next();
 }

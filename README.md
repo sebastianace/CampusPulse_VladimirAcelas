@@ -148,8 +148,14 @@ El detalle de cada cambio está en [CHANGELOG.md](CHANGELOG.md).
   `login.html` y, al entrar, vuelve a la página que se estaba usando (también `movil.html`).
 - **No hay usuarios ni contraseñas en el repositorio.** La primera vez se crea una cuenta desde
   "Crear una cuenta" (usuario de 3 a 30 caracteres y contraseña de al menos 8): esa cuenta es
-  `admin`. Después el registro se cierra (el login oculta "Crear una cuenta") y el admin crea las
-  demás desde la pestaña **Usuarios** (`POST /api/usuarios`).
+  `admin`. Después el registro se cierra (el login oculta "Crear una cuenta") y un admin crea las
+  demás desde la pestaña **Usuarios** (`POST /api/usuarios`), también otros admins, para que el campus
+  no dependa de una sola persona. La lista muestra **quién creó cada cuenta** y cuándo.
+- **Si alguien olvida su contraseña,** un admin le da una **contraseña temporal** desde Usuarios: se
+  muestra una sola vez, cierra sus sesiones y, al entrar, la app obliga a cambiarla (el servidor
+  bloquea lo demás con `403 CAMBIO_DE_CLAVE_REQUERIDO`). Si quien la olvidó es el único admin:
+  `npm run restablecer-admin -- <usuario>` en la terminal del servidor. Cualquiera cambia la suya con
+  el botón **Contraseña** de la barra superior.
 - La interfaz oculta lo que el rol no puede hacer ("Atender", "Marcar como resuelta" y las pestañas
   Soporte TI, Inventario y Usuarios); aun así, quien impide las acciones es el servidor, con 403.
 - **Tres roles:** `admin` (crea cuentas), `profesor` (reserva, presta y reporta)
@@ -424,6 +430,7 @@ error claro y el formulario manual, nunca con una respuesta inventada.
 | `npm run n8n:preparar` | Crea las credenciales en n8n, importa y activa los flujos de `n8n/` y reinicia n8n |
 | `npm run conocimiento` | Recarga `knowledge/` en la base vectorial (necesita `pulse-ai` levantado) |
 | `npm run evaluar-rag` | Hace las 15 preguntas de prueba del RAG, con y sin reranking (gasta cuota de Gemini, ~8 min) |
+| `npm run restablecer-admin -- <usuario>` | Contraseña temporal para un admin que olvidó la suya (sin argumento, lista los admins). Se muestra una sola vez |
 | `npm run restaurar` (o `npm run semilla`) | Vuelve a los datos iniciales: carga espacios, recursos y calidad de datos en PostgreSQL y borra reservas, préstamos e incidencias. No toca las cuentas |
 | `npm run medir-triaje` | Mide el triaje sin ejemplos y con ellos (24 llamadas a Gemini, ~5 min; gasta cuota) |
 

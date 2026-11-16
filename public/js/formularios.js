@@ -28,6 +28,9 @@ export function iniciarFormularios(opciones) {
   const formPrestamo = document.getElementById('form-prestamo');
 
   formReserva.fecha.value = obtenerEstado().fecha;
+  // El responsable por defecto es quien inició sesión; las sugerencias son las cuentas reales
+  formReserva.responsable.value = sesionActual()?.nombre ?? '';
+  cargarResponsables();
   formReserva.addEventListener('submit', enviarReserva);
   formPrestamo.addEventListener('submit', enviarPrestamo);
   document.getElementById('btn-descartar-edicion').addEventListener('click', terminarEdicion);
@@ -67,6 +70,17 @@ export function actualizarFormularios({ espacios, recursos, prestamos, reservas,
 
 // ---------- Reserva ----------
 
+// Llena las sugerencias del campo "Responsable" con los nombres de las cuentas (GET /api/usuarios/nombres).
+// Sigue siendo texto libre: se puede reservar a nombre de alguien sin cuenta.
+async function cargarResponsables() {
+  try {
+    const personas = await pedir('/api/usuarios/nombres');
+    document.getElementById('lista-responsables').replaceChildren(...personas.map((p) => el('option', { value: p.nombre })));
+  } catch {
+    // Sin sugerencias se puede escribir el nombre igual
+  }
+}
+
 async function enviarReserva(evento) {
   evento.preventDefault();
   const form = evento.currentTarget;
@@ -101,7 +115,7 @@ async function enviarReserva(evento) {
     const reserva = await conCarga(boton, 'Reservando…', () => pedir('/api/reservas', { metodo: 'POST', cuerpo }));
     toasts.exito(`Reserva creada: ${nombreEspacio(reserva.espacioId)}, ${hora(reserva.inicio)}–${hora(reserva.fin)}.${avisoLlegada(reserva)}`);
     document.dispatchEvent(new CustomEvent('reserva-creada', { detail: reserva }));
-    form.responsable.value = '';
+    form.responsable.value = sesionActual()?.nombre ?? '';
     form.asistentes.value = '';
     // Mostrar en la línea de tiempo el día de la reserva recién creada
     await cambiarFecha(fecha.value);
@@ -239,7 +253,7 @@ function empezarEdicion(reserva) {
 function terminarEdicion() {
   const form = document.getElementById('form-reserva');
   editandoId = null;
-  form.responsable.value = '';
+  form.responsable.value = sesionActual()?.nombre ?? '';
   form.asistentes.value = '';
   mostrarAviso(form, null);
   form.querySelector('button[type="submit"]').textContent = 'Reservar sala';
