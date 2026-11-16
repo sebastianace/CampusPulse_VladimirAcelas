@@ -27,6 +27,11 @@ responden 503. Nunca quedan abiertas.
 
 ## Los flujos
 
+> **Todo va a TI.** En el campus, TI es el único equipo que resuelve los problemas técnicos y de infraestructura, así que
+> toda incidencia nueva tiene el área `Soporte TI` (`REGLAS.AREA_RESPONSABLE`). Por eso el flujo 1 ya no tiene un Switch
+> por área: con una sola área, un Switch de cinco ramas sería código muerto. Si mañana el campus vuelve a repartir las
+> incidencias por área, se vuelve a poner un Switch después de "¿Es crítica?".
+
 ```mermaid
 flowchart TD
     C[Campus Pulse crea una incidencia] -->|webhook firmado HMAC-SHA256| W[1 · Incidencia nueva]
@@ -34,7 +39,7 @@ flowchart TD
     V -- no --> R401[Responde 401]
     V -- sí --> R202[Responde 202] --> K{¿crítica?}
     K -- no --> D[Queda para el resumen diario]
-    K -- sí --> S{Switch por área}
+    K -- sí --> S[Destinatario: Soporte TI]
     S --> SUB[2 · Notificar por correo<br/>subworkflow]
     S --> M
     SUB --> M[Merge]
@@ -50,7 +55,7 @@ flowchart TD
 
 | # | Flujo | Qué hace | Temas del curso que cubre |
 |---|---|---|---|
-| 1 | **Incidencia nueva** (`pulseIncidenciaNueva`) | Recibe el webhook, valida firma, antigüedad y datos, responde 202 y, si la incidencia es crítica, la enruta por área, avisa por correo y deja constancia en Campus Pulse | Webhook, Respond to Webhook, Code, **IF**, **Switch**, **Execute Workflow**, **Merge**, **HTTP Request**, reintentos |
+| 1 | **Incidencia nueva** (`pulseIncidenciaNueva`) | Recibe el webhook, valida firma, antigüedad y datos, responde 202 y, si la incidencia es crítica, avisa por correo a Soporte TI (el área que atiende todas las incidencias) y deja constancia en Campus Pulse | Webhook, Respond to Webhook, Code, **IF**, **Set**, **Execute Workflow**, **Merge**, **HTTP Request**, reintentos |
 | 2 | **Notificar por correo** (`pulseNotificar`), subworkflow | Envía el correo al destinatario y devuelve el resultado | Execute Workflow Trigger, Send Email |
 | 3 | **Resumen diario con IA** (`pulseResumenDiario`) | Todos los días a las 6 p. m. (hora de Bogotá), o a mano, lee las incidencias abiertas de hoy, le pide a Gemini un resumen en JSON y **lo valida en un Code node** antes de enviarlo | Schedule Trigger, HTTP Request, IA dentro de un workflow con salida estructurada, validación |
 | 4 | **Error Workflow** (`pulseErrores`) | Cuando cualquier flujo falla, avisa al admin con el flujo, el nodo, el mensaje y el ID de la ejecución | Error Trigger, manejo de errores |

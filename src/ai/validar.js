@@ -9,7 +9,7 @@
 // - Nunca se inventa ni se "adivina" un valor de reemplazo.
 // =====================================================================
 
-import { AREAS, CATEGORIAS, PRIORIDADES } from '../config/reglas.js';
+import { CATEGORIAS, PRIORIDADES } from '../config/reglas.js';
 
 // Formato de fecha del contrato: YYYY-MM-DDTHH:mm (hora de Bogotá, sin zona).
 const FORMATO_FECHA = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
@@ -36,13 +36,12 @@ function textoLimpio(valor) {
 /**
  * Valida la sugerencia de triaje contra los enums y el catálogo real.
  * catalogo = { espacios: [{id}], recursos: [{id}] }
- * Devuelve {categoria, prioridad, area, espacioId, recursoId, inhabilitar, razon}.
+ * Devuelve {categoria, prioridad, espacioId, recursoId, inhabilitar, razon}.
  */
 export function validarTriaje(datos, catalogo) {
   return {
     categoria: valorPermitido(datos?.categoria, CATEGORIAS),
     prioridad: valorPermitido(datos?.prioridad, PRIORIDADES),
-    area: valorPermitido(datos?.area, AREAS),
     espacioId: idDelCatalogo(datos?.espacioId, catalogo.espacios),
     recursoId: idDelCatalogo(datos?.recursoId, catalogo.recursos),
     inhabilitar: datos?.inhabilitar === true,

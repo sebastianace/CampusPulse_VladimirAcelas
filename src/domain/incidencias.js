@@ -1,6 +1,7 @@
 // =====================================================================
 // DOMINIO: INCIDENCIAS
 // ---------------------------------------------------------------------
+// Toda incidencia va a REGLAS.AREA_RESPONSABLE (TI): el área no se elige.
 // Al crear una incidencia, algo queda fuera de servicio si:
 //   - el reporte trae inhabilitar: true (o inhabilitarEspacio: true), o
 //   - su prioridad está en REGLAS.PRIORIDADES_QUE_INHABILITAN.
@@ -16,7 +17,7 @@
 // =====================================================================
 
 import { randomUUID } from 'node:crypto';
-import { AREAS, CATEGORIAS, ORIGENES_INCIDENCIA, PRIORIDADES, REGLAS } from '../config/reglas.js';
+import { CATEGORIAS, ORIGENES_INCIDENCIA, PRIORIDADES, REGLAS } from '../config/reglas.js';
 import { DatosInvalidosError, NoEncontradoError, ReglaNegocioError } from './errors.js';
 import { ahoraBogota } from './fechas.js';
 
@@ -44,14 +45,13 @@ function validarDatosIncidencia(db, datos) {
   if (descripcion === '') throw new DatosInvalidosError('Falta la descripción de la incidencia');
   exigirValor(CATEGORIAS, datos.categoria, 'La categoría');
   exigirValor(PRIORIDADES, datos.prioridad, 'La prioridad');
-  exigirValor(AREAS, datos.area, 'El área');
   const origen = datos.origen ?? 'manual';
   exigirValor(ORIGENES_INCIDENCIA, origen, 'El origen');
   return {
     descripcion,
     categoria: datos.categoria,
     prioridad: datos.prioridad,
-    area: datos.area,
+    area: REGLAS.AREA_RESPONSABLE, // TI atiende todo: el área no se elige (si llega otra, se ignora)
     espacioId: idOpcional(db.espacios, datos.espacioId, 'espacio'),
     recursoId: idOpcional(db.recursos, datos.recursoId, 'recurso'),
     origen,

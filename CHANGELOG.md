@@ -13,6 +13,10 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
   `cambiosPermitidos`, así los botones salen de `TRANSICIONES_RECURSO`.
 
 ### Cambiado
+- **Toda incidencia va a Soporte TI** (`REGLAS.AREA_RESPONSABLE`): en el campus, TI es el único equipo que resuelve los
+  problemas técnicos y de infraestructura. El campo "Área responsable" sale del formulario, la IA ya no lo decide (prompt
+  de triaje 1.4) y el flujo de n8n deja el Switch por área y avisa directo a Soporte TI. Las incidencias y los avisos
+  anteriores conservan el área con la que se registraron.
 - Un equipo dañado puede volver directo a disponible y uno disponible se puede marcar dañado (`TRANSICIONES_RECURSO`).
 - Semilla más realista: todos los equipos empiezan disponibles salvo el Portátil HP 03 (dañado), que usa el Modo demo.
 

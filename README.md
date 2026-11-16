@@ -1,7 +1,7 @@
 # Campus Pulse
 
 **Un solo tablero para los espacios, los equipos y las incidencias del campus de Campuslands, con una IA que ayuda pero no
-decide.** Reservas sin cruces, préstamos con reglas, reportes que llegan al área correcta y un asistente que responde
+decide.** Reservas sin cruces, préstamos con reglas, reportes que llegan a Soporte TI y un asistente que responde
 preguntas citando el reglamento.
 
 > Principio del proyecto: **la IA sugiere, las reglas deciden y la persona confirma.**
@@ -27,9 +27,9 @@ tiene que arreglar el problema.
 | Saber qué está libre | **Mapa del campus** en vivo: cada sala con su aforo y estado (libre, ocupada, inhabilitada). |
 | Reservar sin cruces | **Reservas** con reglas de horario, aforo, duración y límite por persona; la base de datos impide reservas cruzadas aunque lleguen a la vez. |
 | Prestar equipos | **Préstamos** con límite por persona y estados del equipo (disponible, prestado, dañado, en reparación). |
-| Reportar sin saber a quién | **Incidencias en lenguaje natural**: la IA sugiere categoría, prioridad, área y lugar; la persona confirma. Lo crítico inhabilita la sala o el equipo al instante. |
+| Reportar sin saber a quién | **Incidencias en lenguaje natural**: la IA sugiere categoría, prioridad y lugar; la persona confirma y la incidencia va a Soporte TI. Lo crítico deja fuera de servicio el equipo (o la sala) al instante. |
 | Evitar reportes repetidos | **"¿Es la misma incidencia?"** con embeddings: si ya la reportaron, el reporte se suma en vez de duplicarse. |
-| Que el área se entere | **Automatización con n8n**: aviso por correo al área responsable de lo crítico y resumen diario con IA. |
+| Que TI se entere | **Automatización con n8n**: aviso por correo a Soporte TI de lo crítico y resumen diario con IA. |
 | Pedir sala o resolver dudas rápido | **Barra Ctrl+K** ("Pregúntale a Pulse"): pide una sala en lenguaje natural o pregunta por el reglamento y recibe la respuesta **con sus fuentes**, o un "no lo sé" honesto. También **por voz**. |
 | Que todo funcione aunque la IA falle | Cada función de IA tiene su **formulario manual**; si Gemini, `pulse-ai` o n8n caen, el resto sigue funcionando. |
 
@@ -128,7 +128,7 @@ tarea. Lo que agregó la v2:
 | 3C | RAG con LangChain: preguntas con fuentes y "no lo sé" |
 | 3D | Voz: dictado y lectura en voz alta |
 | 3E | Decisiones documentadas (RAG frente a fine-tuning, pgvector frente a Qdrant y Chroma) |
-| 3F | n8n: webhook firmado, avisos por área, resumen diario con IA, ingesta y agente |
+| 3F | n8n: webhook firmado, avisos a Soporte TI, resumen diario con IA, ingesta y agente |
 | 4 | Rendimiento y cuota de la IA, revisión de seguridad, README, evidencias y `v2.0.0` |
 
 El detalle de cada cambio está en [CHANGELOG.md](CHANGELOG.md).
@@ -174,7 +174,7 @@ permitido. Resumen:
 
 | Función | Qué hace la IA | Qué deciden las reglas o la persona | Si la IA falla |
 |---|---|---|---|
-| Triaje de incidencias | Sugiere categoría, prioridad, área y lugar | La persona confirma; la salida se valida contra el catálogo | Formulario manual |
+| Triaje de incidencias | Sugiere categoría, prioridad y lugar (el área siempre es Soporte TI) | La persona confirma; la salida se valida contra el catálogo | Formulario manual |
 | Asistente de reservas | Entiende el pedido y explica las opciones | Las reglas eligen las salas; reservar vuelve a validar todo | Formulario de reserva |
 | Incidencias parecidas | Convierte el texto en un vector | Umbral + filtro de lugar; la persona decide si es la misma | Se crea la incidencia igual |
 | Preguntas (RAG) | Responde con los fragmentos recuperados | Sin una cita válida, la respuesta es "no lo sé" | Mensaje claro; el resto sigue |
@@ -248,7 +248,7 @@ Por qué RAG y no fine-tuning, y por qué pgvector y no Qdrant o Chroma: [docs/d
 ### 6. Automatización con n8n y webhooks
 
 Al crear una incidencia, Express envía un **webhook firmado** (HMAC-SHA256, con protección contra repetición) a **n8n**, que
-valida la firma, enruta por área (**Switch**), avisa por correo con un **subworkflow**, une los resultados (**Merge**) y llama
+valida la firma, avisa por correo a Soporte TI con un **subworkflow**, une los resultados (**Merge**) y llama
 de vuelta a Campus Pulse para dejar constancia (*"Avisada: Soporte TI"* en la lista). Las críticas avisan al instante; el resto
 va a un **resumen diario con IA** (Gemini devuelve JSON y un Code node lo valida contra los datos reales antes de enviarlo).
 Hay además un flujo de **ingesta de documentos** por formulario (Document Loader, Embeddings, PGVector), un **agente de
@@ -324,6 +324,7 @@ editar un valor y guardar (`npm run dev` reinicia el servidor solo).
 | Reservas por persona y día | `MAX_RESERVAS_POR_PERSONA_DIA` | 3 |
 | Préstamos activos por persona | `MAX_PRESTAMOS_POR_PERSONA` | 2 |
 | Estados de espacio que no se pueden reservar | `ESTADOS_NO_ASIGNABLES` | inhabilitado, inconsistente |
+| Área que atiende todas las incidencias | `AREA_RESPONSABLE` | Soporte TI |
 | Prioridades que inhabilitan automáticamente | `PRIORIDADES_QUE_INHABILITAN` | critica |
 | Estado al que pasa un equipo cuando una incidencia lo inhabilita | `ESTADO_RECURSO_INHABILITADO` | en_reparacion |
 | Cambios de estado de un equipo | `TRANSICIONES_RECURSO` | disponible → prestado / en reparación / dañado; prestado → disponible / dañado; dañado → en reparación / disponible; en reparación → disponible |

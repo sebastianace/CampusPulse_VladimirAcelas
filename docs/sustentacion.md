@@ -19,9 +19,9 @@ Guion de la demo, plan B, preguntas difíciles y plan de estudio. Pensado para u
 | 0:00 | Portada del README | **Problema:** reservas en hojas sueltas, incidencias por WhatsApp, nadie sabe qué sala está libre ni qué está dañado. **Solución:** un tablero en vivo con reglas claras y una IA que ayuda, pero no decide. |
 | 0:40 | Mapa del campus | Los colores salen de las reglas: libre, ocupada, inhabilitada. Datos oficiales del CSV con su reporte de calidad. |
 | 1:10 | Reservar Skilab para 40 personas | **Rechazada por la regla de aforo** (20 puestos). Luego dos reservas que se cruzan: la base de datos también lo impide. |
-| 1:50 | Reportar "El video beam de Apolo no prende y huele a quemado" | **Triaje con IA:** sugiere categoría, prioridad crítica, área y equipo, y explica por qué. **Yo confirmo**: la IA no guarda nada sola. Solo el video beam queda en reparación y **Apolo se sigue reservando**: se inhabilita lo más específico (la sala completa solo si hay riesgo de la sala, como una gotera cerca de los enchufes). |
+| 1:50 | Reportar "El video beam de Apolo no prende y huele a quemado" | **Triaje con IA:** sugiere categoría, prioridad crítica y equipo, y explica por qué. El área no la elige nadie: todo va a Soporte TI, el único equipo que resuelve lo técnico y la infraestructura. **Yo confirmo**: la IA no guarda nada sola. Solo el video beam queda en reparación y **Apolo se sigue reservando**: se inhabilita lo más específico (la sala completa solo si hay riesgo de la sala, como una gotera cerca de los enchufes). |
 | 2:40 | Reportar "El proyector de Apolo no enciende, sale olor a quemado" | **Embeddings:** "¿Es la misma incidencia?" con ~97 % de parecido. Sumo el reporte en vez de duplicar. |
-| 3:10 | Mailpit | **n8n:** llegó el correo a Soporte TI (webhook firmado → Switch por área → subworkflow). En la lista: "Avisada: Soporte TI". |
+| 3:10 | Mailpit | **n8n:** llegó el correo a Soporte TI (webhook firmado → ¿es crítica? → subworkflow). Toda incidencia va a TI: es el único equipo que resuelve los problemas técnicos y de infraestructura. En la lista: "Avisada: Soporte TI". |
 | 3:40 | Ctrl+K: "¿Cuántas horas puedo reservar una sala?" | **RAG:** responde y muestra **Ver fuentes** (documento y sección). |
 | 4:10 | Ctrl+K: "¿Cuánto cuesta el almuerzo?" | **Dice que no sabe** en vez de inventar, y sugiere a quién preguntar. |
 | 4:30 | Ctrl+K: "Necesito un salón para 30 personas el martes de 2 a 4 pm" | Entiende la intención y los datos; **las reglas** eligen las salas; la IA solo explica. Botón Escuchar (voz). |
@@ -70,7 +70,7 @@ dominas.
 | RAG | `pulse-ai/app/rag.py`, `fragmentos.py`, `almacen.py`, `prompts.py` | Partir → embeber → buscar → (reordenar) → responder con citas; las 3 capas contra inventar | Agregar un documento a `knowledge/`, `npm run conocimiento` y preguntarle algo de él |
 | Memoria del RAG | `pulse-ai/app/llm.py` (`reformular`) | Por qué el modelo decide `depende_del_historial` antes de reescribir | Hacer en Ctrl+K una pregunta, un seguimiento y una de otro tema |
 | Intención y cuota | `src/ai/intencion.js`, `src/ai/limite.js`, `src/routes/ia.js` | Reglas antes que IA, presupuesto global, modo ahorro | Escribir 5 frases y predecir si van a reglas o a la IA; comprobar con `intencionPorReglas` |
-| n8n | `n8n/*.json`, `src/integraciones/n8n.js`, `src/routes/integraciones.js` | Firma HMAC, Switch, subworkflow, Merge, Error Workflow | Abrir el flujo en el editor de n8n y cambiar el destinatario de un área |
+| n8n | `n8n/*.json`, `src/integraciones/n8n.js`, `src/routes/integraciones.js` | Firma HMAC, IF, subworkflow, Merge, Error Workflow | Abrir el flujo en el editor de n8n y cambiar el correo de Soporte TI |
 | Voz | `public/js/voz.js`, `public/js/voz-texto.js` | STT y TTS del navegador, qué pasa si no hay soporte | Dictar un reporte en Chrome y escucharlo |
 
 Orden sugerido (una sesión por fila, de arriba abajo). Las primeras tres son de las Fases 1 y 2, que ya conoces; desde el RAG

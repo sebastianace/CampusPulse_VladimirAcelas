@@ -19,7 +19,6 @@ export const EJEMPLOS_TRIAJE = [
     respuesta: {
       categoria: 'tecnologia',
       prioridad: 'critica',
-      area: 'Soporte TI',
       espacioId: 'apolo',
       recursoId: 'rec-01',
       inhabilitar: true,
@@ -31,7 +30,6 @@ export const EJEMPLOS_TRIAJE = [
     respuesta: {
       categoria: 'tecnologia',
       prioridad: 'media',
-      area: 'Soporte TI',
       espacioId: null,
       recursoId: 'rec-09',
       inhabilitar: false,
@@ -43,7 +41,6 @@ export const EJEMPLOS_TRIAJE = [
     respuesta: {
       categoria: 'aseo',
       prioridad: 'baja',
-      area: 'Servicios generales',
       espacioId: 'azul',
       recursoId: null,
       inhabilitar: false,
@@ -55,7 +52,6 @@ export const EJEMPLOS_TRIAJE = [
     respuesta: {
       categoria: 'seguridad',
       prioridad: 'alta',
-      area: 'Seguridad',
       espacioId: null,
       recursoId: null,
       inhabilitar: false,

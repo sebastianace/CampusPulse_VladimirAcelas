@@ -31,8 +31,6 @@ export const PRIORIDADES = {
   critica: 'Crítica',
 };
 
-export const AREAS = ['Infraestructura', 'Soporte TI', 'Servicios generales', 'Seguridad', 'Bienestar'];
-
 // Etiqueta legible para cualquier valor; si llega uno desconocido se muestra tal cual
 export function etiqueta(catalogo, valor) {
   return catalogo[valor] ?? valor ?? '—';

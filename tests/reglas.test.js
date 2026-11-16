@@ -359,10 +359,17 @@ describe('Incidencias', () => {
     assert.equal(estadoEspacio(db, 'grande'), 'disponible');
   });
 
+  test('toda incidencia va a TI: el área no se elige y si llega otra se ignora', () => {
+    const db = crearDB();
+    for (const area of [undefined, 'Seguridad', 'Cafetería']) {
+      assert.equal(crearIncidencia(db, incidencia({ area, categoria: 'seguridad' })).area, REGLAS.AREA_RESPONSABLE);
+    }
+    assert.equal(REGLAS.AREA_RESPONSABLE, 'Soporte TI');
+  });
+
   test('valores fuera de los enums o IDs inexistentes se rechazan', () => {
     const db = crearDB();
     assert.throws(() => crearIncidencia(db, incidencia({ categoria: 'electrica' })), { status: 422 });
-    assert.throws(() => crearIncidencia(db, incidencia({ area: 'TI' })), { status: 422 });
     assert.throws(() => crearIncidencia(db, incidencia({ espacioId: 'pluton' })), { status: 404 });
     assert.equal(db.incidencias.length, 0);
   });
