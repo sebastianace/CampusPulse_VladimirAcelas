@@ -352,11 +352,13 @@ Además:
 - Una reserva que **ya empezó** no se puede editar ni cancelar.
 - Solo **quien creó la reserva o un admin** la edita o la cancela (las reservas anteriores a la
   migración 007 no tienen dueño registrado: solo las toca un admin).
-- **Solicitudes de salón:** si un salón está reservado pero nadie lo usa (el profesor de las 9:00 no
-  llegó), otra persona lo solicita desde la reserva en curso ("Solicitar este salón"). Un **admin**
-  aprueba o rechaza en la pestaña **Solicitudes**; al aprobar, en una sola transacción, la reserva
-  original termina en ese momento y se crea la nueva. La solicitud se "ensaya" al pedirla, así que no
-  se puede pedir algo que violaría una regla (aforo, horario, cruce con la siguiente reserva). Los
+- **Solicitudes de salón:** si el salón que alguien necesita ya está reservado, lo solicita desde la
+  reserva ("Solicitar este salón") o desde el aviso "ya está reservado" al reservar ("Pedirle el salón
+  a un admin"). Sirve para una reserva en curso (el profesor de las 9:00 no llegó) y para una futura.
+  Un **admin** aprueba o rechaza en la pestaña **Solicitudes**; al aprobar, en una sola transacción,
+  se le quita la franja a la reserva original y se crea la nueva: en curso, la original termina en ese
+  momento; futura, conserva lo que le sobre antes o después (o se cancela si la franja la cubría entera). La solicitud se "ensaya" al pedirla, así que no
+  se puede pedir algo que violaría una regla (aforo, horario, cruce con otra reserva). Los
   avisos son en la app: contador y toast para el admin, y toast para quien pidió y para quien tenía
   la reserva.
 - Una incidencia con `inhabilitar: true` o con una prioridad de `PRIORIDADES_QUE_INHABILITAN`

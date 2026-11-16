@@ -648,6 +648,9 @@ option { color: var(--texto); background: var(--placa-alta); }
   background: rgb(239 83 80 / 0.12);
   border: 1px solid rgb(239 83 80 / 0.4);
 }
+/* "Pedirle el salón a un admin" dentro del aviso de "ya está reservado" */
+.aviso p { margin: 0; }
+.aviso__accion { display: flex; margin-top: 8px; }
 
 .interruptor { display: flex; align-items: center; gap: 10px; font-size: 14px; }
 .interruptor input { width: 18px; min-height: 18px; accent-color: var(--inhabilitado); flex: none; }
@@ -657,7 +660,7 @@ option { color: var(--texto); background: var(--placa-alta); }
 .opciones-alcance .interruptor { min-height: 44px; }
 .opciones-alcance .interruptor:has(input:disabled) { opacity: 0.45; }
 
-/* ---------- Listas (préstamos, incidencias) ---------- */
+/* ---------- Listas (reservas, incidencias) ---------- */
 .lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 
 .item {
@@ -676,7 +679,8 @@ option { color: var(--texto); background: var(--placa-alta); }
 .item[data-estado="resuelta"] { opacity: 0.6; }
 .item__texto { margin: 0; font-size: 13px; }
 .soporte__resumen { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.solicitud { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--linea); }
+/* Formulario "Solicitar este salón" (no confundir con .solicitud de Ctrl+K) */
+.solicitud-salon { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--linea); }
 .solicitud__decision { display: grid; gap: 6px; margin-top: 4px; }
 .solicitud__nota { min-height: 40px; }
 .item__alerta { font-size: 13px; font-weight: 600; color: #ff8a87; }

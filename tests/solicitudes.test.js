@@ -3,6 +3,8 @@
 // ---------------------------------------------------------------------
 // El dominio recibe "ahora" como parámetro: así se prueba un lunes a las
 // 9:20 aunque los tests corran un domingo en la noche.
+// Dos casos: la reserva está EN CURSO (nadie llegó) o es FUTURA (alguien
+// necesita el salón que otro ya reservó).
 // La aprobación se prueba también contra PostgreSQL: cortar la reserva y
 // crear la nueva en la misma transacción no debe chocar con la
 // restricción EXCLUDE (docker compose up -d db).
@@ -21,6 +23,8 @@ const { REGLAS } = await import('../src/config/reglas.js');
 
 // Lunes 16 de noviembre de 2026, 9:20 a. m.: la clase de las 9:00 ya empezó y nadie llegó.
 const AHORA = '2026-11-16T09:20';
+// El mismo lunes a las 8:00: la reserva de las 9:00 todavía es futura.
+const TEMPRANO = '2026-11-16T08:00';
 const ANA = { usuario: 'ana', rol: 'profesor' };      // dueña de la reserva de las 9:00
 const LUIS = { usuario: 'luis', rol: 'profesor' };    // necesita el salón
 const SOFI = { usuario: 'sofi', rol: 'profesor' };
@@ -37,6 +41,10 @@ function crearDB() {
   };
 }
 const pedido = (cambios = {}) => ({ reservaId: 'res-9', responsable: 'Luis', asistentes: 15, fin: '2026-11-16T11:00', motivo: 'Taller de repaso', ...cambios });
+// Pedido de una reserva futura: lleva la franja completa.
+const pedidoFuturo = (cambios = {}) => pedido({ inicio: '2026-11-16T09:00', ...cambios });
+const reserva = (db, id) => db.reservas.find((r) => r.id === id);
+const franja = (r) => `${r.inicio.slice(11)}-${r.fin.slice(11)}`;
 
 describe('Solicitudes: crear', () => {
   test('pedir un salón en curso de otra persona deja la solicitud pendiente y avisa a la dueña', () => {
@@ -48,9 +56,31 @@ describe('Solicitudes: crear', () => {
     assert.equal(db.reservas[0].fin, '2026-11-16T11:00', 'pedir no cambia la reserva: solo aprobar');
   });
 
-  test('solo se piden reservas en curso (409 RESERVA_NO_EN_CURSO)', () => {
-    assert.throws(() => crearSolicitud(crearDB(), pedido({ reservaId: 'res-14' }), LUIS, AHORA), { codigo: 'RESERVA_NO_EN_CURSO' });
-    assert.throws(() => crearSolicitud(crearDB(), pedido(), LUIS, '2026-11-16T11:00'), { codigo: 'RESERVA_NO_EN_CURSO' });
+  test('una reserva que ya terminó no se pide: el salón está libre (409 RESERVA_TERMINADA)', () => {
+    assert.throws(() => crearSolicitud(crearDB(), pedido(), LUIS, '2026-11-16T11:00'), { codigo: 'RESERVA_TERMINADA' });
+  });
+
+  test('una reserva futura también se pide, con la franja que se necesita', () => {
+    const db = crearDB();
+    const s = crearSolicitud(db, pedidoFuturo(), LUIS, TEMPRANO);
+    assert.deepEqual([s.estado, s.inicio, s.fin, s.afectado], ['pendiente', '2026-11-16T09:00', '2026-11-16T11:00', 'ana']);
+    assert.equal(franja(reserva(db, 'res-9')), '09:00-11:00', 'pedir no cambia la reserva: solo aprobar');
+  });
+
+  test('en curso, la nueva empieza al aprobar: el inicio que llegue se ignora', () => {
+    assert.equal(crearSolicitud(crearDB(), pedidoFuturo(), LUIS, AHORA).inicio, null);
+  });
+
+  test('futura: falta el inicio o ya pasó -> 422; franja que no la toca -> 409 FRANJA_LIBRE', () => {
+    assert.throws(() => crearSolicitud(crearDB(), pedido(), LUIS, TEMPRANO), { status: 422 });
+    assert.throws(() => crearSolicitud(crearDB(), pedidoFuturo({ inicio: '2026-11-16T07:00' }), LUIS, TEMPRANO), { status: 422 });
+    assert.throws(() => crearSolicitud(crearDB(), pedidoFuturo({ inicio: '2026-11-16T11:00', fin: '2026-11-16T12:00' }), LUIS, TEMPRANO), { codigo: 'FRANJA_LIBRE' });
+  });
+
+  test('la franja no puede cruzarse con otra reserva del salón (409 CHOCA_CON_OTRA_RESERVA)', () => {
+    const pedidoLargo = pedidoFuturo({ inicio: '2026-11-16T10:00', fin: '2026-11-16T15:00' });
+    assert.throws(() => crearSolicitud(crearDB(), pedidoLargo, LUIS, TEMPRANO), { codigo: 'CHOCA_CON_OTRA_RESERVA', message: /Karen/ });
+    assert.throws(() => crearSolicitud(crearDB(), pedido({ fin: '2026-11-16T15:00' }), LUIS, AHORA), { codigo: 'CHOCA_CON_OTRA_RESERVA' });
   });
 
   test('no se pide la reserva propia ni dos veces la misma', () => {
@@ -63,7 +93,6 @@ describe('Solicitudes: crear', () => {
 
   test('se ensaya la aprobación: si violaría una regla de reservas, se rechaza al pedirla', () => {
     assert.throws(() => crearSolicitud(crearDB(), pedido({ asistentes: 50 }), LUIS, AHORA), { codigo: 'AFORO_EXCEDIDO' });
-    assert.throws(() => crearSolicitud(crearDB(), pedido({ fin: '2026-11-16T15:00' }), LUIS, AHORA), { codigo: 'RESERVA_SOLAPADA' });
     const sinLaDeLaTarde = crearDB();
     sinLaDeLaTarde.reservas.pop();
     const muyLarga = `2026-11-16T${String(9 + REGLAS.MAX_HORAS_RESERVA + 1).padStart(2, '0')}:00`;
@@ -115,6 +144,45 @@ describe('Solicitudes: decidir', () => {
     decidirSolicitud(db, s.id, { decision: 'aprobar' }, JEFA, '2026-11-16T11:15');
     assert.equal(db.reservas.find((r) => r.id === 'res-9').fin, '2026-11-16T11:00', 'no se toca');
     assert.equal(db.reservas.find((r) => r.id === s.reservaNuevaId).inicio, '2026-11-16T11:15');
+  });
+
+  test('futura: si la franja pedida la cubre entera, la reserva original se cancela', () => {
+    const db = crearDB();
+    const s = crearSolicitud(db, pedidoFuturo(), LUIS, TEMPRANO);
+    decidirSolicitud(db, s.id, { decision: 'aprobar' }, JEFA, '2026-11-16T08:10');
+    assert.equal(reserva(db, 'res-9'), undefined);
+    const nueva = reserva(db, s.reservaNuevaId);
+    assert.deepEqual([franja(nueva), nueva.responsable, nueva.creadaPor], ['09:00-11:00', 'Luis', 'luis']);
+    assert.equal(s.reservaId, null, 'la solicitud ya no apunta a una reserva borrada');
+    assert.equal(s.afectado, 'ana', 'Ana sigue enterándose');
+  });
+
+  test('futura: la reserva original conserva lo que sobra antes o después (y si sobra a los dos lados, queda en dos partes)', () => {
+    const aprobar = (inicio, fin) => {
+      const db = crearDB();
+      const s = crearSolicitud(db, pedidoFuturo({ inicio: `2026-11-16T${inicio}`, fin: `2026-11-16T${fin}` }), LUIS, TEMPRANO);
+      decidirSolicitud(db, s.id, { decision: 'aprobar' }, JEFA, TEMPRANO);
+      const deAna = db.reservas.filter((r) => r.creadaPor === 'ana').map(franja).sort();
+      return [deAna, franja(reserva(db, s.reservaNuevaId))];
+    };
+    assert.deepEqual(aprobar('10:00', '11:00'), [['09:00-10:00'], '10:00-11:00']);
+    assert.deepEqual(aprobar('08:30', '10:00'), [['10:00-11:00'], '08:30-10:00']);
+    assert.deepEqual(aprobar('09:30', '10:30'), [['09:00-09:30', '10:30-11:00'], '09:30-10:30']);
+  });
+
+  test('futura que empezó antes de que el admin decidiera: se corta en ese momento, como una en curso', () => {
+    const db = crearDB();
+    const s = crearSolicitud(db, pedidoFuturo(), LUIS, TEMPRANO);
+    decidirSolicitud(db, s.id, { decision: 'aprobar' }, JEFA, '2026-11-16T09:30');
+    assert.equal(franja(reserva(db, 'res-9')), '09:00-09:30');
+    assert.equal(franja(reserva(db, s.reservaNuevaId)), '09:30-11:00');
+  });
+
+  test('si la franja pedida ya pasó, no se aprueba (409 SOLICITUD_VENCIDA)', () => {
+    const db = crearDB();
+    const s = crearSolicitud(db, pedidoFuturo({ fin: '2026-11-16T10:00' }), LUIS, TEMPRANO);
+    assert.throws(() => decidirSolicitud(db, s.id, { decision: 'aprobar' }, JEFA, '2026-11-16T10:00'), { codigo: 'SOLICITUD_VENCIDA' });
+    assert.equal(s.estado, 'pendiente');
   });
 
   test('cada quien ve las suyas y las que cortaron su reserva; el admin ve todas', () => {
@@ -208,17 +276,37 @@ describe('Con PostgreSQL', () => {
     assert.equal(creada.status, 201);
     assert.equal(creada.cuerpo.creadaPor, 'ana');
     assert.equal((await pedir(`/api/reservas/${creada.cuerpo.id}`, 'DELETE', undefined, cookies.luis)).status, 403);
-    // Pedirla tampoco sirve: no está en curso.
-    const pedirla = await pedir('/api/solicitudes', 'POST', pedido({ reservaId: creada.cuerpo.id, fin: `${dia}T11:00` }), cookies.luis);
-    assert.equal(pedirla.cuerpo.error.codigo, 'RESERVA_NO_EN_CURSO');
     assert.equal((await pedir(`/api/reservas/${creada.cuerpo.id}`, 'DELETE', undefined, cookies.ana)).status, 200);
+  });
+
+  test('pedir una reserva futura con la misma franja: al aprobar se cancela la original y se crea la nueva, sin chocar con EXCLUDE', async () => {
+    const f = new Date();
+    f.setDate(f.getDate() + 10);
+    while (!REGLAS.DIAS_HABILES.includes(f.getDay())) f.setDate(f.getDate() + 1);
+    const dia = f.toISOString().slice(0, 10);
+    const deAna = (await pedir('/api/reservas', 'POST', { espacioId: 'cosmos', responsable: 'Ana', asistentes: 20, inicio: `${dia}T09:00`, fin: `${dia}T11:00` }, cookies.ana)).cuerpo;
+    const igual = { espacioId: 'cosmos', responsable: 'Luis', asistentes: 20, inicio: `${dia}T09:00`, fin: `${dia}T11:00` };
+    assert.equal((await pedir('/api/reservas', 'POST', igual, cookies.luis)).cuerpo.error.codigo, 'RESERVA_SOLAPADA', 'reservar directo sigue sin dejar');
+
+    const pedirla = await pedir('/api/solicitudes', 'POST', { ...igual, reservaId: deAna.id, motivo: 'Necesito Cosmos para el taller' }, cookies.luis);
+    assert.equal(pedirla.status, 201);
+    assert.equal(pedirla.cuerpo.inicio, `${dia}T09:00`);
+    const aprobada = await pedir(`/api/solicitudes/${pedirla.cuerpo.id}`, 'PATCH', { decision: 'aprobar' }, cookies.jefa);
+    assert.equal(aprobada.status, 200);
+
+    const db = await leerDB();
+    assert.equal(db.reservas.find((r) => r.id === deAna.id), undefined, 'la reserva de Ana se canceló');
+    const nueva = db.reservas.find((r) => r.id === aprobada.cuerpo.reservaNuevaId);
+    assert.deepEqual([nueva.espacioId, nueva.inicio, nueva.fin, nueva.creadaPor], ['cosmos', `${dia}T09:00`, `${dia}T11:00`, 'luis']);
+    const guardada = db.solicitudes.find((x) => x.id === pedirla.cuerpo.id);
+    assert.deepEqual([guardada.estado, guardada.reservaId, guardada.afectado], ['aprobada', null, 'ana']);
   });
 
   test('solo un admin decide (403 para un profesor) y cada quien ve sus solicitudes', async () => {
     const [s] = (await pedir('/api/solicitudes', 'GET', undefined, cookies.jefa)).cuerpo;
     const respuesta = await pedir(`/api/solicitudes/${s.id}`, 'PATCH', { decision: 'rechazar' }, cookies.luis);
     assert.equal(respuesta.status, 403);
-    assert.equal((await pedir('/api/solicitudes', 'GET', undefined, cookies.luis)).cuerpo.length, 1);
-    assert.equal((await pedir('/api/solicitudes', 'GET', undefined, cookies.ana)).cuerpo.length, 1, 'Ana ve la solicitud que cortó su reserva');
+    assert.equal((await pedir('/api/solicitudes', 'GET', undefined, cookies.luis)).cuerpo.length, 2, 'Luis ve las dos que pidió');
+    assert.equal((await pedir('/api/solicitudes', 'GET', undefined, cookies.ana)).cuerpo.length, 2, 'Ana ve las que cortaron o cancelaron su reserva');
   });
 });

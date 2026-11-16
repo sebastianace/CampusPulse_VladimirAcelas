@@ -18,10 +18,13 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
   del inventario fuera de servicio y un aviso en la app cuando llega una nueva. Es la pestaña con la que abre la app para
   soporte técnico. Botón **Atender**: la incidencia queda "en atención" a nombre de quien la tomó
   (`POST /api/incidencias/:id/atender`, migración `008_atencion_incidencias.sql`).
-- **Solicitudes de salón:** si un salón está reservado pero nadie lo usa, otra persona lo pide desde la reserva en curso
-  y un admin aprueba o rechaza en la pestaña **Solicitudes** (contador y avisos en la app, ya no por correo a TI). Al
-  aprobar, la reserva original termina en ese momento y se crea la nueva en la misma transacción. Migración
-  `007_solicitudes_salon.sql`; rutas `GET`, `POST` y `PATCH /api/solicitudes`.
+- **Solicitudes de salón:** si el salón que alguien necesita ya está reservado, lo pide a un admin, que aprueba o
+  rechaza en la pestaña **Solicitudes** (contador y avisos en la app, ya no por correo a TI). Sirve para una reserva en
+  curso (nadie llegó: al aprobar, la original termina en ese momento) y para una futura (al aprobar, la original
+  conserva lo que le sobre antes o después de la franja pedida, o se cancela si la cubría entera). Se pide con
+  "Solicitar este salón" en la lista de reservas o con "Pedirle el salón a un admin" en el aviso de "ya está
+  reservado", que llena la solicitud con lo que se intentó reservar. Todo en la misma transacción. Migraciones
+  `007_solicitudes_salon.sql` y `011_solicitud_franja.sql`; rutas `GET`, `POST` y `PATCH /api/solicitudes`.
 - Las reservas guardan quién las creó (`creadaPor`) y solo esa persona o un admin las edita o cancela.
 - Pestaña **Inventario** (admin y soporte técnico): la lista de trabajo de TI. Muestra solo los equipos **dañados o en
   reparación**, primero los dañados, y deja enviarlos a reparación o marcarlos disponibles (`PATCH /api/recursos/:id`);
@@ -41,8 +44,9 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
   pasa a la terminal: `npm run restaurar` (sin borrar cuentas). Se quita `POST /api/restaurar`.
 
 ### Cambiado
-- El almacén escribe, tabla por tabla, primero los `UPDATE` y luego los `INSERT` (antes, todos los `INSERT` primero):
-  así cortar una reserva y crear la que la reemplaza no choca con la restricción `EXCLUDE`.
+- El almacén escribe primero todos los `DELETE` (de hijos a padres) y luego, tabla por tabla, los `UPDATE` y después los
+  `INSERT` (antes, los `INSERT` primero y los `DELETE` al final): así cortar o cancelar una reserva y crear la que la
+  reemplaza no choca con la restricción `EXCLUDE`.
 - **Toda incidencia va a Soporte TI** (`REGLAS.AREA_RESPONSABLE`): en el campus, TI es el único equipo que resuelve los
   problemas técnicos y de infraestructura. El campo "Área responsable" sale del formulario, la IA ya no lo decide (prompt
   de triaje 1.4) y el flujo de n8n deja el Switch por área y avisa directo a Soporte TI. Las incidencias y los avisos
