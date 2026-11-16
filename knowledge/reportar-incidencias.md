@@ -21,8 +21,10 @@ generales, Seguridad y Bienestar.
 
 ## Incidencias críticas
 
-Una incidencia de prioridad crítica inhabilita automáticamente el espacio o el equipo afectado: la sala no se
-puede reservar y el equipo pasa a reparación hasta que la incidencia se resuelva.
+Una incidencia de prioridad crítica deja fuera de servicio automáticamente lo más específico: si hay un equipo
+afectado, el equipo pasa a reparación y la sala se sigue reservando; si la incidencia es de la sala (sin equipo) o
+quien reporta elige "Toda la sala", la sala queda inhabilitada y no se puede reservar. Todo vuelve a estar
+disponible cuando la incidencia se resuelve.
 
 ## Si ya reportaron lo mismo
 
