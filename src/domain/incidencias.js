@@ -117,6 +117,21 @@ export function crearIncidencia(db, datos) {
   return incidencia;
 }
 
+/**
+ * Soporte técnico toma la incidencia ("en atención"): queda a su nombre para que el resto del equipo
+ * sepa que alguien ya va en camino. usuario = {usuario, rol}. No cambia el estado: sigue abierta.
+ */
+export function atenderIncidencia(db, incidenciaId, usuario, ahora = ahoraBogota()) {
+  const incidencia = db.incidencias.find((i) => i.id === incidenciaId);
+  if (!incidencia) throw new NoEncontradoError(`No existe la incidencia "${incidenciaId}"`);
+  if (incidencia.estado === 'resuelta') throw new ReglaNegocioError('INCIDENCIA_YA_RESUELTA', 'Esta incidencia ya estaba resuelta');
+  if (incidencia.atendidaPor && incidencia.atendidaPor !== usuario.usuario) {
+    throw new ReglaNegocioError('INCIDENCIA_EN_ATENCION', `Esta incidencia ya la está atendiendo ${incidencia.atendidaPor}`);
+  }
+  if (!incidencia.atendidaPor) Object.assign(incidencia, { atendidaPor: usuario.usuario, fechaAtencion: ahora });
+  return incidencia;
+}
+
 /** Marca la incidencia como resuelta ({estado: "resuelta"}) y rehabilita lo afectado. */
 export function resolverIncidencia(db, incidenciaId, datos) {
   if (datos?.estado !== 'resuelta') throw new DatosInvalidosError('El único cambio permitido es {estado: "resuelta"}');

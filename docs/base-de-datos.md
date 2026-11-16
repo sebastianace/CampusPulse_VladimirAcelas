@@ -52,8 +52,8 @@ Doce tablas, más `schema_migrations` (qué migraciones ya se aplicaron):
 | `incidencias_notificaciones` | A quién avisó n8n de cada incidencia, por qué canal y cuándo |
 
 Las migraciones están en [`db/migrations/`](../db/migrations/): `001_extensiones.sql`,
-`002_esquema.sql`, `003_orden.sql`, `004_embeddings.sql`, `005_notificaciones.sql`, `006_inhabilito_espacio.sql` y
-`007_solicitudes_salon.sql`. Cada archivo corre en una transacción; lo aplicado queda en `schema_migrations`.
+`002_esquema.sql`, `003_orden.sql`, `004_embeddings.sql`, `005_notificaciones.sql`, `006_inhabilito_espacio.sql`,
+`007_solicitudes_salon.sql` y `008_atencion_incidencias.sql` (quién atiende cada incidencia). Cada archivo corre en una transacción; lo aplicado queda en `schema_migrations`.
 
 ### `solicitudes_salon` y `reservas.creada_por` (migración 007)
 

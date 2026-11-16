@@ -21,10 +21,11 @@ sin esperar a que P1 termine.
 | `GET /api/prestamos` | — | `[{id, recursoId, persona, estado, fecha}]` | P1 |
 | `POST /api/prestamos` | `{recursoId, persona}` | `201` + el préstamo | P1 |
 | `POST /api/prestamos/:id/devolver` | `{estadoFinal: "disponible" \| "danado"}` | `200` + el préstamo | P1 |
-| `GET /api/incidencias` | — | `[{id, descripcion, categoria, prioridad, area, espacioId, recursoId, estado, origen, ia, reportesAdicionales, notificaciones: [{canal, area, enviado}]}]` (`reportesAdicionales`: personas que confirmaron que era la misma) | P1 |
+| `GET /api/incidencias` | — | `[{id, descripcion, categoria, prioridad, area, espacioId, recursoId, estado, origen, ia, reportesAdicionales, notificaciones: [{canal, area, enviado}]}]` (`reportesAdicionales`: personas que confirmaron que era la misma). Si está en atención trae también `atendidaPor`, `fechaAtencion` y `atendidaPorNombre` | P1 |
 | `POST /api/incidencias/:id/reportes` | `{descripcion}` | `201 {reporte: {id, incidenciaId, descripcion, reportadoPor, fecha}, totalReportes}`. Suma el reporte a una incidencia abierta; `404` si no existe, `409 INCIDENCIA_YA_RESUELTA` si ya se resolvió | P1 |
 | `GET /api/incidencias/:id/reportes` | — | `[{id, incidenciaId, descripcion, reportadoPor, fecha}]` | P1 |
 | `POST /api/incidencias` | `{descripcion, categoria, prioridad, espacioId, recursoId, inhabilitar, inhabilitarEspacio, origen, ia}` | `201` + la incidencia con `area`, `inhabilito` e `inhabilitoEspacio`. El área siempre es `REGLAS.AREA_RESPONSABLE` (`Soporte TI`): no se envía y, si llega otra, se ignora. Se inhabilita lo más específico: el equipo si lo hay; la sala solo con `inhabilitarEspacio: true` (opcional) o si no hay equipo | P1 |
+| `POST /api/incidencias/:id/atender` | — | `200` + la incidencia con `atendidaPor` y `fechaAtencion` ("en atención"; sigue `abierta`). `409 INCIDENCIA_EN_ATENCION` si ya la atiende otra persona; `409 INCIDENCIA_YA_RESUELTA`. Solo `admin` y `soporte_tecnico`; otro rol → `403` | P1 |
 | `PATCH /api/incidencias/:id` | `{estado: "resuelta"}` | `200` (rehabilita exactamente lo que la incidencia dejó fuera de servicio). Solo `admin` y `soporte_tecnico`; otro rol → `403` | P1 |
 | `GET /api/calidad-datos` | — | `{cargados, validos, inconsistentes: [{fila, motivo}]}` | P1 |
 | `POST /api/auth/registro` | `{usuario, nombre, clave}` | `201 {usuario, nombre, rol}` y abre sesión (cookie). Solo crea la primera cuenta (`admin`); después `403 REGISTRO_CERRADO` | P2 |
@@ -102,7 +103,7 @@ cuenta antigua sin rol, o con un rol que ya no existe (`camper`, `coordinador`),
 | Editar o cancelar una reserva | todas | las suyas | las suyas |
 | Solicitar un salón ocupado | sí | sí | sí |
 | Aprobar o rechazar solicitudes de salón | sí | no | no |
-| Resolver incidencias (rehabilita espacios y equipos) | sí | no | sí |
+| Panel Soporte TI: atender y resolver incidencias (rehabilita espacios y equipos) | sí | no | sí |
 | Crear cuentas | sí | no | no |
 | Actualizar el inventario (estado de equipos y salas) | sí | no | sí |
 

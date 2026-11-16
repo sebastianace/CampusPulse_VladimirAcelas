@@ -150,11 +150,12 @@ El detalle de cada cambio está en [CHANGELOG.md](CHANGELOG.md).
   "Crear una cuenta" (usuario de 3 a 30 caracteres y contraseña de al menos 8): esa cuenta es
   `admin`. Después el registro se cierra (el login oculta "Crear una cuenta") y el admin crea las
   demás desde la pestaña **Usuarios** (`POST /api/usuarios`).
-- La interfaz oculta lo que el rol no puede hacer ("Marcar como resuelta" y las pestañas
-  Inventario y Usuarios); aun así, quien impide las acciones es el servidor, con 403.
+- La interfaz oculta lo que el rol no puede hacer ("Atender", "Marcar como resuelta" y las pestañas
+  Soporte TI, Inventario y Usuarios); aun así, quien impide las acciones es el servidor, con 403.
 - **Tres roles:** `admin` (crea cuentas), `profesor` (reserva, presta y reporta)
-  y `soporte_tecnico` (además resuelve incidencias, lo que rehabilita espacios y equipos, y
-  actualiza el **Inventario**: el estado real de cada equipo y sala). La
+  y `soporte_tecnico` (además trabaja desde el panel **Soporte TI**: todas las incidencias abiertas,
+  de la más urgente a la menos, con aviso de las nuevas; las toma "en atención", las resuelve (lo que
+  rehabilita espacios y equipos) y actualiza el **Inventario**: el estado real de cada equipo y sala). La
   tabla de permisos está en [docs/contrato-api.md](docs/contrato-api.md).
 - Las contraseñas se guardan con hash `scrypt` y sal aleatoria, y las sesiones con el hash de su
   token, en PostgreSQL (tablas `usuarios` y `sesiones`). La sesión dura 8 horas y viaja en una cookie

@@ -34,6 +34,8 @@ duplicado. Si dice que es distinta, se crea una nueva.
 
 ## Quién resuelve las incidencias
 
-Solo el administrador y el personal de soporte técnico pueden marcar una incidencia como resuelta. Un profesor
+Todas las incidencias llegan al panel de Soporte TI, ordenadas de la más urgente a la menos. Cuando alguien de
+soporte técnico toma una, queda "en atención" a su nombre, así todos saben que ya va en camino. Solo el
+administrador y el personal de soporte técnico pueden marcar una incidencia como resuelta. Un profesor
 puede reportar incidencias pero no cerrarlas. Al resolverse una incidencia que había inhabilitado un espacio o un
 equipo, este vuelve a estar disponible.

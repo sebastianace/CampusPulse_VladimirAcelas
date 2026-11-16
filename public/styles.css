@@ -675,6 +675,7 @@ option { color: var(--texto); background: var(--placa-alta); }
 .item__acciones { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
 .item[data-estado="resuelta"] { opacity: 0.6; }
 .item__texto { margin: 0; font-size: 13px; }
+.soporte__resumen { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .solicitud { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--linea); }
 .solicitud__decision { display: grid; gap: 6px; margin-top: 4px; }
 .solicitud__nota { min-height: 40px; }

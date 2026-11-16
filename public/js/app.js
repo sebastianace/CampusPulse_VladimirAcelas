@@ -13,6 +13,7 @@ import { guardarSesion, nombreDeRol } from './sesion.js';
 import { iniciarUsuarios } from './usuarios.js';
 import { iniciarInventario, dibujarInventario } from './inventario.js';
 import { iniciarSolicitudes, dibujarSolicitudes } from './solicitudes.js';
+import { iniciarSoporte, dibujarSoporte } from './soporte.js';
 import * as toasts from './toasts.js';
 
 // Pestañas del panel de acciones
@@ -134,6 +135,7 @@ function iniciarTablero() {
   iniciarUsuarios();
   iniciarInventario({ refrescar, mostrarPestana });
   iniciarSolicitudes({ refrescar });
+  iniciarSoporte({ mostrarPestana });
   iniciarComando({ mostrarPestana });
   iniciarDemo({ mostrarPestana });
   suscribir(dibujarMapa);
@@ -143,6 +145,7 @@ function iniciarTablero() {
   suscribir(dibujarPresion);
   suscribir(dibujarInventario);
   suscribir(dibujarSolicitudes);
+  suscribir(dibujarSoporte);
   refrescar();
   activarRefrescoAutomatico();
 }

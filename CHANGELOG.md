@@ -7,6 +7,11 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 ## [Sin publicar]
 
 ### Agregado
+- Panel **Soporte TI** (soporte técnico y admin): todo daño reportado llega ahí, de la incidencia más urgente a la menos
+  (y dentro de cada prioridad, primero las que nadie ha tomado y las más viejas), con cuánto llevan esperando, un resumen
+  del inventario fuera de servicio y un aviso en la app cuando llega una nueva. Es la pestaña con la que abre la app para
+  soporte técnico. Botón **Atender**: la incidencia queda "en atención" a nombre de quien la tomó
+  (`POST /api/incidencias/:id/atender`, migración `008_atencion_incidencias.sql`).
 - **Solicitudes de salón:** si un salón está reservado pero nadie lo usa, otra persona lo pide desde la reserva en curso
   y un admin aprueba o rechaza en la pestaña **Solicitudes** (contador y avisos en la app, ya no por correo a TI). Al
   aprobar, la reserva original termina en ese momento y se crea la nueva en la misma transacción. Migración

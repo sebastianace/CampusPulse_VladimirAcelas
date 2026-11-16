@@ -111,6 +111,9 @@
         <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-incidencias" id="p-incidencias">
           Incidencias <span class="contador" id="contador-incidencias" hidden></span>
         </button>
+        <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-soporte" id="p-soporte" hidden>
+          Soporte TI <span class="contador" id="contador-soporte" hidden></span>
+        </button>
         <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-solicitudes" id="p-solicitudes">
           Solicitudes <span class="contador" id="contador-solicitudes" hidden></span>
         </button>
@@ -206,6 +209,14 @@
       <!-- Incidencias registradas -->
       <section class="pestana__cuerpo" role="tabpanel" id="tab-incidencias" aria-labelledby="p-incidencias" hidden>
         <ul class="lista" id="lista-incidencias">
+          <li class="vacio">Cargando incidencias…</li>
+        </ul>
+      </section>
+
+      <!-- Soporte TI (soporte técnico y admin): todas las incidencias abiertas, de la más urgente a la menos -->
+      <section class="pestana__cuerpo" role="tabpanel" id="tab-soporte" aria-labelledby="p-soporte" hidden>
+        <div class="soporte__resumen" id="resumen-soporte"></div>
+        <ul class="lista" id="lista-soporte">
           <li class="vacio">Cargando incidencias…</li>
         </ul>
       </section>
