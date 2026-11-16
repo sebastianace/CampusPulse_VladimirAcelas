@@ -34,13 +34,14 @@ Para desarrollar con `npm run dev` se levanta solo la base, como se explica a co
 
 ## Esquema
 
-Diez tablas, más `schema_migrations` (qué migraciones ya se aplicaron):
+Doce tablas, más `schema_migrations` (qué migraciones ya se aplicaron):
 
 | Tabla | Qué guarda |
 |---|---|
 | `espacios` | Salas del campus (id, nombre, tipo, aforo, estado) |
 | `recursos` | Equipos; `espacio_id` puede ser `NULL` si no tienen sala |
-| `reservas` | Reservas de espacios, con la restricción de no solapamiento |
+| `reservas` | Reservas de espacios, con la restricción de no solapamiento y quién la creó (`creada_por`) |
+| `solicitudes_salon` | Pedidos de un salón con reserva en curso, y la decisión del admin |
 | `prestamos` | Préstamos de equipos |
 | `incidencias` | Incidencias; `ia` (jsonb) guarda lo que sugirió la IA |
 | `usuarios` | Cuentas, con rol `admin`, `profesor` o `soporte_tecnico` |
@@ -48,9 +49,18 @@ Diez tablas, más `schema_migrations` (qué migraciones ya se aplicaron):
 | `calidad_datos` | Reporte de calidad del CSV oficial (una sola fila) |
 | `incidencias_embeddings` | El embedding (`vector(768)`, índice HNSW coseno) de cada incidencia, para buscar parecidas |
 | `incidencias_reportes` | Reportes que se suman a una incidencia existente (quién, cuándo y qué escribió) |
+| `incidencias_notificaciones` | A quién avisó n8n de cada incidencia, por qué canal y cuándo |
 
 Las migraciones están en [`db/migrations/`](../db/migrations/): `001_extensiones.sql`,
-`002_esquema.sql`, `003_orden.sql` y `004_embeddings.sql`. Cada archivo corre en una transacción; lo aplicado queda en `schema_migrations`.
+`002_esquema.sql`, `003_orden.sql`, `004_embeddings.sql`, `005_notificaciones.sql`, `006_inhabilito_espacio.sql` y
+`007_solicitudes_salon.sql`. Cada archivo corre en una transacción; lo aplicado queda en `schema_migrations`.
+
+### `solicitudes_salon` y `reservas.creada_por` (migración 007)
+
+Una solicitud pide un salón con una reserva en curso: guarda la reserva pedida (`reserva_id`), quién la pide
+(`solicitante`), de quién era la reserva (`afectado`), los datos de la reserva nueva (`responsable`, `asistentes`, `fin`),
+el `motivo` y la decisión (`estado`: pendiente, aprobada o rechazada; `decidida_por`, `fecha_decision`, `nota_decision`,
+`reserva_nueva_id`). `reservas.creada_por` guarda qué usuario creó cada reserva (null en las anteriores).
 
 ### `incidencias_notificaciones` (migración 005)
 
@@ -134,7 +144,9 @@ transacción**:
 1. `BEGIN` y un bloqueo de escritura (`pg_advisory_xact_lock`): una escritura a la vez.
 2. **Foto:** lee las tablas y arma el objeto `db`.
 3. Llama a `cambio(db)`: las reglas lo modifican. Si lanzan un error, `ROLLBACK` y no se guarda nada.
-4. **Diferencias:** compara `db` con la foto y ejecuta solo los `INSERT`, `UPDATE` y `DELETE` necesarios.
+4. **Diferencias:** compara `db` con la foto y ejecuta solo los `UPDATE`, `INSERT` y `DELETE` necesarios. Tabla por
+   tabla, de padres a hijos, primero los `UPDATE` y luego los `INSERT` (así, al aprobar una solicitud de salón, la
+   reserva original se corta antes de insertar la nueva); los `DELETE` van al final, de hijos a padres.
 5. `COMMIT`.
 
 Cada tabla tiene un repositorio en [`src/data/repos/`](../src/data/repos/) que traduce entre sus filas

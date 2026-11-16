@@ -138,6 +138,18 @@ sigue el mismo método: **síntoma → hipótesis → experimento → causa raí
 - **Lección.** Si el texto de la interfaz y el código dicen cosas distintas, uno de los dos está mal. Probar el sistema
   como lo usaría alguien del campus encuentra errores que los tests no buscaban.
 
+### 15. Aprobar una solicitud de salón chocaba con la restricción EXCLUDE
+- **Síntoma.** Al construir las solicitudes de salón, la prueba contra PostgreSQL de "aprobar" fallaba con
+  `RESERVA_SOLAPADA`, aunque el dominio ya había cortado la reserva original (fin = ahora) antes de crear la nueva.
+- **Hipótesis.** (a) El corte no se guardaba; (b) se guardaba, pero tarde.
+- **Experimento.** En memoria las dos reservas no se cruzaban (los tests del dominio pasaban). En `almacen.js`,
+  `guardarDiferencias` hacía todos los `INSERT` primero y los `UPDATE` después: la reserva nueva se insertaba mientras la
+  original todavía duraba hasta las 11:00. Descartada (a).
+- **Causa raíz.** El orden de escritura. La restricción `EXCLUDE` revisa cada fila en el momento del `INSERT`.
+- **Corrección.** Tabla por tabla, primero los `UPDATE` y luego los `INSERT` (las claves foráneas siguen bien porque las
+  tablas van de padres a hijos). Comprobado al revés: con el orden anterior, el test falla con `RESERVA_SOLAPADA`.
+- **Lección.** Que el dominio esté bien no basta: el orden en que se escriben los cambios también es parte de la regla.
+
 ## Qué se aprendió en general
 1. **Reproducir fuera de la interfaz** (curl, un script) separa los errores del navegador de los del servidor o del modelo.
 2. **Leer el log antes de adivinar:** en los casos 2, 4, 6 y 7 la causa estaba escrita en el log.

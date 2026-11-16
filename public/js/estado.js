@@ -11,6 +11,7 @@ const estado = {
   reservas: [],
   prestamos: [],
   incidencias: [],
+  solicitudes: [],        // solicitudes de salón que le tocan a quien inició sesión
   fecha: hoyISO(),        // día que muestra la línea de tiempo
   actualizado: null,      // hora de la última carga exitosa
 };
@@ -48,6 +49,7 @@ export async function cargarTodo() {
     reservas: `/api/reservas?fecha=${estado.fecha}`,
     prestamos: '/api/prestamos',
     incidencias: '/api/incidencias',
+    solicitudes: '/api/solicitudes',
   };
 
   const claves = Object.keys(consultas);

@@ -10,11 +10,12 @@ const EXCLUSION_VIOLADA = '23P01';
 
 export const reservas = {
   tabla: 'reservas',
-  columnas: ['id', 'espacio_id', 'responsable', 'asistentes', 'inicio', 'fin'],
+  columnas: ['id', 'espacio_id', 'responsable', 'asistentes', 'inicio', 'fin', 'creada_por'],
   desdeFila: (f) => ({
     id: f.id, espacioId: f.espacio_id, responsable: f.responsable, asistentes: f.asistentes, inicio: f.inicio, fin: f.fin,
+    creadaPor: f.creada_por, // usuario que la creó; null en las reservas anteriores a la migración 007
   }),
-  aFila: (r) => [r.id, r.espacioId, r.responsable, r.asistentes, r.inicio, r.fin],
+  aFila: (r) => [r.id, r.espacioId, r.responsable, r.asistentes, r.inicio, r.fin, r.creadaPor ?? null],
   traducirError(error, reserva, db) {
     if (error.code !== EXCLUSION_VIOLADA) return error;
     const nombre = db.espacios.find((e) => e.id === reserva.espacioId)?.nombre ?? reserva.espacioId;

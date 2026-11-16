@@ -33,6 +33,14 @@ Cada responsable puede tener como máximo 3 reservas en un mismo día. La cuarta
 
 Una reserva se puede editar o cancelar solo antes de que empiece. Cuando ya empezó, no se puede cambiar ni
 cancelar. Al editarla se aplican de nuevo todas las reglas: horario, duración, aforo, cruces y límite por persona.
+Solo quien creó la reserva o un administrador puede editarla o cancelarla.
+
+## Pedir un salón que está reservado pero nadie usa
+
+Si un salón tiene una reserva en curso pero la persona no llegó, se puede solicitar con el botón "Solicitar este
+salón" en la lista de reservas. Un administrador aprueba o rechaza la solicitud. Si la aprueba, la reserva original
+termina en ese momento y la sala queda reservada a nombre de quien la pidió hasta la hora que pidió. El aviso llega
+dentro de la aplicación; ya no hay que escribirle a TI por correo.
 
 ## Salas con computadores
 

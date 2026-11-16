@@ -7,6 +7,7 @@ import { pedir } from './api.js';
 import { el, conCarga } from './dom.js';
 import { ESTADOS_ESPACIO, ESTADOS_RECURSO, etiqueta } from './catalogos.js';
 import { ahoraBogota, cambiarFecha, obtenerEstado } from './estado.js';
+import { puedeTocarReserva, sesionActual } from './sesion.js';
 import * as toasts from './toasts.js';
 
 let refrescar = async () => {};
@@ -14,6 +15,9 @@ let mostrarPestana = () => {};
 
 // Id de la reserva que se está editando; null = el formulario crea una reserva nueva
 let editandoId = null;
+
+// Formulario "Solicitar este salón" abierto (se conserva al redibujar la lista, con lo que ya se escribió)
+let solicitando = null; // { reservaId, form }
 
 /** Conecta los formularios. Recibe funciones de app.js para no depender de él en círculo. */
 export function iniciarFormularios(opciones) {
@@ -110,7 +114,9 @@ async function enviarReserva(evento) {
 // ---------- Editar y cancelar reservas ----------
 
 // Lista de reservas del día que muestra la línea de tiempo, con sus acciones.
-// Las que ya empezaron no se pueden tocar (lo valida el backend; aquí solo se ocultan los botones).
+// Las que ya empezaron no se pueden tocar, y las de otra persona solo las toca un admin (lo valida el
+// backend; aquí solo se ocultan los botones). Si una reserva de otra persona está en curso, se puede
+// solicitar el salón: un admin decide (src/domain/solicitudes.js).
 function dibujarReservas(reservas, fecha) {
   document.getElementById('titulo-reservas').textContent = `Reservas del ${fechaCorta(fecha)}`;
   const lista = document.getElementById('lista-reservas');
@@ -122,30 +128,95 @@ function dibujarReservas(reservas, fecha) {
   }
 
   const ahora = ahoraBogota();
+  const yo = sesionActual()?.usuario;
   lista.replaceChildren(...delDia.map((reserva) => {
     const empezo = reserva.inicio <= ahora;
-    return el('li', { className: 'item' },
+    const enCurso = empezo && ahora < reserva.fin;
+    const propia = Boolean(reserva.creadaPor) && reserva.creadaPor === yo;
+    const estado = enCurso ? ' · en curso' : empezo ? ' · terminó' : '';
+    const item = el('li', { className: 'item' },
       el('div', { className: 'item__cabeza' },
         el('span', { className: 'item__titulo' }, nombreEspacio(reserva.espacioId)),
         el('span', { className: 'item__meta dato' }, `${hora(reserva.inicio)}–${hora(reserva.fin)}`)),
-      el('span', { className: 'item__meta' }, `${reserva.responsable} · ${reserva.asistentes} asistentes${empezo ? ' · ya empezó' : ''}`),
-      empezo ? null : el('div', { className: 'item__acciones' },
-        el('button', {
-          type: 'button', className: 'btn btn--secundario btn--chico',
-          onClick: () => empezarEdicion(reserva),
-        }, 'Editar'),
-        el('button', {
-          type: 'button', className: 'btn btn--peligro btn--chico',
-          onClick: (e) => cancelar(reserva, e.currentTarget),
-        }, 'Cancelar reserva')),
-    );
+      el('span', { className: 'item__meta' }, `${reserva.responsable} · ${reserva.asistentes} asistentes${estado}${propia ? ' · tuya' : ''}`));
+
+    if (!empezo && puedeTocarReserva(reserva)) {
+      item.append(el('div', { className: 'item__acciones' },
+        el('button', { type: 'button', className: 'btn btn--secundario btn--chico', onClick: () => empezarEdicion(reserva) }, 'Editar'),
+        el('button', { type: 'button', className: 'btn btn--peligro btn--chico', onClick: (e) => cancelar(reserva, e.currentTarget) }, 'Cancelar reserva')));
+    } else if (enCurso && !propia) {
+      item.append(el('div', { className: 'item__acciones' },
+        el('button', { type: 'button', className: 'btn btn--secundario btn--chico', onClick: () => abrirSolicitud(item, reserva) }, 'Solicitar este salón')));
+      if (solicitando?.reservaId === reserva.id) item.append(solicitando.form);
+    }
+    return item;
   }));
+  if (solicitando && !delDia.some((r) => r.id === solicitando.reservaId)) solicitando = null;
+}
+
+// ---------- Solicitar un salón ocupado ----------
+
+function campo(texto, control, clase = 'campo') {
+  return el('label', { className: clase }, el('span', {}, texto), control);
+}
+
+// Abre, debajo de la reserva en curso, el formulario para pedirle el salón a un admin.
+function abrirSolicitud(item, reserva) {
+  if (solicitando?.reservaId === reserva.id) {
+    solicitando.form.querySelector('textarea').focus();
+    return;
+  }
+  const form = el('form', { className: 'formulario solicitud', noValidate: true },
+    el('p', { className: 'nota' },
+      `Si ${reserva.responsable} no está usando el salón, un admin puede asignártelo. Al aprobarlo, su reserva termina en ese momento y la tuya empieza.`),
+    el('div', { className: 'fila' },
+      campo('Responsable', el('input', { name: 'responsable', type: 'text', required: true, value: sesionActual()?.nombre ?? '', autocomplete: 'off' })),
+      campo('Asistentes', el('input', { name: 'asistentes', type: 'number', min: '1', inputMode: 'numeric', required: true }), 'campo campo--corto')),
+    campo('Hasta', el('input', { name: 'hasta', type: 'time', step: '900', required: true, value: hora(reserva.fin) })),
+    campo('¿Por qué lo necesitas?', el('textarea', {
+      name: 'motivo', rows: 2, maxLength: 300, required: true, placeholder: 'Ej.: el profesor de las 9:00 no llegó y tengo un taller con 15 personas',
+    })),
+    el('div', { className: 'item__acciones' },
+      el('button', { type: 'submit', className: 'btn btn--primario btn--chico' }, 'Enviar solicitud'),
+      el('button', { type: 'button', className: 'btn btn--secundario btn--chico', onClick: () => { solicitando = null; form.remove(); } }, 'Cancelar')));
+  form.addEventListener('submit', (e) => enviarSolicitud(e, reserva));
+  form.addEventListener('input', (e) => limpiarErrorCampo(e.target));
+  solicitando = { reservaId: reserva.id, form };
+  item.append(form);
+  form.asistentes.focus();
+}
+
+async function enviarSolicitud(evento, reserva) {
+  evento.preventDefault();
+  const form = evento.currentTarget;
+  if (!validarCompletos(form)) return;
+  const cuerpo = {
+    reservaId: reserva.id,
+    responsable: form.responsable.value.trim(),
+    asistentes: Number(form.asistentes.value),
+    fin: `${reserva.inicio.slice(0, 10)}T${form.hasta.value}`,
+    motivo: form.motivo.value.trim(),
+  };
+  try {
+    await conCarga(form.querySelector('button[type="submit"]'), 'Enviando…', () => pedir('/api/solicitudes', { metodo: 'POST', cuerpo }));
+    toasts.exito(`Solicitud enviada: ${nombreEspacio(reserva.espacioId)} hasta las ${form.hasta.value}. Un admin la revisará; la respuesta te llega aquí y en la pestaña Solicitudes.`);
+    solicitando = null;
+    form.remove();
+    await refrescar();
+  } catch (error) {
+    mostrarAviso(form, error.message);
+    toasts.error(error);
+  }
 }
 
 // Carga la reserva en el formulario y lo pasa a modo edición
 function empezarEdicion(reserva) {
   if (reserva.inicio <= ahoraBogota()) {
     toasts.error('Esta reserva ya empezó y no se puede editar.');
+    return;
+  }
+  if (!puedeTocarReserva(reserva)) {
+    toasts.error('Solo quien creó la reserva o un administrador puede editarla.');
     return;
   }
   mostrarPestana('p-reservar');

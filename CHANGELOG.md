@@ -7,6 +7,11 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 ## [Sin publicar]
 
 ### Agregado
+- **Solicitudes de salón:** si un salón está reservado pero nadie lo usa, otra persona lo pide desde la reserva en curso
+  y un admin aprueba o rechaza en la pestaña **Solicitudes** (contador y avisos en la app, ya no por correo a TI). Al
+  aprobar, la reserva original termina en ese momento y se crea la nueva en la misma transacción. Migración
+  `007_solicitudes_salon.sql`; rutas `GET`, `POST` y `PATCH /api/solicitudes`.
+- Las reservas guardan quién las creó (`creadaPor`) y solo esa persona o un admin las edita o cancela.
 - Pestaña **Inventario** (admin y soporte técnico) para poner cada equipo y sala en su estado real:
   `PATCH /api/recursos/:id` y `PATCH /api/espacios/:id`. Lo que una incidencia abierta tiene fuera de servicio no se
   cambia a mano (se resuelve la incidencia) y los préstamos siguen en la pestaña Prestar. `GET /api/recursos` trae
@@ -18,6 +23,8 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
   pasa a la terminal: `npm run restaurar` (sin borrar cuentas). Se quita `POST /api/restaurar`.
 
 ### Cambiado
+- El almacén escribe, tabla por tabla, primero los `UPDATE` y luego los `INSERT` (antes, todos los `INSERT` primero):
+  así cortar una reserva y crear la que la reemplaza no choca con la restricción `EXCLUDE`.
 - **Toda incidencia va a Soporte TI** (`REGLAS.AREA_RESPONSABLE`): en el campus, TI es el único equipo que resuelve los
   problemas técnicos y de infraestructura. El campo "Área responsable" sale del formulario, la IA ya no lo decide (prompt
   de triaje 1.4) y el flujo de n8n deja el Switch por área y avisa directo a Soporte TI. Las incidencias y los avisos
