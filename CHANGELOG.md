@@ -23,14 +23,15 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
   aprobar, la reserva original termina en ese momento y se crea la nueva en la misma transacción. Migración
   `007_solicitudes_salon.sql`; rutas `GET`, `POST` y `PATCH /api/solicitudes`.
 - Las reservas guardan quién las creó (`creadaPor`) y solo esa persona o un admin las edita o cancela.
-- Pestaña **Inventario** (admin y soporte técnico) para poner cada equipo y sala en su estado real:
-  `PATCH /api/recursos/:id` y `PATCH /api/espacios/:id`. Lo que una incidencia abierta tiene fuera de servicio no se
-  cambia a mano (se resuelve la incidencia) y los préstamos siguen en la pestaña Prestar. `GET /api/recursos` trae
-  `cambiosPermitidos`, así los botones salen de `TRANSICIONES_RECURSO`.
+- Pestaña **Inventario** (admin y soporte técnico): la lista de trabajo de TI. Muestra solo los equipos **dañados o en
+  reparación**, primero los dañados, y deja enviarlos a reparación o marcarlos disponibles (`PATCH /api/recursos/:id`);
+  al quedar disponible, el equipo sale de la lista. Las salas no aparecen: una sala se inhabilita y se rehabilita con su
+  incidencia. Lo que una incidencia abierta tiene fuera de servicio no se cambia a mano (se resuelve la incidencia).
+  `GET /api/recursos` trae `cambiosPermitidos`, así los botones salen de `TRANSICIONES_RECURSO`.
 
 ### Quitado
 - La pestaña **Datos** y el botón "Restaurar". La validación del CSV oficial sigue igual (la sala inválida queda en gris
-  en el plano y aparece en Inventario) y el reporte sigue en `GET /api/calidad-datos`. Restaurar los datos iniciales
+  en el plano) y el reporte sigue en `GET /api/calidad-datos`. Restaurar los datos iniciales
   pasa a la terminal: `npm run restaurar` (sin borrar cuentas). Se quita `POST /api/restaurar`.
 
 ### Cambiado

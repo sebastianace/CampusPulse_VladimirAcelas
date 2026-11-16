@@ -8,7 +8,7 @@ las cuentas) e iniciar sesión (o **Crear una cuenta** la primera vez).
 
 Los 9 espacios oficiales se cargan desde `data/raw/espacios.csv`. Cualquier registro inválido
 (duplicado, vacío, aforo no numérico o ≤ 0) se valida al cargar, sin romper la aplicación: la sala
-queda en gris en el plano y en **Inventario** aparece como "Dato inconsistente en el CSV oficial".
+queda en gris en el plano, con "Dato inconsistente" en la leyenda.
 El reporte completo, con fila y motivo, está en `GET /api/calidad-datos`. (La pestaña "Datos" se
 quitó: al campus le sirve ver qué sala no se puede usar, no un reporte técnico del archivo.)
 
