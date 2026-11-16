@@ -195,6 +195,11 @@
 
       <!-- Soporte TI (soporte técnico y admin): todas las incidencias abiertas, de la más urgente a la menos -->
       <section class="pestana__cuerpo" role="tabpanel" id="tab-soporte" aria-labelledby="p-soporte" hidden>
+        <!-- Tiempo de respuesta de TI (GET /api/incidencias/indicadores) -->
+        <section class="indicadores" id="indicadores-ti" aria-labelledby="titulo-indicadores">
+          <h3 class="subtitulo" id="titulo-indicadores">Tiempo de respuesta de TI</h3>
+          <div id="cuerpo-indicadores"><p class="nota">Calculando…</p></div>
+        </section>
         <div class="soporte__resumen" id="resumen-soporte"></div>
         <ul class="lista" id="lista-soporte">
           <li class="vacio">Cargando incidencias…</li>
