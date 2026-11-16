@@ -905,10 +905,10 @@ option { color: var(--texto); background: var(--placa-alta); }
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  opacity: 0.7;
-  transition: opacity 0.15s ease, color 0.15s ease;
+  /* Opaco: con transparencia, el texto de abajo se mezclaba con el del botón */
+  transition: color 0.15s ease, border-color 0.15s ease;
 }
-.btn-demo:hover, .btn-demo[aria-expanded="true"] { opacity: 1; color: var(--texto); }
+.btn-demo:hover, .btn-demo[aria-expanded="true"] { color: var(--texto); border-color: var(--tenue); }
 
 .panel-demo {
   width: min(330px, calc(100vw - 40px));
@@ -992,4 +992,7 @@ option { color: var(--texto); background: var(--placa-alta); }
   .mapa-juego { height: 300px; }
   .mapa-juego__ayuda { display: none; }
   .mapa-juego__hud { white-space: normal; right: 10px; }
+  /* El botón "Modo demo" es fijo abajo: espacio al final para que no tape los últimos botones */
+  .tablero { padding-bottom: 76px; }
+  .demo { left: 12px; bottom: 12px; }
 }
