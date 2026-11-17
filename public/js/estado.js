@@ -59,7 +59,7 @@ export async function cargarTodo() {
     else errores.push(resultado.reason);
   });
 
-  // Las salas renombradas en el campus (Sputnik, Salón Morado…) se muestran con su
+  // Las salas renombradas en el campus (Sputnik, Sala de reuniones…) se muestran con su
   // nombre nuevo en todo el tablero; el de la API queda en nombreApi
   estado.espacios = estado.espacios.map((e) => {
     if (e.nombreApi !== undefined) return e; // ya traducido (la ruta falló y se conservó)

@@ -15,7 +15,8 @@ puestos, seguida de Apolo (34), Artemis (32) y Skilab (20).
 
 ## Salas pequeñas para reuniones
 
-Para reuniones de pocas personas están Amarillas verdes (6 puestos), Azul (10) y Blanca (12).
+Para reuniones de pocas personas están la Sala de reuniones (en los datos oficiales se llama Amarillas verdes; 6
+puestos), Azul (10) y Blanca (12). El Salón Morado es privado: no se reserva y ahí no se dictan clases.
 
 ## Equipos fijos de cada sala
 
