@@ -149,7 +149,7 @@ describe('Avisos: de punta a punta con un n8n falso', () => {
     const f = new Date();
     f.setDate(f.getDate() + 10);
     while (!REGLAS.DIAS_HABILES.includes(f.getDay())) f.setDate(f.getDate() + 1);
-    const dia = f.toISOString().slice(0, 10);
+    const dia = `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`; // fecha local (toISOString es UTC: de noche ya es mañana)
     const deAna = (await pedir('/api/reservas', 'POST', { espacioId: 'cosmos', responsable: 'Ana', asistentes: 20, inicio: `${dia}T09:00`, fin: `${dia}T11:00` }, ana)).cuerpo;
     recibidos.splice(0);
 
@@ -171,7 +171,7 @@ describe('Avisos: de punta a punta con un n8n falso', () => {
     const f = new Date();
     f.setDate(f.getDate() + 12);
     while (!REGLAS.DIAS_HABILES.includes(f.getDay())) f.setDate(f.getDate() + 1);
-    const dia = f.toISOString().slice(0, 10);
+    const dia = `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`; // fecha local (toISOString es UTC: de noche ya es mañana)
     const ana = (await pedir('/api/auth/login', 'POST', { usuario: 'ana', clave: 'clave-de-prueba-1' })).cookie;
     const r = (await pedir('/api/reservas', 'POST', { espacioId: 'apolo', responsable: 'Ana', asistentes: 5, inicio: `${dia}T10:00`, fin: `${dia}T11:00` }, ana)).cuerpo;
     const cancelada = await pedir(`/api/reservas/${r.id}`, 'DELETE', undefined, jefa);
