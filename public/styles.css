@@ -164,9 +164,172 @@ body[data-presion="media"] .barra { box-shadow: inset 0 3px 0 var(--ocupada); }
 .sesion { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; }
 .sesion__nombre { color: var(--tenue); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* ---------- Pantalla de inicio de sesión ---------- */
-.acceso { min-height: 100vh; display: grid; place-items: center; padding: 16px; box-sizing: border-box; }
-.acceso__caja { width: min(400px, 100%); display: grid; gap: 24px; padding: 28px; box-sizing: border-box; }
+/* ---------- Pantalla de inicio de sesión ----------
+   Inspirada en la de Campuslands: cielo oscuro con estrellas, brillo morado detrás del título, dos tarjetas con
+   borde claro y botones morados. Los "planetas" son CSS (no se usan imágenes de Campuslands). */
+.acceso {
+  --a-fondo: #2a2a31;
+  --a-morado: #6c63ff;
+  --a-morado-claro: #7f78ff;
+  --a-lavanda: #dcd7ff;
+  --a-borde: #8d8d97;
+  --a-tarjeta: rgb(40 40 47 / 0.86);
+  --a-texto: #ececf1;
+  --a-tenue: #b9b9c4;
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+  background:
+    radial-gradient(ellipse 55% 42% at 50% 40%, rgb(108 99 255 / 0.5), transparent 72%),
+    radial-gradient(ellipse 80% 60% at 50% 100%, rgb(108 99 255 / 0.18), transparent 70%),
+    var(--a-fondo);
+  color: var(--a-texto);
+}
+.acceso__cielo {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1.2px 1.2px at 12% 18%, rgb(255 255 255 / 0.75), transparent),
+    radial-gradient(1px 1px at 72% 9%, rgb(255 255 255 / 0.6), transparent),
+    radial-gradient(1.4px 1.4px at 38% 66%, rgb(255 255 255 / 0.55), transparent),
+    radial-gradient(1px 1px at 88% 44%, rgb(255 255 255 / 0.7), transparent),
+    radial-gradient(1px 1px at 22% 84%, rgb(255 255 255 / 0.5), transparent),
+    radial-gradient(1.3px 1.3px at 58% 28%, rgb(255 255 255 / 0.45), transparent),
+    radial-gradient(1px 1px at 94% 82%, rgb(255 255 255 / 0.6), transparent),
+    radial-gradient(1px 1px at 4% 52%, rgb(255 255 255 / 0.55), transparent);
+  background-size: 340px 340px;
+}
+.acceso__planeta { position: fixed; pointer-events: none; z-index: 0; }
+/* Dona iridiscente, abajo a la izquierda */
+.acceso__planeta--dona {
+  width: 260px; height: 260px; left: 4vw; bottom: 6vh; border-radius: 50%;
+  background: conic-gradient(from 200deg, #4f6ef7, #9d8bff, #f2c9ff, #6fd3f7, #3f5fe6, #4f6ef7);
+  -webkit-mask: radial-gradient(circle, transparent 30%, #000 31.5%, #000 69%, transparent 70.5%);
+  mask: radial-gradient(circle, transparent 30%, #000 31.5%, #000 69%, transparent 70.5%);
+  transform: rotate(-18deg) scaleY(0.92);
+  opacity: 0.9;
+}
+/* Planeta con anillo, a la derecha */
+.acceso__planeta--anillo {
+  width: 150px; height: 150px; right: 5vw; top: 34vh; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #c9f6ff, #5fd0f0 30%, #4c6ef5 62%, #7b5cf0 100%);
+  box-shadow: 0 0 60px rgb(95 208 240 / 0.35);
+}
+.acceso__planeta--anillo::before {
+  content: '';
+  position: absolute;
+  left: -55%; top: 30%; width: 210%; height: 40%;
+  border-radius: 50%;
+  border: 10px solid rgb(178 160 255 / 0.85);
+  border-top-color: transparent;
+  transform: rotate(-18deg);
+}
+
+.acceso__contenido {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 36px;
+  padding: 40px 16px 32px;
+  box-sizing: border-box;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+.acceso__cabeza { text-align: center; display: grid; gap: 6px; }
+.acceso__logo {
+  margin: 0;
+  display: inline-flex; align-items: center; justify-content: center; gap: 14px;
+  font-family: var(--f-display);
+  font-stretch: 78%;
+  font-weight: 800;
+  font-size: clamp(44px, 8vw, 84px);
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: #fff;
+}
+.acceso__pulso {
+  width: 0.28em; height: 0.28em; border-radius: 50%; flex: none;
+  background: var(--disponible);
+  box-shadow: 0 0 0 0.09em rgb(63 182 139 / 0.3);
+  animation: latido 2.4s ease-in-out infinite;
+}
+.acceso__sede { margin: 18px 0 0; font-size: clamp(20px, 2.6vw, 30px); font-weight: 500; color: #f3f3f7; }
+.acceso__titulo {
+  margin: 0;
+  font-family: var(--f-texto);
+  font-size: clamp(26px, 4.2vw, 48px);
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--a-lavanda);
+  text-shadow: 0 0 40px rgb(108 99 255 / 0.55);
+}
+
+.acceso__tarjetas { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; align-items: stretch; }
+.tarjeta-acceso {
+  display: grid;
+  align-content: center;
+  gap: 16px;
+  padding: 40px 44px;
+  border: 3px solid var(--a-borde);
+  border-radius: 24px;
+  background: var(--a-tarjeta);
+  backdrop-filter: blur(6px);
+  box-sizing: border-box;
+}
+.tarjeta-acceso #bloque-info { display: grid; gap: 16px; }
+.tarjeta-acceso #bloque-info[hidden] { display: none; }
+.tarjeta-acceso__titulo { margin: 0; text-align: center; font-size: clamp(24px, 2.6vw, 32px); font-weight: 700; color: var(--a-texto); }
+.tarjeta-acceso__sub { margin: -6px 0 4px; text-align: center; font-size: clamp(19px, 2vw, 24px); font-weight: 600; color: var(--a-texto); }
+.tarjeta-acceso__texto { margin: 0; text-align: center; font-size: 16px; line-height: 1.55; color: var(--a-texto); }
+.tarjeta-acceso__aviso {
+  margin: 4px 0 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.05);
+  font-size: 15px; line-height: 1.5; color: var(--a-texto);
+}
+.tarjeta-acceso__nota { margin: 0; text-align: center; font-size: 14px; color: var(--a-tenue); }
+.acceso__lista { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; font-size: 15px; line-height: 1.45; }
+.acceso__lista li { display: grid; grid-template-columns: 20px 1fr; gap: 8px; }
+.acceso__lista li::before { content: '✦'; color: #f5c84c; }
+.acceso .formulario { gap: 14px; }
+.acceso .campo > span { color: var(--a-tenue); font-size: 13px; }
+.acceso input {
+  min-height: 50px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #d9d9e3;
+  background: #fff;
+  color: #1d1d24;
+  font-size: 16px;
+  caret-color: var(--a-morado);
+}
+.acceso input::placeholder { color: #8a8a96; }
+.acceso input:hover { border-color: #b9b5ff; }
+.btn--acceso {
+  width: 100%;
+  min-height: 54px;
+  margin-top: 6px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--a-morado);
+  color: #fff;
+  font-size: 19px;
+  font-weight: 600;
+}
+.btn--acceso:hover:not(:disabled) { background: var(--a-morado-claro); }
+.acceso__pie { margin: 0; text-align: center; font-size: 14px; color: var(--a-tenue); }
+
+@media (max-width: 760px) {
+  .acceso__contenido { gap: 26px; padding-top: 28px; }
+  .acceso__tarjetas { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .tarjeta-acceso { padding: 26px 20px; border-width: 2px; border-radius: 20px; }
+  .tarjeta-acceso--entrar { order: -1; } /* en el celular, entrar va primero */
+  .acceso__planeta--dona { width: 160px; height: 160px; left: -50px; bottom: 4vh; opacity: 0.45; }
+  .acceso__planeta--anillo { width: 90px; height: 90px; right: -20px; top: 18vh; opacity: 0.5; }
+}
 
 /* ---------- Botones ---------- */
 .btn {

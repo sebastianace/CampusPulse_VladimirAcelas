@@ -27,7 +27,7 @@ sin esperar a que P1 termine.
 | `PATCH /api/incidencias/:id` | `{estado: "resuelta"}` | `200` (rehabilita exactamente lo que la incidencia dejó fuera de servicio). Solo `admin` y `soporte_tecnico`; otro rol → `403` | P1 |
 | `GET /api/calidad-datos` | — | `{cargados, validos, inconsistentes: [{fila, motivo}]}` | P1 |
 | `POST /api/auth/registro` | `{usuario, nombre, clave}` | `201 {usuario, nombre, rol}` y abre sesión (cookie). Solo crea la primera cuenta (`admin`); después `403 REGISTRO_CERRADO` | P2 |
-| `GET /api/auth/estado` | — | `200 {registroAbierto}`; es público. El login lo usa para ocultar "Crear una cuenta" | P2 |
+| `GET /api/auth/estado` | — | `200 {registroAbierto}`; es público. El login lo usa para mostrar "Crea la primera cuenta" solo mientras no exista ninguna | P2 |
 | `GET /api/usuarios` | — | `200 [{usuario, nombre, rol, creado, creadoPor, creadoPorNombre, debeCambiarClave}]` (nunca trae las claves). `creadoPor: null` = la primera cuenta o una anterior a la migración 009. Solo `admin` | P2 |
 | `POST /api/usuarios` | `{usuario, nombre, clave, correo?, rol: "admin" \| "profesor" \| "soporte_tecnico"}` | `201 {usuario, nombre, rol}`. Solo `admin`; no abre sesión. Guarda qué admin la creó | P2 |
 | `GET /api/usuarios/nombres` | — | `200 [{usuario, nombre}]`. Cualquier sesión: sugerencias para el responsable de una reserva | P2 |

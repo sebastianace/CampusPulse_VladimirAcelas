@@ -2,7 +2,7 @@
 
 Demostración de Campus Pulse en 3 minutos. Cada paso muestra una regla de negocio o el papel de
 la IA. Antes de empezar: `npm run restaurar` en la terminal (deja los datos iniciales sin borrar
-las cuentas) e iniciar sesión (o **Crear una cuenta** la primera vez).
+las cuentas) e iniciar sesión (o **Crea la primera cuenta** la primera vez).
 
 ## 1. Datos oficiales y su calidad
 
