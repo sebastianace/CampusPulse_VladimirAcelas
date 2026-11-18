@@ -4,13 +4,15 @@
 // PATCH /api/reservas/:id {campos a cambiar} -> 200 + la reserva editada. Solo quien la creó o un admin (si no, 403).
 // DELETE /api/reservas/:id -> 200 + la reserva cancelada. Solo quien la creó o un admin (si no, 403).
 // Si quien edita o cancela no es el dueño (un admin), al dueño le llega un correo (src/domain/avisos.js).
+// Al cancelar, las solicitudes pendientes de esa reserva se cierran y a quien las pidió le llega que el salón quedó libre.
 import { Router } from 'express';
 import { actualizarDB, leerDB } from '../data/almacen.js';
-import { avisosDeReservaCambiada } from '../domain/avisos.js';
+import { avisosDeReservaCambiada, avisosDeSolicitudesCerradas } from '../domain/avisos.js';
 import { enviarAvisos } from '../integraciones/avisos.js';
 import { DatosInvalidosError } from '../domain/errors.js';
 import { esFechaValida, hoyBogota } from '../domain/fechas.js';
 import { cancelarReserva, crearReserva, editarReserva } from '../domain/reservas.js';
+import { cerrarSolicitudesDe } from '../domain/solicitudes.js';
 
 const router = Router();
 
@@ -45,7 +47,11 @@ router.patch('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   const { reserva, avisos } = await actualizarDB((db) => {
     const cancelada = cancelarReserva(db, req.params.id, req.usuario);
-    return { reserva: cancelada, avisos: avisosDeReservaCambiada(db, cancelada, null, req.usuario.usuario) };
+    const cerradas = cerrarSolicitudesDe(db, cancelada.id, req.usuario);
+    return {
+      reserva: cancelada,
+      avisos: [...avisosDeReservaCambiada(db, cancelada, null, req.usuario.usuario), ...avisosDeSolicitudesCerradas(db, cerradas, req.usuario.usuario)],
+    };
   });
   res.json(reserva);
   enviarAvisos(avisos);

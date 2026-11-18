@@ -13,7 +13,7 @@ import { crearBaseDeLaApp } from './ayuda-bd.js';
 const bd = await crearBaseDeLaApp();
 const { app } = await import('../src/server.js');
 const { actualizarEstadoEspacio, actualizarEstadoRecurso, cambiosManuales } = await import('../src/domain/inventario.js');
-const { crearIncidencia } = await import('../src/domain/incidencias.js');
+const { atenderIncidencia, crearIncidencia, resolverIncidencia } = await import('../src/domain/incidencias.js');
 
 // Base mínima en memoria para las reglas.
 function crearDB() {
@@ -30,6 +30,33 @@ function crearDB() {
   };
 }
 const incidencia = (cambios) => ({ descripcion: 'Falla', categoria: 'tecnologia', prioridad: 'alta', area: 'Soporte TI', espacioId: 'apolo', ...cambios });
+
+describe('Inventario e incidencias juntas', () => {
+  test('una sala cerrada a mano (en obra) sigue cerrada después de resolver una incidencia de esa sala', () => {
+    const db = crearDB();
+    actualizarEstadoEspacio(db, 'apolo', { estado: 'inhabilitado' });
+    const inc = crearIncidencia(db, incidencia({ inhabilitarEspacio: true }));
+    assert.equal(inc.inhabilitoEspacio, false, 'la incidencia no se queda con el cierre de Inventario');
+    resolverIncidencia(db, inc.id, { estado: 'resuelta' });
+    assert.equal(db.espacios[0].estado, 'inhabilitado');
+  });
+
+  test('una sala que cerró la incidencia sí vuelve a estar disponible al resolverla', () => {
+    const db = crearDB();
+    const inc = crearIncidencia(db, incidencia({ inhabilitarEspacio: true }));
+    assert.equal(db.espacios[0].estado, 'inhabilitado');
+    resolverIncidencia(db, inc.id, { estado: 'resuelta' });
+    assert.equal(db.espacios[0].estado, 'disponible');
+  });
+
+  test('si otra persona ya la atiende, el 409 dice su nombre y no su usuario', () => {
+    const db = crearDB();
+    const inc = crearIncidencia(db, incidencia());
+    atenderIncidencia(db, inc.id, { usuario: 'ana.gomez' });
+    assert.throws(() => atenderIncidencia(db, inc.id, { usuario: 'luis' }, undefined, new Map([['ana.gomez', 'Ana Gómez']])),
+      { codigo: 'INCIDENCIA_EN_ATENCION', message: /Ana Gómez/ });
+  });
+});
 
 describe('Inventario: reglas', () => {
   test('un micrófono dañado puede volver directo a disponible', () => {

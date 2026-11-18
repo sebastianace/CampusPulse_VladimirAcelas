@@ -17,7 +17,7 @@ import { crearBaseDeLaApp } from './ayuda-bd.js';
 const bd = await crearBaseDeLaApp();
 const { app } = await import('../src/server.js');
 const { actualizarDB, leerDB } = await import('../src/data/almacen.js');
-const { crearSolicitud, decidirSolicitud, solicitudesDe } = await import('../src/domain/solicitudes.js');
+const { cerrarSolicitudesDe, crearSolicitud, decidirSolicitud, solicitudesDe } = await import('../src/domain/solicitudes.js');
 const { cancelarReserva, crearReserva, editarReserva } = await import('../src/domain/reservas.js');
 const { REGLAS } = await import('../src/config/reglas.js');
 
@@ -196,6 +196,32 @@ describe('Solicitudes: decidir', () => {
   });
 });
 
+describe('Solicitudes: la reserva pedida cambió mientras la solicitud esperaba', () => {
+  test('si la dueña movió su reserva a OTRA sala, aprobar no se la toca: sigue entera en la otra sala', () => {
+    const db = crearDB();
+    db.espacios.push({ id: 'cosmos', nombre: 'Cosmos', aforo: 25, estado: 'disponible' });
+    const s = crearSolicitud(db, pedidoFuturo(), LUIS, TEMPRANO);
+    // Ana se pasa a Cosmos en el mismo horario (ya no ocupa Apolo)
+    Object.assign(reserva(db, 'res-9'), { espacioId: 'cosmos' });
+    decidirSolicitud(db, s.id, { decision: 'aprobar' }, JEFA, TEMPRANO);
+    const deAna = reserva(db, 'res-9');
+    assert.ok(deAna, 'la reserva de Ana no se borró');
+    assert.deepEqual([deAna.espacioId, franja(deAna)], ['cosmos', '09:00-11:00']);
+    const deLuis = db.reservas.find((r) => r.creadaPor === 'luis');
+    assert.deepEqual([deLuis.espacioId, franja(deLuis)], ['apolo', '09:00-11:00']);
+  });
+
+  test('si la dueña cancela su reserva, las solicitudes pendientes se cierran solas con una nota', () => {
+    const db = crearDB();
+    const s = crearSolicitud(db, pedidoFuturo(), LUIS, TEMPRANO);
+    const cerradas = cerrarSolicitudesDe(db, 'res-9', ANA, TEMPRANO);
+    assert.deepEqual(cerradas.map((x) => x.id), [s.id]);
+    assert.deepEqual([s.estado, s.reservaId, s.decididaPor], ['rechazada', null, 'ana']);
+    assert.match(s.notaDecision, /quedó libre/);
+    assert.deepEqual(cerrarSolicitudesDe(db, 'res-14', ANA, TEMPRANO), [], 'sin solicitudes pendientes no cierra nada');
+  });
+});
+
 describe('Reservas: solo quien la creó o un admin la edita o la cancela', () => {
   const futura = (creadaPor) => ({ id: 'res-f', espacioId: 'apolo', responsable: 'Ana', asistentes: 5, inicio: '2099-11-16T10:00', fin: '2099-11-16T11:00', creadaPor });
 
@@ -308,5 +334,20 @@ describe('Con PostgreSQL', () => {
     assert.equal(respuesta.status, 403);
     assert.equal((await pedir('/api/solicitudes', 'GET', undefined, cookies.luis)).cuerpo.length, 2, 'Luis ve las dos que pidió');
     assert.equal((await pedir('/api/solicitudes', 'GET', undefined, cookies.ana)).cuerpo.length, 2, 'Ana ve las que cortaron o cancelaron su reserva');
+  });
+
+  test('cancelar una reserva pedida cierra la solicitud pendiente en la base (sin chocar con la clave foránea)', async () => {
+    const f = new Date();
+    f.setDate(f.getDate() + 12);
+    while (!REGLAS.DIAS_HABILES.includes(f.getDay())) f.setDate(f.getDate() + 1);
+    const dia = `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`;
+    const deAna = (await pedir('/api/reservas', 'POST', { espacioId: 'artemis', responsable: 'Ana', asistentes: 10, inicio: `${dia}T14:00`, fin: `${dia}T16:00` }, cookies.ana)).cuerpo;
+    const pedida = (await pedir('/api/solicitudes', 'POST', {
+      reservaId: deAna.id, responsable: 'Luis', asistentes: 10, inicio: `${dia}T14:00`, fin: `${dia}T16:00`, motivo: 'Taller',
+    }, cookies.luis)).cuerpo;
+    assert.equal((await pedir(`/api/reservas/${deAna.id}`, 'DELETE', undefined, cookies.ana)).status, 200);
+    const guardada = (await leerDB()).solicitudes.find((x) => x.id === pedida.id);
+    assert.deepEqual([guardada.estado, guardada.reservaId], ['rechazada', null]);
+    assert.match(guardada.notaDecision, /quedó libre/);
   });
 });

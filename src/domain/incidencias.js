@@ -14,6 +14,9 @@
 // Recurso inhabilitado -> REGLAS.ESTADO_RECURSO_INHABILITADO.
 // Al resolverla se rehabilita exactamente lo que se apagó, salvo que otra
 // incidencia abierta lo siga inhabilitando.
+// Si la sala ya estaba cerrada A MANO desde Inventario (por ejemplo, en obra),
+// la incidencia no se queda con ese cierre: al resolverla, la sala sigue
+// cerrada hasta que Inventario la rehabilite.
 // =====================================================================
 
 import { randomUUID } from 'node:crypto';
@@ -100,10 +103,19 @@ function sigueInhabilitado(db, incidencia, apago, campo) {
 
 // ---------- funciones públicas ----------
 
+// true si la sala está inhabilitada sin que ninguna incidencia abierta la tenga así: la cerró Inventario a mano.
+function cerradaAMano(db, espacioId) {
+  const espacio = db.espacios.find((e) => e.id === espacioId);
+  return espacio?.estado === 'inhabilitado'
+    && !db.incidencias.some((i) => i.estado === 'abierta' && apagoEspacio(i) && i.espacioId === espacioId);
+}
+
 /** Crea la incidencia y, si corresponde, deja fuera de servicio el equipo o la sala (ver queInhabilitar). */
 export function crearIncidencia(db, datos) {
   const limpia = validarDatosIncidencia(db, datos);
-  const apagar = queInhabilitar({ ...limpia, inhabilitar: datos.inhabilitar, inhabilitarEspacio: datos.inhabilitarEspacio });
+  const pedido = queInhabilitar({ ...limpia, inhabilitar: datos.inhabilitar, inhabilitarEspacio: datos.inhabilitarEspacio });
+  // Una sala cerrada a mano ya está fuera de servicio: la incidencia no la "apaga" (y al resolverla no la reabre)
+  const apagar = { ...pedido, espacio: pedido.espacio && !cerradaAMano(db, limpia.espacioId) };
   const incidencia = {
     id: `inc-${randomUUID().slice(0, 8)}`, ...limpia, estado: 'abierta',
     inhabilito: apagar.espacio || apagar.recurso, inhabilitoEspacio: apagar.espacio, fecha: ahoraBogota(),
@@ -120,13 +132,14 @@ export function crearIncidencia(db, datos) {
 /**
  * Soporte técnico toma la incidencia ("en atención"): queda a su nombre para que el resto del equipo
  * sepa que alguien ya va en camino. usuario = {usuario, rol}. No cambia el estado: sigue abierta.
+ * nombres (Map usuario -> nombre) es opcional: con él, el 409 dice el nombre de quien la atiende.
  */
-export function atenderIncidencia(db, incidenciaId, usuario, ahora = ahoraBogota()) {
+export function atenderIncidencia(db, incidenciaId, usuario, ahora = ahoraBogota(), nombres = new Map()) {
   const incidencia = db.incidencias.find((i) => i.id === incidenciaId);
   if (!incidencia) throw new NoEncontradoError(`No existe la incidencia "${incidenciaId}"`);
   if (incidencia.estado === 'resuelta') throw new ReglaNegocioError('INCIDENCIA_YA_RESUELTA', 'Esta incidencia ya estaba resuelta');
   if (incidencia.atendidaPor && incidencia.atendidaPor !== usuario.usuario) {
-    throw new ReglaNegocioError('INCIDENCIA_EN_ATENCION', `Esta incidencia ya la está atendiendo ${incidencia.atendidaPor}`);
+    throw new ReglaNegocioError('INCIDENCIA_EN_ATENCION', `Esta incidencia ya la está atendiendo ${nombres.get(incidencia.atendidaPor) ?? incidencia.atendidaPor}`);
   }
   if (!incidencia.atendidaPor) Object.assign(incidencia, { atendidaPor: usuario.usuario, fechaAtencion: ahora });
   return incidencia;

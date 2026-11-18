@@ -25,7 +25,11 @@
 //          franja pedida (si sobra a los dos lados, queda en dos partes); si
 //          la franja pedida la cubre entera, se cancela.
 //      Las demás solicitudes pendientes de la misma reserva quedan rechazadas.
+//      Si el dueño movió su reserva a OTRA sala mientras la solicitud esperaba,
+//      no se le toca: ya no ocupa el salón pedido.
 //   5. Solo un admin aprueba o rechaza (lo exige la ruta).
+//   6. Si el dueño cancela su reserva, las solicitudes pendientes de esa reserva
+//      se cierran solas: el salón quedó libre y se reserva normal.
 // Avisos: solo en la app (la pestaña Solicitudes y los toasts).
 // =====================================================================
 
@@ -92,7 +96,8 @@ function aplicarAprobacion(db, solicitud, ahora) {
     throw new ReglaNegocioError('SOLICITUD_VENCIDA', `La franja pedida terminó a las ${hora(solicitud.fin)}: ya no se puede aprobar`);
   }
   const original = db.reservas.find((r) => r.id === solicitud.reservaId);
-  if (original && original.fin > ahora) liberarFranja(db, original, inicio, solicitud.fin, ahora);
+  // Solo se le quita la franja si sigue en el salón pedido (el dueño pudo moverla a otra sala)
+  if (original && original.espacioId === solicitud.espacioId && original.fin > ahora) liberarFranja(db, original, inicio, solicitud.fin, ahora);
   return crearReserva(db, {
     espacioId: solicitud.espacioId, responsable: solicitud.responsable, asistentes: solicitud.asistentes, inicio, fin: solicitud.fin,
   }, { creadaPor: solicitud.solicitante, desdeAhora: true });
@@ -163,6 +168,22 @@ export function decidirSolicitud(db, id, datos, admin, ahora = ahoraBogota()) {
   // Regla 4: el salón ya tiene dueño en esa franja; las otras solicitudes de la misma reserva no se pueden aprobar.
   otrasPendientes.forEach((s) => decidir(s, 'rechazada', 'Se aprobó otra solicitud para este salón'));
   return solicitud;
+}
+
+/**
+ * Regla 6: la reserva reservaId se canceló (o se va a cancelar). Sus solicitudes pendientes quedan rechazadas
+ * con una nota que explica que el salón quedó libre, y sin la referencia a la reserva (que se borra).
+ * usuario: quien canceló. Devuelve las solicitudes cerradas (para avisarles por correo).
+ */
+export function cerrarSolicitudesDe(db, reservaId, usuario, ahora = ahoraBogota()) {
+  const pendientes = db.solicitudes.filter((s) => s.estado === 'pendiente' && s.reservaId === reservaId);
+  for (const s of pendientes) {
+    Object.assign(s, {
+      estado: 'rechazada', reservaId: null, decididaPor: usuario.usuario, fechaDecision: ahora, reservaNuevaId: null,
+      notaDecision: 'Quien tenía la reserva la canceló: el salón quedó libre. Resérvalo directamente.',
+    });
+  }
+  return pendientes;
 }
 
 /**
