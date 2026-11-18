@@ -42,9 +42,9 @@ describe('evaluarCaso', () => {
   });
 
   test('si no menciona lo que debía, no acierta', () => {
-    const r = evaluarCaso(caso(4), { respondido: true, respuesta: 'Apolo y Skilab.', fragmentos: [fragmento('reglamento-de-uso-de-salas.md', true)] });
+    const r = evaluarCaso(caso(4), { respondido: true, respuesta: 'Apolo y Skylabs.', fragmentos: [fragmento('reglamento-de-uso-de-salas.md', true)] });
     assert.equal(r.acerto, false);
-    assert.match(r.motivo, /Spooki/);
+    assert.match(r.motivo, /Sputnik/);
   });
 
   test('decir "no sé" cuando sí estaba la respuesta es un fallo, y se ve si el documento llegó a Gemini', () => {

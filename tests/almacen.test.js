@@ -16,6 +16,10 @@ const { crearEstadoInicial } = await import('../src/data/estado-inicial.js');
 const { REGLAS } = await import('../src/config/reglas.js');
 const { cancelarReserva, crearReserva, editarReserva } = await import('../src/domain/reservas.js');
 const { crearIncidencia, resolverIncidencia } = await import('../src/domain/incidencias.js');
+const { nombreEnCampus } = await import('../src/config/nombres.js');
+
+// Los espacios del estado inicial como los entrega el almacén: con el nombre del campus y el del CSV oficial aparte.
+const comoEnCampus = (espacios) => espacios.map((e) => ({ ...e, nombre: nombreEnCampus(e.id, e.nombre), nombreOficial: e.nombre }));
 
 after(async () => { await bd.cerrar(); });
 
@@ -34,10 +38,23 @@ describe('Lectura', () => {
   test('devuelve los mismos espacios, recursos y calidad de datos del estado inicial, en el mismo orden', async () => {
     const db = await leerDB();
     const esperado = crearEstadoInicial();
-    assert.deepEqual(db.espacios, esperado.espacios);
+    assert.deepEqual(db.espacios, comoEnCampus(esperado.espacios));
     assert.deepEqual(db.recursos, esperado.recursos);
     assert.deepEqual(db.calidadDatos, esperado.calidadDatos);
     assert.deepEqual([db.reservas, db.prestamos, db.incidencias], [[], [], []]);
+  });
+});
+
+describe('Nombres de las salas en el campus', () => {
+  test('las salas renombradas se leen con el nombre del campus y la base conserva el del CSV oficial', async () => {
+    const leidos = (await leerDB()).espacios;
+    assert.deepEqual(['spooki', 'skilab', 'amarillas-verdes'].map((id) => leidos.find((e) => e.id === id).nombre),
+      ['Sputnik', 'Skylabs', 'Sala de reuniones']);
+    // Cambiar el estado de una sala renombrada no reescribe su nombre oficial
+    await actualizarDB((db) => { db.espacios.find((e) => e.id === 'skilab').estado = 'inhabilitado'; });
+    const { rows } = await bd.pool.query("SELECT nombre FROM espacios WHERE id = 'skilab'");
+    assert.equal(rows[0].nombre, 'Skilab');
+    await actualizarDB((db) => { db.espacios.find((e) => e.id === 'skilab').estado = 'disponible'; });
   });
 });
 
@@ -126,6 +143,6 @@ describe('Restaurar', () => {
     await actualizarDB((db) => crearReserva(db, reserva()));
     const db = await restaurarDB();
     assert.deepEqual([db.reservas, db.prestamos, db.incidencias], [[], [], []]);
-    assert.deepEqual(db.espacios, crearEstadoInicial().espacios);
+    assert.deepEqual(db.espacios, comoEnCampus(crearEstadoInicial().espacios));
   });
 });

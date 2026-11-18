@@ -455,6 +455,9 @@ estado inicial.
   Amarillas verdes 6, Artemis 32) y **nunca se modifica**. Un test verifica que se carga completo.
 - Los nombres se normalizan (espacios sobrantes, mayúsculas) y el ID se genera del nombre:
   `Amarillas verdes` → `amarillas-verdes`.
+- **Nombres en el campus:** tres salas hoy se llaman distinto que en el CSV: Spooki es **Sputnik**, Skilab es
+  **Skylabs** y Amarillas verdes es la **Sala de reuniones**. La traducción vive solo en `src/config/nombres.js`: la
+  base guarda el nombre oficial y la app (tablero, IA, correos, documentos del RAG) usa el del campus.
 - Un registro con aforo vacío, no numérico, decimal o menor o igual a 0 se carga como
   **inconsistente**: se ve en gris y no se puede reservar.
 - Las filas sin nombre y los nombres duplicados solo aparecen en el reporte de calidad (se
@@ -462,8 +465,8 @@ estado inicial.
 - Un registro inválido nunca detiene la carga.
 - Los recursos tecnológicos son **ficticios** (`"ficticio": true` en `data/seed/recursos.json`),
   porque no se entregó un inventario oficial.
-- **Salas con computadores:** Apolo, Spooki, Artemis y Skilab tienen computadores; Cosmos, Blanca,
-  Azul, Amarillas verdes y el Auditorio no. El CSV oficial no trae este dato: lo aportó el equipo
+- **Salas con computadores:** Apolo, Sputnik, Artemis y Skylabs tienen computadores; Cosmos, Blanca,
+  Azul, la Sala de reuniones y el Auditorio no. El CSV oficial no trae este dato: lo aportó el equipo
   a partir de su conocimiento de las salas del campus. Vive en `ESPACIOS_CON_COMPUTADORES` de
   `src/config/reglas.js` y se puede cambiar en vivo.
 - **Mesas de ping-pong:** `Ping-pong 1` y `Ping-pong 2` (aforo 4) no están en el CSV oficial; se

@@ -25,7 +25,7 @@ ocupada, rojo inhabilitada y gris dato inconsistente.
 |---|---|
 | Reservar **Cosmos** para 20 personas | Se acepta |
 | Reservar **Cosmos** en la misma franja | Se rechaza por solapamiento |
-| Reservar **Skilab** para 40 personas | Se rechaza por aforo (máximo 20) |
+| Reservar **Skylabs** para 40 personas | Se rechaza por aforo (máximo 20) |
 
 ![Reserva rechazada por aforo](capturas/03-reserva-rechazada.png)
 

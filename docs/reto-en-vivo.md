@@ -32,7 +32,7 @@ Con `npm run dev`, al guardar `reglas.js` el servidor se reinicia solo en 1 o 2 
 
 | Pedido del jurado | Qué cambiar en `reglas.js` | Cómo comprobarlo en pantalla |
 |---|---|---|
-| "Permitan 10 % más del aforo" | `MARGEN_AFORO: 1.1` | Reservar Skilab (aforo 20) para 22 personas: ahora se acepta. Con 23 se rechaza. |
+| "Permitan 10 % más del aforo" | `MARGEN_AFORO: 1.1` | Reservar Skylabs (aforo 20) para 22 personas: ahora se acepta. Con 23 se rechaza. |
 | "Las incidencias altas también inhabilitan" | `PRIORIDADES_QUE_INHABILITAN: ['alta', 'critica']` | Reportar una incidencia de prioridad **Alta** sobre una sala: se pone roja. |
 | "No se reserva los sábados" | `DIAS_HABILES: [1, 2, 3, 4, 5]` (quitar el `6`) | Reservar un sábado: "No se puede reservar los sábados". |
 | "Máximo 2 horas por reserva" | `MAX_HORAS_RESERVA: 2` | Reservar de 9:00 a 12:00: "Una reserva puede durar como máximo 2 horas". |
