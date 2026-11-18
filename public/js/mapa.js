@@ -138,7 +138,7 @@ function salaDe(espacio, yaUbicados) {
 function dibujarLista(espacios, sinUbicar) {
   const lista = contenedor();
   if (!espacios.length) {
-    lista.replaceChildren(el('p', { className: 'vacio' }, 'No hay espacios cargados. Revisa la pestaña Datos o restaura los datos iniciales.'));
+    lista.replaceChildren(el('p', { className: 'vacio' }, 'No hay espacios cargados. Revisa la conexión o restaura los datos iniciales (npm run restaurar).'));
     return;
   }
 

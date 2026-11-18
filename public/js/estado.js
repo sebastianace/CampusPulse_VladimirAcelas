@@ -17,6 +17,10 @@ const estado = {
 
 const suscriptores = new Set();
 
+// Último "hoy" conocido: si el tablero queda abierto pasada la medianoche y se estaba viendo el día de hoy,
+// la línea de tiempo pasa sola al día nuevo (si se estaba viendo otro día, se respeta)
+let ultimoHoy = estado.fecha;
+
 // Huella de los últimos datos dibujados: si una recarga trae exactamente
 // lo mismo, no se redibuja (así no se cierran selects ni se reinician animaciones)
 let ultimaHuella = '';
@@ -42,6 +46,11 @@ export function cambiarFecha(fecha) {
  * no deja la pantalla en blanco.
  */
 export async function cargarTodo() {
+  const hoy = hoyISO();
+  if (hoy !== ultimoHoy) {
+    if (estado.fecha === ultimoHoy) estado.fecha = hoy;
+    ultimoHoy = hoy;
+  }
   const consultas = {
     espacios: '/api/espacios',
     recursos: '/api/recursos',

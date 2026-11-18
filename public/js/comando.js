@@ -90,13 +90,15 @@ async function enviar(evento) {
 
 // ---------- 2a. Mostrar la conversación de preguntas ----------
 
-function dibujarConversacion() {
+// extra: lo que va después del último turno (por ejemplo, un error), antes del enlace para empezar de nuevo.
+function dibujarConversacion(extra = []) {
   resultado().replaceChildren(
     ...turnos.map((turno, i) => crearTurno(turno, i === turnos.length - 1)),
+    ...extra,
     botonNuevaConversacion(),
   );
-  const filas = resultado().querySelectorAll('.turno');
-  filas[filas.length - 1]?.scrollIntoView({ block: 'nearest' });
+  const ultimo = extra.length ? extra[0] : [...resultado().querySelectorAll('.turno')].at(-1);
+  ultimo?.scrollIntoView({ block: 'nearest' });
 }
 
 function crearTurno({ pregunta, respuesta }, esElUltimo) {
@@ -235,9 +237,10 @@ function ajustarEnFormulario(solicitud) {
 
 // ---------- Errores ----------
 
+// Si había una conversación, el error se muestra debajo de ella: no se borra lo que ya se habló.
 function dibujarError(error) {
   const iaCaida = esFallaDeIA(error);
-  resultado().replaceChildren(
+  const partes = [
     el('p', { className: 'aviso', role: 'alert' }, error.message),
     iaCaida
       ? el('button', {
@@ -247,8 +250,9 @@ function dibujarError(error) {
       : el('p', { className: 'nota' }, error.codigo === 'SOLICITUD_INCOMPLETA'
         ? 'Reescribe el pedido con cuántas personas, qué día y de qué hora a qué hora.'
         : 'Revisa el mensaje e inténtalo de nuevo.'),
-    botonNuevaConversacion(),
-  );
+  ];
+  if (turnos.length) dibujarConversacion(partes);
+  else resultado().replaceChildren(...partes, botonNuevaConversacion());
 }
 
 // ---------- Formato ----------
