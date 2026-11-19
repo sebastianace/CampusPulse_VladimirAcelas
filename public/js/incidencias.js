@@ -10,7 +10,7 @@
 
 import { pedir } from './api.js';
 import { el, conCarga } from './dom.js';
-import { AREAS, CATEGORIAS, PRIORIDADES, etiqueta } from './catalogos.js';
+import { CATEGORIAS, PRIORIDADES, etiqueta } from './catalogos.js';
 import { obtenerEstado } from './estado.js';
 import { puede } from './sesion.js';
 import * as toasts from './toasts.js';
@@ -84,10 +84,10 @@ function abrirFormulario({ modo, descripcion, sugerencia = {}, motivoFallo }) {
     el('div', { className: 'fila' },
       campoSelect('categoria', 'Categoría', opcionesDe(CATEGORIAS), sugerencia.categoria, esIA),
       campoSelect('prioridad', 'Prioridad', opcionesDe(PRIORIDADES), sugerencia.prioridad, esIA)),
-    campoSelect('area', 'Área responsable', AREAS.map((a) => [a, a]), sugerencia.area, esIA),
     campoSelect('espacioId', 'Espacio afectado', espacios.map((e) => [e.id, e.nombre]), sugerencia.espacioId, false, 'Ninguno'),
     campoSelect('recursoId', 'Equipo afectado', recursos.map((r) => [r.id, r.nombre]), sugerencia.recursoId, false, 'Ninguno'),
     campoFueraDeServicio(sugerencia),
+    el('p', { className: 'nota' }, 'La atiende Soporte TI: es el equipo que resuelve los problemas técnicos y de infraestructura del campus.'),
     el('p', { className: 'nota' }, 'Según las reglas del campus, algunas prioridades dejan fuera de servicio el equipo afectado (o la sala, si no hay equipo) aunque elijas "Nada".'),
     el('div', { className: 'item__acciones' },
       el('button', { type: 'submit', className: 'btn btn--primario' }, esIA ? 'Confirmar y registrar' : 'Registrar incidencia'),
@@ -121,11 +121,11 @@ function cerrarFormularios() {
 
 async function registrar(form, sugerencia, { omitirParecidas = false } = {}) {
   const datos = Object.fromEntries(new FormData(form));
-  const faltantes = ['descripcion', 'categoria', 'prioridad', 'area'].filter((campo) => !String(datos[campo] ?? '').trim());
+  const faltantes = ['descripcion', 'categoria', 'prioridad'].filter((campo) => !String(datos[campo] ?? '').trim());
   if (faltantes.length) {
     faltantes.forEach((campo) => form[campo].setAttribute('aria-invalid', 'true'));
     form[faltantes[0]].focus();
-    toasts.error('Completa descripción, categoría, prioridad y área antes de registrar.');
+    toasts.error('Completa descripción, categoría y prioridad antes de registrar.');
     return;
   }
 
@@ -133,7 +133,6 @@ async function registrar(form, sugerencia, { omitirParecidas = false } = {}) {
     descripcion: datos.descripcion.trim(),
     categoria: datos.categoria,
     prioridad: datos.prioridad,
-    area: datos.area,
     espacioId: datos.espacioId || null,
     recursoId: datos.recursoId || null,
     // "Solo el equipo" -> inhabilitar; "Toda la sala" -> inhabilitar y inhabilitarEspacio (ver src/domain/incidencias.js)
@@ -145,10 +144,10 @@ async function registrar(form, sugerencia, { omitirParecidas = false } = {}) {
       razon: sugerencia.razon ?? null,
       modelo: sugerencia.modelo ?? null,
       sugerencia: {
-        categoria: sugerencia.categoria, prioridad: sugerencia.prioridad, area: sugerencia.area,
+        categoria: sugerencia.categoria, prioridad: sugerencia.prioridad,
         espacioId: sugerencia.espacioId, recursoId: sugerencia.recursoId, inhabilitar: sugerencia.inhabilitar,
       },
-      editadaPorPersona: ['categoria', 'prioridad', 'area', 'espacioId', 'recursoId']
+      editadaPorPersona: ['categoria', 'prioridad', 'espacioId', 'recursoId']
         .some((c) => (sugerencia[c] ?? null) !== (c.endsWith('Id') ? datos[c] || null : datos[c])),
     } : null,
   };
@@ -225,7 +224,7 @@ function itemParecido(parecida, cuerpo) {
     el('div', { className: 'item__cabeza' },
       el('span', { className: 'item__titulo' }, parecida.descripcion),
       el('span', { className: 'etiqueta', title: 'Qué tan parecido es el significado del texto (similitud coseno)' }, `Parecido ${Math.round(parecida.similitud * 100)} %`)),
-    el('span', { className: 'item__meta' }, [parecida.area, lugar, otros ? `${otros} reporte${otros > 1 ? 's' : ''} más` : null].filter(Boolean).join(' · ')),
+    el('span', { className: 'item__meta' }, [lugar, otros ? `${otros} reporte${otros > 1 ? 's' : ''} más` : null].filter(Boolean).join(' · ')),
     el('div', { className: 'item__acciones' },
       el('button', {
         type: 'button', className: 'btn btn--primario btn--chico',
@@ -302,7 +301,7 @@ function crearItemIncidencia(incidencia) {
         : null,
       ...(incidencia.notificaciones ?? []).map((n) => el('span', { className: 'etiqueta', title: `Aviso enviado por ${n.canal}` }, `Avisada: ${n.area}`)),
       resuelta ? el('span', { className: 'etiqueta etiqueta--resuelta' }, 'Resuelta') : null),
-    el('span', { className: 'item__meta' }, [incidencia.area, lugar].filter(Boolean).join(' · ')),
+    lugar ? el('span', { className: 'item__meta' }, lugar) : null,
     !resuelta && fueraDeServicio(incidencia).length
       ? el('span', { className: 'item__alerta' }, `Fuera de servicio: ${fueraDeServicio(incidencia).join(' · ')}`)
       : null,

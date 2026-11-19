@@ -2,15 +2,16 @@
 // TRIAJE DE INCIDENCIAS CON IA
 // ---------------------------------------------------------------------
 // Recibe la descripción en lenguaje natural y la IA SUGIERE:
-// categoría, prioridad, área responsable, espacio y recurso afectados,
-// si conviene inhabilitar y una razón corta.
+// categoría, prioridad, espacio y recurso afectados,
+// si conviene inhabilitar y una razón corta. El área no: toda incidencia va a TI
+// (REGLAS.AREA_RESPONSABLE), así que no se gasta la IA en decidirla.
 // - El prompt (src/ai/prompts/triaje.js) lleva el catálogo real (la base de datos) y los valores cerrados.
 // - La respuesta se valida con validar.js: lo que no existe queda en null.
 // - Nada se guarda aquí: la persona confirma y luego el frontend llama
 //   POST /api/incidencias, donde las reglas de P1 deciden.
 // =====================================================================
 
-import { AREAS, CATEGORIAS, PRIORIDADES } from '../config/reglas.js';
+import { CATEGORIAS, PRIORIDADES } from '../config/reglas.js';
 import { leerDB } from '../data/almacen.js';
 import { generarJSON } from './cliente.js';
 import { promptTriaje } from './prompts/triaje.js';
@@ -28,14 +29,13 @@ export function crearSchema(catalogo) {
     properties: {
       categoria: lista(CATEGORIAS),
       prioridad: lista(PRIORIDADES),
-      area: lista(AREAS),
       espacioId: catalogo.espacios.length ? idOpcional(catalogo.espacios) : { type: 'STRING', nullable: true },
       recursoId: catalogo.recursos.length ? idOpcional(catalogo.recursos) : { type: 'STRING', nullable: true },
       inhabilitar: { type: 'BOOLEAN' },
       razon: { type: 'STRING' },
     },
-    required: ['categoria', 'prioridad', 'area', 'espacioId', 'recursoId', 'inhabilitar', 'razon'],
-    propertyOrdering: ['categoria', 'prioridad', 'area', 'espacioId', 'recursoId', 'inhabilitar', 'razon'],
+    required: ['categoria', 'prioridad', 'espacioId', 'recursoId', 'inhabilitar', 'razon'],
+    propertyOrdering: ['categoria', 'prioridad', 'espacioId', 'recursoId', 'inhabilitar', 'razon'],
   };
 }
 
@@ -43,7 +43,7 @@ export function crearSchema(catalogo) {
 
 /**
  * Pide a la IA el triaje de una descripción y lo valida contra el catálogo.
- * Devuelve {categoria, prioridad, area, espacioId, recursoId, inhabilitar, razon, modelo}.
+ * Devuelve {categoria, prioridad, espacioId, recursoId, inhabilitar, razon, modelo}.
  * Si la IA falla lanza IANoDisponibleError (503).
  */
 export async function triarIncidencia(descripcion) {

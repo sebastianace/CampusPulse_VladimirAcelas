@@ -46,6 +46,10 @@ export const REGLAS = {
   // Estados de espacio que impiden reservarlo o recomendarlo.
   ESTADOS_NO_ASIGNABLES: ['inhabilitado', 'inconsistente'],
 
+  // Área que atiende TODAS las incidencias. En el campus, TI es el único equipo que resuelve
+  // problemas técnicos y de infraestructura: el área no la elige la persona ni la IA, la pone el código.
+  AREA_RESPONSABLE: 'Soporte TI',
+
   // Prioridades de incidencia que inhabilitan automáticamente el espacio o
   // recurso afectado, aunque no se marque "inhabilitar".
   // Ejemplo de cambio: ['alta', 'critica'].
@@ -123,7 +127,8 @@ export const CATEGORIAS = ['infraestructura', 'tecnologia', 'aseo', 'seguridad',
 // Prioridades de una incidencia, de menor a mayor.
 export const PRIORIDADES = ['baja', 'media', 'alta', 'critica'];
 
-// Áreas responsables a las que se enruta una incidencia.
+// Áreas que puede tener una incidencia guardada. Las nuevas siempre van a REGLAS.AREA_RESPONSABLE;
+// las demás quedan para las incidencias y los avisos anteriores (y para el CHECK de la base).
 export const AREAS = ['Infraestructura', 'Soporte TI', 'Servicios generales', 'Seguridad', 'Bienestar'];
 
 // Estados de una incidencia. El contrato solo nombra "resuelta" (PATCH);

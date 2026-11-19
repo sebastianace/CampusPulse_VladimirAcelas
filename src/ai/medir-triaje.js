@@ -23,7 +23,7 @@ import { promptTriaje } from './prompts/triaje.js';
 import { crearSchema } from './triaje.js';
 import { validarTriaje } from './validar.js';
 
-export const CAMPOS = ['categoria', 'prioridad', 'area', 'espacioId', 'recursoId', 'inhabilitar'];
+export const CAMPOS = ['categoria', 'prioridad', 'espacioId', 'recursoId', 'inhabilitar'];
 const PAUSA_MS = 13_000; // 5 peticiones por minuto en la capa gratis de Gemini
 
 /** Compara el triaje obtenido con el esperado campo por campo. Sin triaje (error), todo falla. */

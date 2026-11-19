@@ -33,7 +33,7 @@ ocupada, rojo inhabilitada y gris dato inconsistente.
 
 Reportar: _"Hay una gotera en el techo de Apolo y el agua cae cerca de los enchufes"_.
 
-1. La IA sugiere categoría, prioridad, área y espacio, con su razón (**"Sugerido por IA"**).
+1. La IA sugiere categoría, prioridad y espacio, con su razón (**"Sugerido por IA"**). El área no se elige: toda incidencia la atiende Soporte TI.
 2. La persona revisa, puede editar y elige **qué queda fuera de servicio**: nada, solo el equipo o toda la sala.
    Como el riesgo es de la sala, viene marcado "Toda la sala".
 3. Al confirmar, **Apolo se pone rojo**.

@@ -21,7 +21,7 @@ schema JSON y se vuelve a validar en `src/ai/validar.js`.
 
 | Prompt | Archivo | Lo usa | Versión |
 |---|---|---|---|
-| Triaje de incidencias | `prompts/triaje.js` | `POST /api/ia/triaje` | 1.3 |
+| Triaje de incidencias | `prompts/triaje.js` | `POST /api/ia/triaje` | 1.4 |
 | Extracción de la solicitud de reserva | `prompts/solicitud.js` | `POST /api/ia/recomendar`, paso 1 | 1.0 |
 | Explicación de las salas recomendadas | `prompts/explicacion.js` | `POST /api/ia/recomendar`, paso 3 | 1.1 |
 | Intención del mensaje (reservar o preguntar) | `prompts/intencion.js` | `POST /api/ia/asistente` | 1.0 |
@@ -34,6 +34,14 @@ y la misma personalidad de Pulse. Un test de Node comprueba que las conductas de
 lugares (`tests/conocimiento-docs.test.js`).
 
 ## Historial de versiones
+
+### 1.4: el triaje ya no decide el área
+- **Decisión de negocio:** en el campus, TI es el único equipo que resuelve los problemas técnicos y de infraestructura.
+  Toda incidencia va a `REGLAS.AREA_RESPONSABLE` (`Soporte TI`), así que el área la pone el código, no la IA ni la persona.
+- Se quitaron del prompt la guía "categoría → área" y el campo `area` del procedimiento, y `area` del schema de la
+  respuesta. La salida es más corta y la IA tiene una decisión menos en la que equivocarse.
+- La categoría sigue: dice **qué tipo** de problema es (tecnología, infraestructura, aseo…), no quién lo atiende.
+- Las mediciones de 1.2 y 1.3 de abajo incluyen el campo área porque se hicieron antes de este cambio.
 
 ### 1.3: el criterio de "inhabilitar" es el riesgo para las personas
 - La política decía "inhabilitar si el espacio o equipo no se puede usar con seguridad"; el modelo marcaba como inhabilitado

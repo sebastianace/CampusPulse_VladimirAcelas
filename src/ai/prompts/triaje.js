@@ -1,19 +1,10 @@
-// Prompt del triaje de incidencias (POST /api/ia/triaje). Versión 1.3 (criterio de inhabilitar aclarado)
+// Prompt del triaje de incidencias (POST /api/ia/triaje). Versión 1.4 (sin área: toda incidencia va a TI)
 // Ver docs/biblioteca-prompts.md.
 
-import { AREAS, CATEGORIAS, PRIORIDADES, REGLAS } from '../../config/reglas.js';
+import { CATEGORIAS, PRIORIDADES, REGLAS } from '../../config/reglas.js';
 import { construirPrompt } from './estructura.js';
 import { EJEMPLOS_TRIAJE } from './ejemplos-triaje.js';
 import { tonoDePulse } from './personalidad.js';
-
-// Área sugerida para cada categoría (guía para la IA, no una regla).
-const AREA_POR_CATEGORIA = {
-  infraestructura: 'Infraestructura',
-  tecnologia: 'Soporte TI',
-  aseo: 'Servicios generales',
-  seguridad: 'Seguridad',
-  bienestar: 'Bienestar',
-};
 
 // Una línea por espacio y por recurso: así la IA relaciona nombres con IDs.
 function describirCatalogo({ espacios, recursos }) {
@@ -42,13 +33,11 @@ function formatearEjemplos() {
 export const USAR_EJEMPLOS_TRIAJE = false;
 
 export function promptTriaje(descripcion, catalogo, { conEjemplos = USAR_EJEMPLOS_TRIAJE } = {}) {
-  const guiaAreas = Object.entries(AREA_POR_CATEGORIA).map(([c, a]) => `${c} -> ${a}`).join(', ');
   return construirPrompt({
     rol: 'Eres el asistente de triaje de incidencias del campus Campuslands. Tu objetivo es clasificar el reporte y responder SOLO con el JSON pedido.',
     tono: tonoDePulse('En el JSON, la razón es una frase corta en español.'),
     politicas: [
       `"critica" si hay riesgo para personas (humo, olor a quemado, chispas, cables expuestos, inundación).`,
-      `Área responsable: guía ${guiaAreas}; para "otro" elige la más cercana.`,
       `inhabilitar es true SOLO si usar el espacio o el equipo pone en riesgo a las personas (electricidad, fuego, agua cerca de tomas eléctricas, estructura dañada) hasta que lo reparen. Las prioridades ${REGLAS.PRIORIDADES_QUE_INHABILITAN.join(', ')} inhabilitan siempre.`,
       'Un equipo o mueble que simplemente no funciona o está dañado sin riesgo (no enciende, sin imagen, pantalla rota, batería muerta) NO se inhabilita: queda reportado para repararlo y la sala se sigue usando.',
       'Si no se identifica ningún espacio ni equipo del catálogo, inhabilitar es false: no hay nada que inhabilitar.',
@@ -60,7 +49,6 @@ export function promptTriaje(descripcion, catalogo, { conEjemplos = USAR_EJEMPLO
     procedimiento: [
       `categoria: una de ${CATEGORIAS.join(', ')}.`,
       `prioridad: una de ${PRIORIDADES.join(', ')}.`,
-      `area: una de ${AREAS.join(', ')}.`,
       'espacioId: el espacio mencionado o donde está el recurso afectado; null si no se puede saber.',
       'recursoId: el equipo mencionado; null si no se menciona un equipo del catálogo.',
       'inhabilitar: según la política anterior.',

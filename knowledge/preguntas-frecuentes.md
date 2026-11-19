@@ -39,6 +39,5 @@ escrito en lenguaje natural y explica las opciones que las reglas ya aprobaron.
 
 ## ¿A quién le pregunto algo que no encuentro aquí?
 
-Para dudas de equipos y conexión, a Soporte TI; para daños en las instalaciones, a Infraestructura; para limpieza,
-a Servicios generales; para temas de seguridad, a Seguridad; y para temas de bienestar, a Bienestar. Lo más
-práctico es reportar una incidencia y dejar que llegue al área responsable.
+Para cualquier daño o problema técnico o de las instalaciones, lo más práctico es reportar una incidencia: todas
+llegan a Soporte TI, que es el equipo que las resuelve. Para temas de bienestar, a Bienestar.

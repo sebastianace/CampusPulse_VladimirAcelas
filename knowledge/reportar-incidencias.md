@@ -10,19 +10,21 @@ de agua o un problema de seguridad. Cualquier persona con sesión puede reportar
 ## Cómo reportar
 
 En la pestaña de reportes se escribe qué pasó y dónde. También se puede dictar por voz con el botón del micrófono
-si el navegador lo permite. El botón "Clasificar con IA" sugiere la categoría, la prioridad, el área responsable y
-el espacio o equipo afectado. La persona revisa la sugerencia y confirma; la IA nunca registra nada sola.
+si el navegador lo permite. El botón "Clasificar con IA" sugiere la categoría, la prioridad y el espacio o
+equipo afectado. La persona revisa la sugerencia y confirma; la IA nunca registra nada sola.
 
-## Categorías, prioridades y áreas
+## Categorías, prioridades y quién la atiende
 
 Las categorías son: infraestructura, tecnología, aseo, seguridad, bienestar y otro. Las prioridades, de menor a
-mayor, son: baja, media, alta y crítica. Las áreas responsables son: Infraestructura, Soporte TI, Servicios
-generales, Seguridad y Bienestar.
+mayor, son: baja, media, alta y crítica. Todas las incidencias las atiende Soporte TI, que es el equipo que
+resuelve los problemas técnicos y de infraestructura del campus; por eso no hay que elegir un área.
 
 ## Incidencias críticas
 
-Una incidencia de prioridad crítica inhabilita automáticamente el espacio o el equipo afectado: la sala no se
-puede reservar y el equipo pasa a reparación hasta que la incidencia se resuelva.
+Una incidencia de prioridad crítica deja fuera de servicio automáticamente lo más específico: si hay un equipo
+afectado, el equipo pasa a reparación y la sala se sigue reservando; si la incidencia es de la sala (sin equipo) o
+quien reporta elige "Toda la sala", la sala queda inhabilitada y no se puede reservar. Todo vuelve a estar
+disponible cuando la incidencia se resuelve.
 
 ## Si ya reportaron lo mismo
 

@@ -12,7 +12,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { readFileSync, readdirSync } from 'node:fs';
-import { AREAS, PRIORIDADES } from '../src/config/reglas.js';
+import { PRIORIDADES, REGLAS } from '../src/config/reglas.js';
 import { firmar } from '../src/integraciones/n8n.js';
 
 const requerir = createRequire(import.meta.url);
@@ -69,14 +69,13 @@ describe('estructura de los flujos exportados', () => {
     assert.match(readFileSync(new URL('../compose.yaml', import.meta.url), 'utf8'), /N8N_WEBHOOK_URL: http:\/\/n8n:5678\/webhook\/incidencia-nueva/);
   });
 
-  test('hay una rama del Switch por cada área del campus, cada una con su destinatario', () => {
-    const reglas = nodoDe('pulseIncidenciaNueva', 'Área responsable').parameters.rules.values;
-    assert.deepEqual(reglas.map((r) => r.outputKey).sort(), [...AREAS].sort(), 'si cambian las áreas en reglas.js, actualiza el Switch');
-    for (const area of AREAS) {
-      const destinatario = nodoDe('pulseIncidenciaNueva', `Destinatario: ${area}`);
-      assert.ok(destinatario, `falta el destinatario de ${area}`);
-      assert.match(JSON.stringify(destinatario.parameters), /@campus\.local/);
-    }
+  test('toda incidencia crítica va al destinatario del área responsable (TI), sin Switch por área', () => {
+    const flujo = flujos.get('pulseIncidenciaNueva');
+    assert.ok(!flujo.nodes.some((n) => n.type === 'n8n-nodes-base.switch'), 'todo va a TI: no hay que enrutar por área');
+    const destinatario = nodoDe('pulseIncidenciaNueva', `Destinatario: ${REGLAS.AREA_RESPONSABLE}`);
+    assert.ok(destinatario, `falta el destinatario de ${REGLAS.AREA_RESPONSABLE}`);
+    assert.match(JSON.stringify(destinatario.parameters), /@campus\.local/);
+    assert.equal(flujo.connections['¿Es crítica?'].main[0][0].node, destinatario.name);
   });
 
   test('la prioridad que dispara el aviso inmediato es una prioridad válida', () => {

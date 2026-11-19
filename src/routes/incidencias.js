@@ -1,6 +1,7 @@
 // Rutas de incidencias.
 // GET   /api/incidencias      -> [{id, descripcion, categoria, prioridad, area, espacioId, recursoId, estado, origen, ia, reportesAdicionales, notificaciones}]
-// POST  /api/incidencias      {descripcion, categoria, prioridad, area, espacioId, recursoId, inhabilitar, inhabilitarEspacio, origen, ia}
+// POST  /api/incidencias      {descripcion, categoria, prioridad, espacioId, recursoId, inhabilitar, inhabilitarEspacio, origen, ia}
+//                             (el área no se envía: siempre es REGLAS.AREA_RESPONSABLE)
 //                             -> 201 + la incidencia (deja fuera de servicio lo más específico: el equipo si lo hay;
 //                             la sala solo con inhabilitarEspacio: true o si no hay equipo)
 // POST  /api/incidencias/:id/reportes {descripcion} -> 201 {reporte, totalReportes}: suma el reporte de
