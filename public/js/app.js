@@ -12,6 +12,7 @@ import { iniciarDemo } from './demo.js';
 import { cerrarSesion, pedir } from './api.js';
 import { guardarSesion, nombreDeRol } from './sesion.js';
 import { iniciarUsuarios } from './usuarios.js';
+import { iniciarInventario, dibujarInventario } from './inventario.js';
 import * as toasts from './toasts.js';
 
 // Pestañas del panel de acciones
@@ -132,6 +133,7 @@ function iniciarTablero() {
   iniciarTimeline();
   iniciarCalidad({ refrescar });
   iniciarUsuarios();
+  iniciarInventario({ refrescar, mostrarPestana });
   iniciarComando({ mostrarPestana });
   iniciarDemo({ mostrarPestana });
   suscribir(dibujarMapa);
@@ -139,6 +141,7 @@ function iniciarTablero() {
   suscribir(actualizarFormularios);
   suscribir(dibujarIncidencias);
   suscribir(dibujarPresion);
+  suscribir(dibujarInventario);
   // El reporte de calidad se carga después de los espacios (los usa para nombrar los grises)
   refrescar().then(cargarCalidad);
   activarRefrescoAutomatico();

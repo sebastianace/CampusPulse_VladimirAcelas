@@ -19,5 +19,7 @@ incidencia indicando el equipo para que Soporte TI lo revise.
 
 ## Equipos dañados o en reparación
 
-Un equipo dañado pasa a reparación y, cuando lo arreglan, vuelve a disponible. Un equipo dañado no puede volver
-a disponible sin pasar por reparación.
+Soporte TI actualiza el estado de los equipos en la pestaña Inventario. Un equipo dañado pasa a reparación o, si
+Soporte TI lo arregla en el momento, vuelve directo a disponible. Un equipo en reparación vuelve a disponible cuando lo
+arreglan. Si una incidencia abierta tiene el equipo fuera de servicio, vuelve a estar disponible cuando se resuelve
+la incidencia.

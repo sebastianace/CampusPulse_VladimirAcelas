@@ -8,7 +8,9 @@ sin esperar a que P1 termine.
 | Método y ruta | Cuerpo que recibe | Respuesta OK | Dueño |
 |---|---|---|---|
 | `GET /api/espacios` | — | `[{id, nombre, tipo, aforo, estado, ocupadoAhora, computadores}]` | P1 |
-| `GET /api/recursos` | — | `[{id, nombre, tipo, espacioId, estado}]` | P1 |
+| `GET /api/recursos` | — | `[{id, nombre, tipo, espacioId, estado, cambiosPermitidos}]` (`cambiosPermitidos`: estados a los que Inventario lo puede pasar, según `TRANSICIONES_RECURSO`) | P1 |
+| `PATCH /api/recursos/:id` | `{estado}` | `200` + el recurso. Inventario: respeta `TRANSICIONES_RECURSO`; `409 USAR_PRESTAMOS` si se pide `prestado` o el equipo está prestado; `409 INCIDENCIA_ABIERTA` si una incidencia abierta lo tiene fuera de servicio. Solo `admin` y `soporte_tecnico`; otro rol → `403` | P1 |
+| `PATCH /api/espacios/:id` | `{estado: "disponible" \| "inhabilitado"}` | `200` + el espacio. Inventario: `409 INCIDENCIA_ABIERTA` si una incidencia abierta la inhabilitó; `409 ESPACIO_INCONSISTENTE` si su dato del CSV es inconsistente. Solo `admin` y `soporte_tecnico`; otro rol → `403` | P1 |
 | `GET /api/reservas?fecha=YYYY-MM-DD` | — | `[{id, espacioId, responsable, asistentes, inicio, fin}]` | P1 |
 | `POST /api/reservas` | `{espacioId, responsable, asistentes, inicio, fin}` | `201` + la reserva | P1 |
 | `PATCH /api/reservas/:id` | Los campos a cambiar de `{espacioId, responsable, asistentes, inicio, fin}` | `200` + la reserva editada (vuelve a pasar por todas las reglas) | P1 |

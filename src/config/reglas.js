@@ -57,12 +57,13 @@ export const REGLAS = {
 
   // Cambios de estado permitidos para un recurso tecnológico.
   // Clave = estado actual; valor = estados a los que puede pasar.
-  // Ejemplo: para que un equipo dañado vuelva directo a disponible,
-  // poner  danado: ['en_reparacion', 'disponible'].
+  // Un equipo dañado puede volver directo a disponible: TI a veces lo
+  // arregla en el momento (un cable suelto) sin pasar por reparación.
+  // Un equipo disponible se puede marcar dañado desde Inventario.
   TRANSICIONES_RECURSO: {
-    disponible: ['prestado', 'en_reparacion'],
+    disponible: ['prestado', 'en_reparacion', 'danado'],
     prestado: ['disponible', 'danado'],
-    danado: ['en_reparacion'],
+    danado: ['en_reparacion', 'disponible'],
     en_reparacion: ['disponible'],
   },
 

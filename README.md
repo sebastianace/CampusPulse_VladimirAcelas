@@ -153,7 +153,8 @@ El detalle de cada cambio está en [CHANGELOG.md](CHANGELOG.md).
 - La interfaz oculta lo que el rol no puede hacer (el botón "Restaurar", "Marcar como resuelta" y
   la pestaña Usuarios); aun así, quien impide las acciones es el servidor, con 403.
 - **Tres roles:** `admin` (crea cuentas y restaura datos), `profesor` (reserva, presta y reporta)
-  y `soporte_tecnico` (además resuelve incidencias, lo que rehabilita espacios y equipos). La
+  y `soporte_tecnico` (además resuelve incidencias, lo que rehabilita espacios y equipos, y
+  actualiza el **Inventario**: el estado real de cada equipo y sala). La
   tabla de permisos está en [docs/contrato-api.md](docs/contrato-api.md).
 - Las contraseñas se guardan con hash `scrypt` y sal aleatoria, y las sesiones con el hash de su
   token, en PostgreSQL (tablas `usuarios` y `sesiones`). La sesión dura 8 horas y viaja en una cookie
@@ -325,7 +326,7 @@ editar un valor y guardar (`npm run dev` reinicia el servidor solo).
 | Estados de espacio que no se pueden reservar | `ESTADOS_NO_ASIGNABLES` | inhabilitado, inconsistente |
 | Prioridades que inhabilitan automáticamente | `PRIORIDADES_QUE_INHABILITAN` | critica |
 | Estado al que pasa un equipo cuando una incidencia lo inhabilita | `ESTADO_RECURSO_INHABILITADO` | en_reparacion |
-| Cambios de estado de un equipo | `TRANSICIONES_RECURSO` | disponible → prestado / en reparación; prestado → disponible / dañado; dañado → en reparación; en reparación → disponible |
+| Cambios de estado de un equipo | `TRANSICIONES_RECURSO` | disponible → prestado / en reparación / dañado; prestado → disponible / dañado; dañado → en reparación / disponible; en reparación → disponible |
 | Salas con computadores (si el pedido los necesita, solo se recomiendan estas) | `ESPACIOS_CON_COMPUTADORES` | apolo, spooki, artemis, skilab |
 | Tipos de espacio que la IA nunca recomienda | `TIPOS_FUERA_DE_RECOMENDACION` | mesa_juego |
 | Consultas a la IA por usuario en la ventana | `LIMITE_IA_PETICIONES` / `LIMITE_IA_VENTANA_MINUTOS` | 5 por minuto |
