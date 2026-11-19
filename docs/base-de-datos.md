@@ -55,8 +55,9 @@ Las migraciones están en [`db/migrations/`](../db/migrations/): `001_extensione
 `002_esquema.sql`, `003_orden.sql`, `004_embeddings.sql`, `005_notificaciones.sql`, `006_inhabilito_espacio.sql`,
 `007_solicitudes_salon.sql`, `008_atencion_incidencias.sql` (quién atiende cada incidencia), `009_cuentas.sql` (quién creó
 cada cuenta y contraseñas temporales), `010_sin_prestamos.sql` (cierra los préstamos activos, devuelve a disponible lo
-prestado y quita el estado "prestado") `011_solicitud_franja.sql` (franja de una solicitud de salón a futuro) y `012_correo.sql` (correo opcional de cada
-cuenta para los avisos). Cada archivo corre en una transacción; lo aplicado queda en `schema_migrations`.
+prestado y quita el estado "prestado") `011_solicitud_franja.sql` (franja de una solicitud de salón a futuro) , `012_correo.sql` (correo opcional de cada
+cuenta para los avisos) y `013_nombres_en_campus.sql` (el televisor de Skylabs; los espacios conservan el nombre del CSV
+oficial y el nombre del campus se pone al leerlos, `src/config/nombres.js`). Cada archivo corre en una transacción; lo aplicado queda en `schema_migrations`.
 
 ### `solicitudes_salon` y `reservas.creada_por` (migración 007)
 

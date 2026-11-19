@@ -13,6 +13,10 @@
 //   3. Reserva editada o cancelada por OTRA persona (un admin): a su dueño.
 //   4. Nunca se avisa a quien hizo el cambio, ni a una reserva sin dueño
 //      conocido (anterior a la migración 007).
+//   5. El dueño canceló una reserva que alguien había pedido: a quien la
+//      pidió, que el salón quedó libre.
+//   6. Una sala queda fuera de servicio (incidencia o Inventario): a cada
+//      dueño de una reserva de esa sala que todavía no termina.
 // =====================================================================
 
 const hora = (f) => f.slice(11, 16);
@@ -67,7 +71,8 @@ export function avisosDeDecision(db, decididas, originalAntes, autor) {
     const nueva = db.reservas.find((r) => r.id === s.reservaNuevaId);
     avisos.push({ para: s.solicitante, asunto: `Te asignaron ${sala}`,
       mensaje: `Un admin aprobó tu solicitud: ${sala} es tuyo ${nueva ? franja(nueva) : franjaPedida(s)}, a nombre de ${s.responsable}.${conNota(s)}` });
-    if (originalAntes && s.afectado) {
+    // Si el dueño había movido su reserva a otra sala, no perdió nada: no hay aviso para él
+    if (originalAntes && s.afectado && originalAntes.espacioId === s.espacioId) {
       // Lo que le quedó al dueño: sus reservas de esa sala que caen dentro de la franja que tenía
       const quedan = db.reservas
         .filter((r) => r.creadaPor === s.afectado && r.espacioId === originalAntes.espacioId
@@ -98,4 +103,34 @@ export function avisosDeReservaCambiada(db, antes, despues, autor) {
     : { para: antes.creadaPor, asunto: `Cancelaron tu reserva de ${sala}`,
       mensaje: `Un admin canceló tu reserva de ${describir(antes)}. Si la necesitas, vuelve a reservar o habla con un admin.` };
   return sinAutor([aviso], autor);
+}
+
+/** Regla 5. cerradas: las solicitudes que se cerraron al cancelar la reserva (cerrarSolicitudesDe). autor: quien canceló. */
+export function avisosDeSolicitudesCerradas(db, cerradas, autor) {
+  return sinAutor(cerradas.map((s) => {
+    const sala = nombreSala(db, s.espacioId);
+    return {
+      para: s.solicitante,
+      asunto: `${sala} quedó libre`,
+      mensaje: `Quien tenía reservado ${sala} canceló su reserva, así que tu solicitud ${franjaPedida(s)} se cerró: `
+        + 'el salón quedó libre. Si todavía lo necesitas, resérvalo directamente en Campus Pulse.',
+    };
+  }), autor);
+}
+
+/**
+ * Regla 6. espacioId: la sala que acaba de quedar fuera de servicio. motivo: por qué (texto corto).
+ * ahora ("YYYY-MM-DDTHH:mm"): solo se avisa de las reservas que todavía no terminan. autor: quien la inhabilitó.
+ */
+export function avisosDeSalaInhabilitada(db, espacioId, motivo, autor, ahora) {
+  const sala = nombreSala(db, espacioId);
+  const reservas = db.reservas
+    .filter((r) => r.espacioId === espacioId && r.fin > ahora && r.creadaPor)
+    .sort((a, b) => a.inicio.localeCompare(b.inicio));
+  return sinAutor(reservas.map((r) => ({
+    para: r.creadaPor,
+    asunto: `${sala} quedó fuera de servicio`,
+    mensaje: `${sala} quedó fuera de servicio (${motivo}). Tienes una reserva ahí ${franja(r)}, a nombre de ${r.responsable}: `
+      + 'mientras la sala no se rehabilite no se podrá usar. Busca otra sala en Campus Pulse o habla con un admin.',
+  })), autor);
 }

@@ -14,8 +14,8 @@ import { crearBaseDeLaApp } from './ayuda-bd.js';
 
 const bd = await crearBaseDeLaApp();
 const { app } = await import('../src/server.js');
-const { avisosDeDecision, avisosDeReservaCambiada, avisosDeSolicitudNueva } = await import('../src/domain/avisos.js');
-const { crearSolicitud, decidirSolicitud } = await import('../src/domain/solicitudes.js');
+const { avisosDeDecision, avisosDeReservaCambiada, avisosDeSalaInhabilitada, avisosDeSolicitudNueva, avisosDeSolicitudesCerradas } = await import('../src/domain/avisos.js');
+const { cerrarSolicitudesDe, crearSolicitud, decidirSolicitud } = await import('../src/domain/solicitudes.js');
 const { verificarFirma } = await import('../src/integraciones/n8n.js');
 const { REGLAS } = await import('../src/config/reglas.js');
 
@@ -82,6 +82,37 @@ describe('Avisos: a quién y qué', () => {
     assert.match(avisosDeReservaCambiada(db, antes, null, 'jefa')[0].asunto, /Cancelaron tu reserva de Cosmos/);
     assert.deepEqual(avisosDeReservaCambiada(db, antes, null, 'ana'), [], 'la cambió ella misma');
     assert.deepEqual(avisosDeReservaCambiada(db, { ...antes, creadaPor: null }, null, 'jefa'), [], 'sin dueño conocido');
+  });
+
+  test('aprobada cuando la dueña ya se había movido a otra sala: a ella no se le avisa nada (no perdió nada)', () => {
+    const db = crearDB();
+    db.espacios.push({ id: 'apolo', nombre: 'Apolo', aforo: 34, estado: 'disponible' });
+    const s = crearSolicitud(db, pedido(), LUIS, TEMPRANO);
+    db.reservas[0].espacioId = 'apolo';
+    const antes = structuredClone(db.reservas[0]);
+    decidirSolicitud(db, s.id, { decision: 'aprobar' }, { usuario: 'jefa', rol: 'admin' }, TEMPRANO);
+    assert.deepEqual(para(avisosDeDecision(db, [s], antes, 'jefa')), ['luis']);
+  });
+
+  test('la dueña canceló la reserva pedida: a quien la pidió le llega que el salón quedó libre', () => {
+    const db = crearDB();
+    crearSolicitud(db, pedido(), LUIS, TEMPRANO);
+    const cerradas = cerrarSolicitudesDe(db, 'res-9', { usuario: 'ana' }, TEMPRANO);
+    const [aviso] = avisosDeSolicitudesCerradas(db, cerradas, 'ana');
+    assert.deepEqual([aviso.para, aviso.asunto], ['luis', 'Cosmos quedó libre']);
+    assert.match(aviso.mensaje, /resérvalo directamente/);
+  });
+
+  test('sala fuera de servicio: a los dueños de reservas que no han terminado, nunca a quien la inhabilitó', () => {
+    const db = crearDB();
+    db.reservas.push(
+      { id: 'res-ya', espacioId: 'cosmos', responsable: 'Karen', asistentes: 5, inicio: '2026-11-16T06:00', fin: '2026-11-16T07:00', creadaPor: 'karen' },
+      { id: 'res-tec', espacioId: 'cosmos', responsable: 'TI', asistentes: 2, inicio: '2026-11-16T12:00', fin: '2026-11-16T13:00', creadaPor: 'tec' },
+    );
+    const avisos = avisosDeSalaInhabilitada(db, 'cosmos', 'incidencia: "gotera"', 'tec', TEMPRANO);
+    assert.deepEqual(para(avisos), ['ana'], 'la de Karen ya terminó y la de TI es de quien la inhabilitó');
+    assert.equal(avisos[0].asunto, 'Cosmos quedó fuera de servicio');
+    assert.match(avisos[0].mensaje, /gotera.*el 16\/11 de 09:00 a 11:00/);
   });
 });
 

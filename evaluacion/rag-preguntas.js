@@ -17,7 +17,7 @@ export const CASOS_RAG = [
   { id: 3, tipo: 'responde', pregunta: '¿Cuántas reservas puede hacer una persona en un mismo día?',
     archivo: 'reglamento-de-uso-de-salas.md', debeDecir: [/\b3\b|tres/i], esperado: 'Máximo 3 reservas por día.' },
   { id: 4, tipo: 'responde', pregunta: '¿Qué salas tienen computadores?',
-    archivo: 'reglamento-de-uso-de-salas.md', debeDecir: [/Apolo/i, /Spooki/i, /Artemis/i, /Skilab/i], esperado: 'Apolo, Spooki, Artemis y Skilab.' },
+    archivo: 'reglamento-de-uso-de-salas.md', debeDecir: [/Apolo/i, /Sputnik/i, /Artemis/i, /Skylabs/i], esperado: 'Apolo, Sputnik, Artemis y Skylabs.' },
   { id: 5, tipo: 'responde', pregunta: '¿Puedo pedir un portátil prestado?',
     archivo: 'prestamo-de-equipos.md', debeDecir: [/\bno\b/i], esperado: 'No: el campus no presta equipos.' },
   { id: 6, tipo: 'responde', pregunta: '¿Qué pasa con una sala cuando reportan una incidencia crítica sobre ella?',

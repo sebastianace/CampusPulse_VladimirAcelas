@@ -7,8 +7,10 @@ import { EJEMPLOS_TRIAJE } from './ejemplos-triaje.js';
 import { tonoDePulse } from './personalidad.js';
 
 // Una línea por espacio y por recurso: así la IA relaciona nombres con IDs.
+// Si la sala cambió de nombre en el campus, se da también el del CSV oficial ("el televisor de Skilab").
+const otroNombre = (e) => (e.nombreOficial && e.nombreOficial !== e.nombre ? `, antes ${e.nombreOficial}` : '');
 function describirCatalogo({ espacios, recursos }) {
-  const lineasEspacios = espacios.map((e) => `- ${e.id}: ${e.nombre} (${e.tipo}, aforo ${e.aforo})`);
+  const lineasEspacios = espacios.map((e) => `- ${e.id}: ${e.nombre} (${e.tipo}, aforo ${e.aforo}${otroNombre(e)})`);
   const lineasRecursos = recursos.map((r) => `- ${r.id}: ${r.nombre} (${r.tipo}, en espacio ${r.espacioId ?? 'ninguno'})`);
   return `ESPACIOS:\n${lineasEspacios.join('\n') || '- (ninguno)'}\n\nRECURSOS:\n${lineasRecursos.join('\n') || '- (ninguno)'}`;
 }

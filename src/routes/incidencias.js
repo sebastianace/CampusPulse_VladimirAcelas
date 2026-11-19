@@ -14,6 +14,7 @@
 //                             Solo admin y soporte_tecnico. 409 si ya está resuelta o la atiende otra persona.
 // PATCH /api/incidencias/:id  {estado: "resuelta"} -> 200 (rehabilita el espacio o recurso).
 //                             Solo admin y soporte_tecnico: quien arregla es quien rehabilita.
+// Si una incidencia deja la sala fuera de servicio, a los dueños de sus reservas que no han terminado les llega un correo.
 import { Router } from 'express';
 import { exigirRol } from './auth.js';
 import { listarUsuarios } from '../auth/usuarios.js';
@@ -23,6 +24,8 @@ import { notificarIncidenciaNueva } from '../integraciones/n8n.js';
 import { actualizarDB, leerDB } from '../data/almacen.js';
 import { agregarReporte, contarReportes, listarReportes } from '../data/similares.js';
 import { atenderIncidencia, crearIncidencia, resolverIncidencia } from '../domain/incidencias.js';
+import { avisosDeSalaInhabilitada } from '../domain/avisos.js';
+import { enviarAvisos } from '../integraciones/avisos.js';
 import { indicadoresTI } from '../domain/indicadores.js';
 
 const router = Router();
@@ -43,7 +46,14 @@ router.get('/indicadores', exigirRol('admin', 'soporte_tecnico'), async (req, re
 });
 
 router.post('/', async (req, res) => {
-  const incidencia = await actualizarDB((db) => crearIncidencia(db, req.body));
+  const { incidencia, avisos } = await actualizarDB((db) => {
+    const creada = crearIncidencia(db, req.body);
+    const avisos = creada.inhabilitoEspacio
+      ? avisosDeSalaInhabilitada(db, creada.espacioId, `incidencia: "${creada.descripcion}"`, req.usuario.usuario, creada.fecha)
+      : [];
+    return { incidencia: creada, avisos };
+  });
+  enviarAvisos(avisos); // después de guardar y sin esperar
   guardarEmbeddingEnSegundoPlano(incidencia); // para que se sugiera como parecida; no hace esperar la respuesta
   notificarIncidenciaNueva(incidencia); // webhook firmado a n8n; no hace esperar la respuesta y nunca falla la creación
   res.status(201).json(incidencia);
@@ -58,7 +68,9 @@ router.get('/:id/reportes', async (req, res) => {
 });
 
 router.post('/:id/atender', exigirRol('admin', 'soporte_tecnico'), async (req, res) => {
-  res.json(await actualizarDB((db) => atenderIncidencia(db, req.params.id, req.usuario)));
+  // Los nombres, para que el 409 diga "la está atendiendo Ana Gómez" y no "ana.gomez"
+  const nombres = new Map((await listarUsuarios()).map((u) => [u.usuario, u.nombre]));
+  res.json(await actualizarDB((db) => atenderIncidencia(db, req.params.id, req.usuario, undefined, nombres)));
 });
 
 router.patch('/:id', exigirRol('admin', 'soporte_tecnico'), async (req, res) => {

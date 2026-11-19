@@ -6,6 +6,7 @@
 import { el } from './dom.js';
 import { hoyISO, obtenerEstado } from './estado.js';
 import * as toasts from './toasts.js';
+import { terminarEdicion } from './formularios.js';
 
 let mostrarPestana = () => {};
 
@@ -28,7 +29,7 @@ const CASOS = [
   {
     titulo: 'Más personas que el aforo',
     esperado: 'Se rechaza por aforo',
-    llenar: () => llenarReserva('Skilab', { responsable: 'Alexandra Villamizar', asistentes: 40, desde: '14:00', hasta: '16:00' }),
+    llenar: () => llenarReserva('Skylabs', { responsable: 'Alexandra Villamizar', asistentes: 40, desde: '14:00', hasta: '16:00' }),
   },
   {
     titulo: 'Incidencia con IA',
@@ -97,6 +98,7 @@ function usarCaso(caso) {
 function llenarReserva(nombreSala, { responsable, asistentes, desde, hasta }) {
   const espacio = buscarEspacio(nombreSala);
   const form = document.getElementById('form-reserva');
+  terminarEdicion(); // el caso crea una reserva nueva, aunque se estuviera editando otra
   mostrarPestana('p-reservar');
   form.espacioId.value = espacio.id;
   form.responsable.value = responsable;
@@ -130,7 +132,7 @@ function enfocarEnvio(form) {
 
 function buscarEspacio(nombre) {
   const buscado = nombre.toLowerCase();
-  const espacio = obtenerEstado().espacios.find((e) => [e.nombre, e.nombreApi].some((n) => n?.toLowerCase() === buscado));
+  const espacio = obtenerEstado().espacios.find((e) => [e.nombre, e.nombreApi, e.nombreOficial].some((n) => n?.toLowerCase() === buscado));
   if (!espacio) throw new Error(`No se encontró el espacio ${nombre} en los datos cargados.`);
   return espacio;
 }

@@ -30,6 +30,8 @@ export function iniciarFormularios(opciones) {
   // El responsable por defecto es quien inició sesión; las sugerencias son las cuentas reales
   formReserva.responsable.value = sesionActual()?.nombre ?? '';
   cargarResponsables();
+  // Un admin creó una cuenta (pestaña Usuarios): su nombre ya sirve como sugerencia de responsable
+  document.addEventListener('cuentas-cambiaron', cargarResponsables);
   formReserva.addEventListener('submit', enviarReserva);
   document.getElementById('btn-descartar-edicion').addEventListener('click', terminarEdicion);
 
@@ -43,8 +45,14 @@ export function iniciarFormularios(opciones) {
   });
 
   // Clic en una sala del plano o en una franja de la línea de tiempo
-  // -> preseleccionar sala (y fecha/hora si vienen) para reservar
+  // -> preseleccionar sala (y fecha/hora si vienen) para reservar.
+  // Es una reserva NUEVA: si se estaba editando otra, se sale de la edición (si no, "Guardar cambios"
+  // movería la reserva que se editaba a la sala o la hora del clic).
   document.addEventListener('espacio-seleccionado', ({ detail }) => {
+    if (editandoId) {
+      terminarEdicion();
+      toasts.aviso('Saliste de la edición: ahora estás creando una reserva nueva.');
+    }
     mostrarPestana('p-reservar');
     formReserva.espacioId.value = detail.id;
     if (detail.fecha) formReserva.fecha.value = detail.fecha;
@@ -286,8 +294,8 @@ function empezarEdicion(reserva) {
   form.asistentes.focus();
 }
 
-// Vuelve el formulario a modo "crear reserva"
-function terminarEdicion() {
+// Vuelve el formulario a modo "crear reserva" (también lo usa el Modo demo antes de llenar el formulario)
+export function terminarEdicion() {
   const form = document.getElementById('form-reserva');
   editandoId = null;
   form.responsable.value = sesionActual()?.nombre ?? '';

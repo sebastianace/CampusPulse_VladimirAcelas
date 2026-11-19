@@ -16,7 +16,7 @@ reservas separadas y la segunda debe aprobarse por las mismas reglas, sin garant
 ## Aforo
 
 No se puede reservar una sala para más personas que su aforo. El aforo es el número de puestos de la sala y no
-se permite superarlo (el margen es del 100 %). Por ejemplo, Skilab tiene 20 puestos, así que no admite una
+se permite superarlo (el margen es del 100 %). Por ejemplo, Skylabs tiene 20 puestos, así que no admite una
 reserva para 40 personas.
 
 ## Una sala no se puede reservar dos veces a la vez
@@ -52,7 +52,7 @@ escribirle a TI por correo.
 
 ## Salas con computadores
 
-Las salas con computadores son Apolo, Spooki, Artemis y Skilab. Si una actividad necesita que cada persona
+Las salas con computadores son Apolo, Sputnik, Artemis y Skylabs. Si una actividad necesita que cada persona
 tenga computador (programar, un taller práctico, un examen en computador), solo se recomiendan esas salas.
 
 ## Salas que no están disponibles

@@ -182,6 +182,21 @@ sigue el mismo método: **síntoma → hipótesis → experimento → causa raí
 - **Lección.** Un "✔" que cuenta lo que se quiso hacer, y no lo que pasó, esconde fallas. Verificar el resultado en el
   sistema de destino.
 
+### 18. Aprobar una solicitud borraba una reserva de otra sala
+- **Síntoma.** En una revisión completa del código, antes de la reunión con dirección: Ana reserva Cosmos de 9 a 11,
+  Luis lo pide, Ana mueve su reserva a Apolo y el admin aprueba lo de Luis. La reserva de Ana en Apolo **desaparecía** y
+  le llegaba un correo diciendo que se canceló.
+- **Hipótesis.** (a) Editar la reserva no actualizaba la solicitud; (b) aprobar no revisaba en qué sala estaba la
+  reserva original.
+- **Experimento.** Un script con el dominio en memoria (sin base ni interfaz) lo reprodujo: antes de aprobar,
+  `r1 apolo Ana`; después, solo `cosmos Luis`. La solicitud seguía bien apuntando a `r1` (descartada a): el problema
+  era qué hacía la aprobación con ella.
+- **Causa raíz.** `aplicarAprobacion` le quitaba la franja a la reserva original comparando solo las horas, no la sala.
+- **Corrección.** Solo se le quita la franja si sigue en el salón pedido; el aviso al dueño, igual. Test nuevo que
+  falla con el código anterior (comprobado quitando el arreglo).
+- **Lección.** Una regla que guarda una referencia (la reserva pedida) debe volver a revisar que lo referido siga siendo
+  lo que era: entre pedir y aprobar, el mundo cambia.
+
 ## Qué se aprendió en general
 1. **Reproducir fuera de la interfaz** (curl, un script) separa los errores del navegador de los del servidor o del modelo.
 2. **Leer el log antes de adivinar:** en los casos 2, 4, 6 y 7 la causa estaba escrita en el log.

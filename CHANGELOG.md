@@ -6,7 +6,30 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Corregido (revisión general antes de la reunión)
+- **Aprobar una solicitud de salón ya no borra una reserva de otra sala.** Si el dueño había movido su reserva a otra
+  sala mientras la solicitud esperaba, aprobarla se la cancelaba igual (solo se comparaban las horas). Ahora solo se le
+  quita la franja si sigue en el salón pedido, y en ese caso no le llega el correo de "tu reserva se canceló".
+- **Los mismos nombres de sala en todas partes.** La IA, los documentos del RAG, los correos y los mensajes de error
+  decían Spooki, Skilab y Amarillas verdes, y el tablero decía Sputnik, Skylabs y Sala de reuniones. La traducción vive en
+  un solo lugar (`src/config/nombres.js`): el repositorio de espacios entrega el nombre del campus y conserva el del CSV
+  oficial en `nombreOficial` (el CSV no se toca). Migración `013_nombres_en_campus.sql` (el televisor de Skylabs).
+- Un error en Pulse (por ejemplo, el límite de consultas) ya no borra la conversación de la pantalla: aparece debajo.
+- Hacer clic en el plano o en la línea de tiempo mientras se edita una reserva ya no la mueve: sale de la edición y
+  empieza una reserva nueva (lo avisa con un toast). El Modo demo también sale de la edición antes de llenar.
+- Una sala cerrada a mano desde Inventario sigue cerrada al resolver una incidencia de esa sala.
+- Si el dueño cancela una reserva que alguien pidió, la solicitud se cierra sola ("el salón quedó libre") en vez de
+  quedar pendiente para siempre, y a quien la pidió le llega un correo.
+- La documentación de espacios aclara que no tiene el estado en vivo de los equipos (Pulse respondía "computadores
+  funcionales" con los puestos de la sala) y dice cómo se llama cada sala en el archivo oficial.
+- Detalles: el mapa ya no menciona la pestaña Datos; una cuenta nueva aparece enseguida en las sugerencias de
+  responsable; "la está atendiendo" dice el nombre y no el usuario; en el celular, una contraseña temporal lleva al
+  tablero para cambiarla y no aparece "0 salas en servicio"; si el tablero queda abierto pasada la medianoche, la línea
+  de tiempo pasa al día nuevo.
+
 ### Agregado
+- **Aviso por correo cuando una sala queda fuera de servicio** (por una incidencia o desde Inventario): a cada dueño de
+  una reserva de esa sala que todavía no termina, para que busque otra.
 - **Avisos por correo** de lo que cambia en una reserva: a quien tiene la reserva cuando se la piden, a los admins
   cuando llega una solicitud, a quien la pidió cuando se aprueba o rechaza, a quien la tenía cuando se aprueba (cómo
   quedó su reserva o que se canceló) y al dueño cuando un admin le edita o cancela una reserva. Campus Pulse decide a

@@ -107,6 +107,7 @@ async function crear(evento) {
       () => pedir('/api/usuarios', { metodo: 'POST', cuerpo }));
     toasts.exito(`Cuenta creada: ${nueva.usuario} (${nombreDeRol(nueva.rol)}).`);
     form.reset();
+    document.dispatchEvent(new CustomEvent('cuentas-cambiaron')); // las sugerencias de responsable la incluyen
     await cargarUsuarios();
   } catch (error) {
     toasts.error(error);
