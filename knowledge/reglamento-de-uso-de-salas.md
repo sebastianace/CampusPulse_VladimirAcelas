@@ -35,12 +35,20 @@ Una reserva se puede editar o cancelar solo antes de que empiece. Cuando ya empe
 cancelar. Al editarla se aplican de nuevo todas las reglas: horario, duración, aforo, cruces y límite por persona.
 Solo quien creó la reserva o un administrador puede editarla o cancelarla.
 
-## Pedir un salón que está reservado pero nadie usa
+## Pedir un salón que ya está reservado
 
-Si un salón tiene una reserva en curso pero la persona no llegó, se puede solicitar con el botón "Solicitar este
-salón" en la lista de reservas. Un administrador aprueba o rechaza la solicitud. Si la aprueba, la reserva original
-termina en ese momento y la sala queda reservada a nombre de quien la pidió hasta la hora que pidió. El aviso llega
-dentro de la aplicación; ya no hay que escribirle a TI por correo.
+Si el salón que necesitas ya está reservado por otra persona, se puede solicitar a un administrador con el botón
+"Solicitar este salón" en la lista de reservas, o con "Pedirle el salón a un admin" cuando al reservar sale que ya
+está reservado. Sirve para una reserva en curso (la persona no llegó) y para una reserva futura. El administrador
+aprueba o rechaza la solicitud:
+
+- Si la reserva estaba en curso, al aprobar termina en ese momento y la sala queda a nombre de quien la pidió hasta
+  la hora que pidió.
+- Si la reserva era futura, la franja pedida pasa a nombre de quien la pidió. La persona que la tenía conserva lo
+  que le sobre antes o después de esa franja; si la franja pedida cubría toda su reserva, su reserva se cancela.
+
+Los avisos llegan dentro de la aplicación, a quien pidió el salón y a quien lo tenía reservado; ya no hay que
+escribirle a TI por correo.
 
 ## Salas con computadores
 

@@ -5,8 +5,7 @@
 // en la realidad: "el micrófono ya se arregló", "la sala está en obra".
 // Reglas:
 //   1. Un equipo solo cambia si TRANSICIONES_RECURSO lo permite.
-//   2. "Prestado" no se pone a mano (se presta en Préstamos) y un equipo
-//      prestado no se toca aquí (se devuelve en Préstamos).
+//   2. (Ya no hay préstamos: el campus no presta equipos, migración 010.)
 //   3. Si una incidencia abierta tiene fuera de servicio el equipo o la
 //      sala, no se cambia a mano: se resuelve la incidencia, así queda el
 //      registro de quién lo arregló y cuándo.
@@ -15,7 +14,9 @@
 
 import { ESTADOS_RECURSO, REGLAS } from '../config/reglas.js';
 import { DatosInvalidosError, NoEncontradoError, ReglaNegocioError } from './errors.js';
-import { cambiarEstadoRecurso } from './prestamos.js';
+
+// Cómo se muestra cada estado en los mensajes de error.
+const NOMBRES_ESTADO = { disponible: 'disponible', danado: 'dañado', en_reparacion: 'en reparación' };
 
 // Estados de sala que se pueden poner a mano.
 const ESTADOS_ESPACIO_MANUALES = ['disponible', 'inhabilitado'];
@@ -41,13 +42,21 @@ function exigirSinIncidencia(db, lugar, nombre) {
   }
 }
 
+/** Regla 1: cambia el estado del recurso solo si la transición está permitida. */
+function cambiarEstadoRecurso(recurso, nuevoEstado) {
+  if (!cambiosManuales(recurso).includes(nuevoEstado)) {
+    throw new ReglaNegocioError('TRANSICION_INVALIDA',
+      `${recurso.nombre} está ${NOMBRES_ESTADO[recurso.estado] ?? recurso.estado} y no puede pasar a ${NOMBRES_ESTADO[nuevoEstado] ?? nuevoEstado}`);
+  }
+  recurso.estado = nuevoEstado;
+}
+
 /**
- * Estados a los que se puede pasar el equipo desde Inventario (sin "prestado").
+ * Estados a los que se puede pasar el equipo desde Inventario.
  * Sale de TRANSICIONES_RECURSO: si la regla cambia, los botones de la pantalla cambian solos.
  */
 export function cambiosManuales(recurso) {
-  if (recurso.estado === 'prestado') return [];
-  return (REGLAS.TRANSICIONES_RECURSO[recurso.estado] ?? []).filter((estado) => estado !== 'prestado');
+  return REGLAS.TRANSICIONES_RECURSO[recurso.estado] ?? [];
 }
 
 /** Cambia el estado de un equipo: {estado} -> el recurso actualizado. */
@@ -55,9 +64,6 @@ export function actualizarEstadoRecurso(db, recursoId, datos) {
   const estado = datos?.estado;
   if (!ESTADOS_RECURSO.includes(estado)) throw new DatosInvalidosError(`estado debe ser uno de: ${ESTADOS_RECURSO.join(', ')}`);
   const recurso = buscar(db.recursos, recursoId, 'recurso');
-  if (estado === 'prestado' || recurso.estado === 'prestado') {
-    throw new ReglaNegocioError('USAR_PRESTAMOS', `Los préstamos se manejan en la pestaña Prestar: ${recurso.nombre} se presta o se devuelve allí`);
-  }
   exigirSinIncidencia(db, { recursoId }, recurso.nombre);
   cambiarEstadoRecurso(recurso, estado);
   return recurso;

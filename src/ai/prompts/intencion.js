@@ -16,7 +16,7 @@ export function promptIntencion(texto, historial = []) {
     tono: 'Sin texto adicional: solo la intención.',
     politicas: [
       '"reservar": la persona pide o busca un espacio para una actividad (menciona cuántas personas, un día, una hora, o pide "una sala", "un salón", "reservar").',
-      '"preguntar": cualquier otra cosa: una duda sobre reglas, horarios, aforos, préstamos o incidencias, cómo se hace algo, quién puede hacer algo, o una pregunta de seguimiento sobre la respuesta anterior.',
+      '"preguntar": cualquier otra cosa: una duda sobre reglas, horarios, aforos, equipos o incidencias, cómo se hace algo, quién puede hacer algo, o una pregunta de seguimiento sobre la respuesta anterior.',
       'Ante la duda, elige "preguntar": equivocarse hacia "preguntar" solo muestra una respuesta; equivocarse hacia "reservar" intentaría crear una reserva.',
     ],
     limites: [

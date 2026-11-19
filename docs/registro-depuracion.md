@@ -150,6 +150,23 @@ sigue el mismo método: **síntoma → hipótesis → experimento → causa raí
   tablas van de padres a hijos). Comprobado al revés: con el orden anterior, el test falla con `RESERVA_SOLAPADA`.
 - **Lección.** Que el dominio esté bien no basta: el orden en que se escriben los cambios también es parte de la regla.
 
+### 16. Pedir un salón reservado para mañana no dejaba mandar la solicitud
+- **Síntoma.** Probándolo con un administrador del campus: un profesor reservó Cosmos para el día siguiente de 9 a 11;
+  otro profesor intentó la misma reserva, le salió "Cosmos ya está reservado en esa franja" y no había forma de pedirle
+  el salón a un admin.
+- **Hipótesis.** (a) El botón "Solicitar este salón" fallaba; (b) la regla no contemplaba ese caso.
+- **Experimento.** El botón solo se dibujaba para reservas **en curso** y el dominio respondía `RESERVA_NO_EN_CURSO` a
+  cualquier otra. Descartada (a): era la regla, escrita solo para "el profesor de las 9:00 no llegó".
+- **Causa raíz.** El caso de uso se definió más angosto que la necesidad real: en el campus se piden salones con
+  anticipación, no solo cuando alguien no llega.
+- **Corrección.** La solicitud sirve también para reservas futuras, con una franja (`inicio`, migración 011), y el aviso
+  de "ya está reservado" trae el botón "Pedirle el salón a un admin". Al aprobar, la reserva original conserva lo que le
+  sobre o se cancela entera. Cancelarla e insertar la nueva en la misma transacción volvía a chocar con `EXCLUDE` (caso
+  15), porque los `DELETE` iban al final: ahora van primero. Comprobado al revés: con el orden anterior, el test de
+  PostgreSQL falla.
+- **Lección.** Probar con quien usa el sistema encuentra lo que los tests no buscan: los tests cubrían bien la regla
+  equivocada.
+
 ## Qué se aprendió en general
 1. **Reproducir fuera de la interfaz** (curl, un script) separa los errores del navegador de los del servidor o del modelo.
 2. **Leer el log antes de adivinar:** en los casos 2, 4, 6 y 7 la causa estaba escrita en el log.

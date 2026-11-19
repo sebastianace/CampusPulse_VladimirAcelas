@@ -14,7 +14,6 @@ import { explicarErrorDeConexion } from './data/pg.js';
 import espaciosRouter from './routes/espacios.js';
 import recursosRouter from './routes/recursos.js';
 import reservasRouter from './routes/reservas.js';
-import prestamosRouter from './routes/prestamos.js';
 import incidenciasRouter from './routes/incidencias.js';
 import calidadRouter from './routes/calidad.js';
 import usuariosRouter from './routes/usuarios.js';
@@ -42,7 +41,6 @@ app.use('/api/espacios', espaciosRouter);
 app.use('/api/recursos', recursosRouter);
 app.use('/api/reservas', reservasRouter);
 app.use('/api/solicitudes', solicitudesRouter); // pedir un salón ocupado; aprobar o rechazar: solo admin
-app.use('/api/prestamos', prestamosRouter);
 app.use('/api/incidencias', incidenciasRouter);
 app.use('/api/calidad-datos', calidadRouter);
 app.use('/api/usuarios', usuariosRouter); // crear cuentas y contraseñas temporales: solo admin (lo exige el router)

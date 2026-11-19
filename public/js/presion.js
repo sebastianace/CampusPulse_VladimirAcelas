@@ -2,7 +2,7 @@
 // con los mismos datos de la API que ya muestra el tablero.
 //
 //   presión = PESO_SALAS   × % de salas ocupadas ahora o inhabilitadas
-//           + PESO_EQUIPOS × % de equipos prestados, dañados o en reparación
+//           + PESO_EQUIPOS × % de equipos dañados o en reparación
 //           + PUNTOS_POR_CRITICA × incidencias críticas abiertas
 //           + PUNTOS_POR_ALTA    × incidencias altas abiertas
 //   (con tope en 100)

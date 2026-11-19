@@ -12,7 +12,6 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { REGLAS } from '../src/config/reglas.js';
 import { buscarEspaciosDisponibles, cancelarReserva, capacidadMaxima, crearReserva, editarReserva } from '../src/domain/reservas.js';
-import { crearPrestamo, devolverPrestamo } from '../src/domain/prestamos.js';
 import { crearIncidencia, resolverIncidencia } from '../src/domain/incidencias.js';
 import { ahoraBogota } from '../src/domain/fechas.js';
 
@@ -232,43 +231,6 @@ describe('buscarEspaciosDisponibles', () => {
   test('si la franja viola una regla, explica cuál', () => {
     const solicitud = { asistentes: 5, inicio: a(DIA_HABIL, APERTURA), fin: a(DIA_HABIL, APERTURA + REGLAS.MAX_HORAS_RESERVA + 1) };
     assert.throws(() => buscarEspaciosDisponibles(solicitud, crearDB()), { codigo: /DURACION_EXCEDIDA|FUERA_DE_HORARIO/ });
-  });
-});
-
-// ---------- PRÉSTAMOS ----------
-
-describe('Préstamos', () => {
-  test('transición: un recurso disponible se presta y queda "prestado"', () => {
-    const db = crearDB();
-    const prestamo = crearPrestamo(db, { recursoId: 'pc1', persona: 'Ana' });
-    assert.equal(prestamo.estado, 'activo');
-    assert.equal(db.recursos.find((r) => r.id === 'pc1').estado, 'prestado');
-  });
-
-  test('transición: un recurso dañado no se puede prestar', () => {
-    assert.throws(() => crearPrestamo(crearDB(), { recursoId: 'roto', persona: 'Ana' }), { codigo: 'TRANSICION_INVALIDA', status: 409 });
-  });
-
-  test('límite: hasta MAX_PRESTAMOS_POR_PERSONA se acepta y el siguiente se rechaza', () => {
-    const db = crearDB();
-    const libres = ['pc1', 'pc2', 'pc3', 'vb'];
-    for (let i = 0; i < REGLAS.MAX_PRESTAMOS_POR_PERSONA; i++) crearPrestamo(db, { recursoId: libres[i], persona: 'Ana' });
-    assert.throws(() => crearPrestamo(db, { recursoId: libres[REGLAS.MAX_PRESTAMOS_POR_PERSONA], persona: 'ana' }), { codigo: 'LIMITE_PRESTAMOS_PERSONA' });
-  });
-
-  test('devolución: devolver como "danado" cambia el estado del recurso', () => {
-    const db = crearDB();
-    const { id } = crearPrestamo(db, { recursoId: 'pc1', persona: 'Ana' });
-    assert.equal(devolverPrestamo(db, id, { estadoFinal: 'danado' }).estado, 'devuelto');
-    assert.equal(db.recursos.find((r) => r.id === 'pc1').estado, 'danado');
-  });
-
-  test('devolución: no se puede devolver dos veces ni con un estado inválido', () => {
-    const db = crearDB();
-    const { id } = crearPrestamo(db, { recursoId: 'pc1', persona: 'Ana' });
-    assert.throws(() => devolverPrestamo(db, id, { estadoFinal: 'roto' }), { status: 422 });
-    devolverPrestamo(db, id, { estadoFinal: 'disponible' });
-    assert.throws(() => devolverPrestamo(db, id, { estadoFinal: 'disponible' }), { codigo: 'PRESTAMO_YA_DEVUELTO' });
   });
 });
 

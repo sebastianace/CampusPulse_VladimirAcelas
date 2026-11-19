@@ -2,7 +2,7 @@
 // GET   /api/recursos      -> [{id, nombre, tipo, espacioId, estado, cambiosPermitidos}]
 //                          (cambiosPermitidos: estados a los que Inventario lo puede pasar, según TRANSICIONES_RECURSO)
 // PATCH /api/recursos/:id  {estado} -> 200 + el recurso (Inventario). Solo admin y soporte_tecnico.
-//                          409 si la transición no está permitida, si está prestado o si una incidencia abierta lo inhabilita.
+//                          409 si la transición no está permitida o si una incidencia abierta lo inhabilita.
 import { Router } from 'express';
 import { exigirRol } from './auth.js';
 import { actualizarDB, leerDB } from '../data/almacen.js';

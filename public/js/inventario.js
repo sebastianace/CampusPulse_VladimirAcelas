@@ -1,11 +1,13 @@
-// Pestaña "Inventario" (admin y soporte técnico): poner cada equipo y sala
-// en su estado real (PATCH /api/recursos/:id y PATCH /api/espacios/:id).
+// Pestaña "Inventario" (admin y soporte técnico): la lista de trabajo de TI.
+// Solo muestra los equipos dañados o en reparación (PATCH /api/recursos/:id);
+// los disponibles no necesitan nada y alargaban la pantalla sin aportar.
+// Un equipo se daña al reportar una incidencia (pestaña Reportar).
 // Los botones de cada equipo salen de cambiosPermitidos (lo calcula el
 // servidor con TRANSICIONES_RECURSO), así nunca se ofrece un cambio prohibido.
 
 import { pedir } from './api.js';
 import { el, conCarga } from './dom.js';
-import { ESTADOS_ESPACIO, ESTADOS_RECURSO, etiqueta } from './catalogos.js';
+import { ESTADOS_RECURSO, etiqueta } from './catalogos.js';
 import { puede } from './sesion.js';
 import * as toasts from './toasts.js';
 
@@ -20,7 +22,10 @@ const ACCION_RECURSO = {
 };
 
 // Color de la etiqueta de estado.
-const CLASE_ESTADO = { danado: 'etiqueta--critica', en_reparacion: 'etiqueta--alta', inhabilitado: 'etiqueta--critica', disponible: 'etiqueta--resuelta' };
+const CLASE_ESTADO = { danado: 'etiqueta--critica', en_reparacion: 'etiqueta--alta' };
+
+// Estados que aparecen en la lista: los que necesitan a Soporte TI. Primero los dañados.
+const PENDIENTES = ['danado', 'en_reparacion'];
 
 export function iniciarInventario(dependencias) {
   if (!puede('gestionarInventario')) return; // la pestaña sigue oculta
@@ -34,31 +39,23 @@ export function dibujarInventario({ espacios, recursos, incidencias }) {
   const nombreSala = (id) => espacios.find((e) => e.id === id)?.nombre;
   const abiertas = incidencias.filter((i) => i.estado === 'abierta');
 
-  const equipos = [...recursos].sort((a, b) => Number(a.estado === 'disponible') - Number(b.estado === 'disponible'));
-  document.getElementById('lista-inventario-equipos').replaceChildren(...equipos.map((recurso) => {
+  const equipos = recursos
+    .filter((r) => PENDIENTES.includes(r.estado))
+    .sort((a, b) => PENDIENTES.indexOf(a.estado) - PENDIENTES.indexOf(b.estado));
+  const lista = document.getElementById('lista-inventario-equipos');
+  if (!equipos.length) {
+    lista.replaceChildren(el('li', { className: 'vacio' }, 'No hay equipos dañados ni en reparación. Todo está funcionando.'));
+    return;
+  }
+  lista.replaceChildren(...equipos.map((recurso) => {
     const bloqueo = abiertas.find((i) => i.inhabilito && i.recursoId === recurso.id);
-    const acciones = recurso.estado === 'prestado'
-      ? [el('span', { className: 'item__meta' }, 'Prestado: se devuelve en la pestaña Prestar.')]
-      : bloqueo ? [botonIncidencia()]
-        : (recurso.cambiosPermitidos ?? []).map((estado) => el('button', {
-          type: 'button', className: `btn btn--chico ${estado === 'danado' ? 'btn--peligro' : 'btn--secundario'}`,
-          onClick: (e) => cambiar(`/api/recursos/${encodeURIComponent(recurso.id)}`, estado, recurso.nombre, ESTADOS_RECURSO, e.currentTarget),
-        }, ACCION_RECURSO[estado] ?? etiqueta(ESTADOS_RECURSO, estado)));
+    const acciones = bloqueo ? [botonIncidencia()]
+      : (recurso.cambiosPermitidos ?? []).map((estado) => el('button', {
+        type: 'button', className: `btn btn--chico ${estado === 'danado' ? 'btn--peligro' : 'btn--secundario'}`,
+        onClick: (e) => cambiar(`/api/recursos/${encodeURIComponent(recurso.id)}`, estado, recurso.nombre, ESTADOS_RECURSO, e.currentTarget),
+      }, ACCION_RECURSO[estado] ?? etiqueta(ESTADOS_RECURSO, estado)));
     return item(recurso.nombre, etiqueta(ESTADOS_RECURSO, recurso.estado), recurso.estado,
-      recurso.espacioId ? `En ${nombreSala(recurso.espacioId) ?? recurso.espacioId}` : 'Para préstamo', bloqueo, acciones);
-  }));
-
-  document.getElementById('lista-inventario-salas').replaceChildren(...espacios.map((espacio) => {
-    const bloqueo = abiertas.find((i) => i.inhabilitoEspacio && i.espacioId === espacio.id);
-    const acciones = espacio.estado === 'inconsistente'
-      ? [el('span', { className: 'item__meta' }, 'Dato inconsistente en el CSV oficial: se corrige en el archivo.')]
-      : bloqueo ? [botonIncidencia()]
-        : [el('button', {
-          type: 'button', className: `btn btn--chico ${espacio.estado === 'disponible' ? 'btn--peligro' : 'btn--secundario'}`,
-          onClick: (e) => cambiar(`/api/espacios/${encodeURIComponent(espacio.id)}`,
-            espacio.estado === 'disponible' ? 'inhabilitado' : 'disponible', espacio.nombre, ESTADOS_ESPACIO, e.currentTarget),
-        }, espacio.estado === 'disponible' ? 'Inhabilitar sala' : 'Habilitar sala')];
-    return item(espacio.nombre, etiqueta(ESTADOS_ESPACIO, espacio.estado), espacio.estado, `Aforo ${espacio.aforo}`, bloqueo, acciones);
+      recurso.espacioId ? `En ${nombreSala(recurso.espacioId) ?? recurso.espacioId}` : 'Equipo portátil (sin sala fija)', bloqueo, acciones);
   }));
 }
 

@@ -1,11 +1,11 @@
-// Formularios de reserva (crear, editar y cancelar), préstamo y devolución.
+// Formularios de reserva (crear, editar y cancelar) y solicitud de un salón ocupado.
 // El navegador solo revisa que los campos estén completos; las reglas
 // del campus (aforo, solapamiento, horario, límites…) las decide el
 // backend y su mensaje se muestra tal cual.
 
 import { pedir } from './api.js';
 import { el, conCarga } from './dom.js';
-import { ESTADOS_ESPACIO, ESTADOS_RECURSO, etiqueta } from './catalogos.js';
+import { ESTADOS_ESPACIO, etiqueta } from './catalogos.js';
 import { ahoraBogota, cambiarFecha, obtenerEstado } from './estado.js';
 import { puedeTocarReserva, sesionActual } from './sesion.js';
 import * as toasts from './toasts.js';
@@ -25,25 +25,21 @@ export function iniciarFormularios(opciones) {
   mostrarPestana = opciones.mostrarPestana;
 
   const formReserva = document.getElementById('form-reserva');
-  const formPrestamo = document.getElementById('form-prestamo');
 
   formReserva.fecha.value = obtenerEstado().fecha;
   // El responsable por defecto es quien inició sesión; las sugerencias son las cuentas reales
   formReserva.responsable.value = sesionActual()?.nombre ?? '';
   cargarResponsables();
   formReserva.addEventListener('submit', enviarReserva);
-  formPrestamo.addEventListener('submit', enviarPrestamo);
   document.getElementById('btn-descartar-edicion').addEventListener('click', terminarEdicion);
 
   // Clic en un bloque de la línea de tiempo -> editar esa reserva
   document.addEventListener('reserva-seleccionada', ({ detail }) => empezarEdicion(detail));
 
   // Al editar un campo se limpian sus errores
-  [formReserva, formPrestamo].forEach((form) => {
-    form.addEventListener('input', (evento) => {
-      limpiarErrorCampo(evento.target);
-      mostrarAviso(form, null);
-    });
+  formReserva.addEventListener('input', (evento) => {
+    limpiarErrorCampo(evento.target);
+    mostrarAviso(formReserva, null);
   });
 
   // Clic en una sala del plano o en una franja de la línea de tiempo
@@ -60,12 +56,10 @@ export function iniciarFormularios(opciones) {
   });
 }
 
-/** Redibuja selects y las listas de reservas y préstamos con los datos nuevos. */
-export function actualizarFormularios({ espacios, recursos, prestamos, reservas, fecha }) {
+/** Redibuja el select de espacios y la lista de reservas con los datos nuevos. */
+export function actualizarFormularios({ espacios, reservas, fecha }) {
   llenarSelectEspacios(espacios);
-  llenarSelectRecursos(recursos);
   dibujarReservas(reservas, fecha);
-  dibujarPrestamos(prestamos, recursos);
 }
 
 // ---------- Reserva ----------
@@ -120,17 +114,40 @@ async function enviarReserva(evento) {
     // Mostrar en la línea de tiempo el día de la reserva recién creada
     await cambiarFecha(fecha.value);
   } catch (error) {
-    mostrarAviso(form, error.message);
+    // Salón ocupado: en vez de quedarse ahí, se le puede pedir a un admin con los mismos datos
+    const accion = error.codigo === 'RESERVA_SOLAPADA' && !editandoId
+      ? el('button', { type: 'button', className: 'btn btn--secundario btn--chico', onClick: () => pedirSalonOcupado(cuerpo) }, 'Pedirle el salón a un admin')
+      : null;
+    mostrarAviso(form, error.message, accion);
     toasts.error(error);
   }
+}
+
+// Busca la reserva con la que chocó y abre debajo de ella la solicitud, llena con lo que se quería reservar.
+async function pedirSalonOcupado(pedido) {
+  if (obtenerEstado().fecha !== pedido.inicio.slice(0, 10)) await cambiarFecha(pedido.inicio.slice(0, 10));
+  const choques = obtenerEstado().reservas
+    .filter((r) => r.espacioId === pedido.espacioId && seSolapan(r.inicio, r.fin, pedido.inicio, pedido.fin))
+    .sort((a, b) => a.inicio.localeCompare(b.inicio));
+  const yo = sesionActual()?.usuario;
+  const ajena = choques.find((r) => !(r.creadaPor && r.creadaPor === yo));
+  if (!ajena) {
+    toasts.error(choques.length ? 'Esa franja choca con una reserva tuya: edítala en la lista de reservas.' : 'El salón ya no está ocupado en esa franja: intenta reservar de nuevo.');
+    return;
+  }
+  abrirSolicitud(ajena, pedido);
+  mostrarAviso(document.getElementById('form-reserva'), null);
+  dibujarReservas(obtenerEstado().reservas, obtenerEstado().fecha);
+  solicitando?.form.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  solicitando?.form.motivo.focus({ preventScroll: true });
 }
 
 // ---------- Editar y cancelar reservas ----------
 
 // Lista de reservas del día que muestra la línea de tiempo, con sus acciones.
 // Las que ya empezaron no se pueden tocar, y las de otra persona solo las toca un admin (lo valida el
-// backend; aquí solo se ocultan los botones). Si una reserva de otra persona está en curso, se puede
-// solicitar el salón: un admin decide (src/domain/solicitudes.js).
+// backend; aquí solo se ocultan los botones). Si una reserva de otra persona no ha terminado (en curso
+// o futura), se puede solicitar el salón: un admin decide (src/domain/solicitudes.js).
 function dibujarReservas(reservas, fecha) {
   document.getElementById('titulo-reservas').textContent = `Reservas del ${fechaCorta(fecha)}`;
   const lista = document.getElementById('lista-reservas');
@@ -145,7 +162,8 @@ function dibujarReservas(reservas, fecha) {
   const yo = sesionActual()?.usuario;
   lista.replaceChildren(...delDia.map((reserva) => {
     const empezo = reserva.inicio <= ahora;
-    const enCurso = empezo && ahora < reserva.fin;
+    const termino = reserva.fin <= ahora;
+    const enCurso = empezo && !termino;
     const propia = Boolean(reserva.creadaPor) && reserva.creadaPor === yo;
     const estado = enCurso ? ' · en curso' : empezo ? ' · terminó' : '';
     const item = el('li', { className: 'item' },
@@ -158,9 +176,11 @@ function dibujarReservas(reservas, fecha) {
       item.append(el('div', { className: 'item__acciones' },
         el('button', { type: 'button', className: 'btn btn--secundario btn--chico', onClick: () => empezarEdicion(reserva) }, 'Editar'),
         el('button', { type: 'button', className: 'btn btn--peligro btn--chico', onClick: (e) => cancelar(reserva, e.currentTarget) }, 'Cancelar reserva')));
-    } else if (enCurso && !propia) {
+    } else if (!termino && !propia && yaLaPedi(reserva, yo)) {
+      item.append(el('span', { className: 'item__meta' }, 'Ya pediste este salón: un admin la revisará (pestaña Solicitudes).'));
+    } else if (!termino && !propia) {
       item.append(el('div', { className: 'item__acciones' },
-        el('button', { type: 'button', className: 'btn btn--secundario btn--chico', onClick: () => abrirSolicitud(item, reserva) }, 'Solicitar este salón')));
+        el('button', { type: 'button', className: 'btn btn--secundario btn--chico', onClick: () => { abrirSolicitud(reserva); item.append(solicitando.form); solicitando.form.asistentes.focus(); } }, 'Solicitar este salón')));
       if (solicitando?.reservaId === reserva.id) item.append(solicitando.form);
     }
     return item;
@@ -170,50 +190,67 @@ function dibujarReservas(reservas, fecha) {
 
 // ---------- Solicitar un salón ocupado ----------
 
+// true si quien inició sesión ya tiene una solicitud pendiente para esa reserva (el servidor no deja repetirla)
+const yaLaPedi = (reserva, yo) => (obtenerEstado().solicitudes ?? [])
+  .some((s) => s.estado === 'pendiente' && s.reservaId === reserva.id && s.solicitante === yo);
+
 function campo(texto, control, clase = 'campo') {
   return el('label', { className: clase }, el('span', {}, texto), control);
 }
 
-// Abre, debajo de la reserva en curso, el formulario para pedirle el salón a un admin.
-function abrirSolicitud(item, reserva) {
-  if (solicitando?.reservaId === reserva.id) {
-    solicitando.form.querySelector('textarea').focus();
-    return;
-  }
-  const form = el('form', { className: 'formulario solicitud', noValidate: true },
-    el('p', { className: 'nota' },
-      `Si ${reserva.responsable} no está usando el salón, un admin puede asignártelo. Al aprobarlo, su reserva termina en ese momento y la tuya empieza.`),
+// Arma el formulario para pedirle el salón a un admin (queda en "solicitando" y se dibuja debajo de la reserva).
+// En curso: la nueva empieza al aprobarla, solo se elige hasta qué hora. Futura: se elige la franja; por
+// defecto, la de la reserva o la que se intentó reservar (pedido).
+function abrirSolicitud(reserva, pedido = null) {
+  if (solicitando?.reservaId === reserva.id && !pedido) return;
+  const enCurso = reserva.inicio <= ahoraBogota();
+  const quien = reserva.responsable;
+  const nota = enCurso
+    ? `Si ${quien} no está usando el salón, un admin puede asignártelo. Al aprobarlo, su reserva termina en ese momento y la tuya empieza.`
+    : `${quien} tiene este salón de ${hora(reserva.inicio)} a ${hora(reserva.fin)}. Un admin decide: si aprueba, la franja que pides pasa a tu nombre y ${quien} conserva lo que le quede.`;
+  const desde = el('input', { name: 'desde', type: 'time', step: '900', required: true, value: hora(pedido?.inicio ?? reserva.inicio) });
+  const hasta = el('input', { name: 'hasta', type: 'time', step: '900', required: true, value: hora(pedido?.fin ?? reserva.fin) });
+  const form = el('form', { className: 'formulario solicitud-salon', noValidate: true },
+    el('p', { className: 'nota' }, nota),
     el('div', { className: 'fila' },
-      campo('Responsable', el('input', { name: 'responsable', type: 'text', required: true, value: sesionActual()?.nombre ?? '', autocomplete: 'off' })),
-      campo('Asistentes', el('input', { name: 'asistentes', type: 'number', min: '1', inputMode: 'numeric', required: true }), 'campo campo--corto')),
-    campo('Hasta', el('input', { name: 'hasta', type: 'time', step: '900', required: true, value: hora(reserva.fin) })),
+      campo('Responsable', el('input', { name: 'responsable', type: 'text', required: true, value: pedido?.responsable ?? sesionActual()?.nombre ?? '', autocomplete: 'off' })),
+      campo('Asistentes', el('input', { name: 'asistentes', type: 'number', min: '1', inputMode: 'numeric', required: true, value: pedido?.asistentes ?? '' }), 'campo campo--corto')),
+    enCurso ? campo('Hasta', hasta) : el('div', { className: 'fila' }, campo('Desde', desde), campo('Hasta', hasta)),
     campo('¿Por qué lo necesitas?', el('textarea', {
-      name: 'motivo', rows: 2, maxLength: 300, required: true, placeholder: 'Ej.: el profesor de las 9:00 no llegó y tengo un taller con 15 personas',
+      name: 'motivo', rows: 2, maxLength: 300, required: true,
+      placeholder: enCurso ? 'Ej.: el profesor de las 9:00 no llegó y tengo un taller con 15 personas' : 'Ej.: es el único salón con video beam libre y tengo la sustentación',
     })),
     el('div', { className: 'item__acciones' },
       el('button', { type: 'submit', className: 'btn btn--primario btn--chico' }, 'Enviar solicitud'),
       el('button', { type: 'button', className: 'btn btn--secundario btn--chico', onClick: () => { solicitando = null; form.remove(); } }, 'Cancelar')));
-  form.addEventListener('submit', (e) => enviarSolicitud(e, reserva));
-  form.addEventListener('input', (e) => limpiarErrorCampo(e.target));
+  form.addEventListener('submit', (e) => enviarSolicitud(e, reserva, enCurso));
+  form.addEventListener('input', (e) => { limpiarErrorCampo(e.target); mostrarAviso(form, null); });
+  solicitando?.form.remove();
   solicitando = { reservaId: reserva.id, form };
-  item.append(form);
-  form.asistentes.focus();
 }
 
-async function enviarSolicitud(evento, reserva) {
+async function enviarSolicitud(evento, reserva, enCurso) {
   evento.preventDefault();
   const form = evento.currentTarget;
   if (!validarCompletos(form)) return;
+  const dia = reserva.inicio.slice(0, 10);
+  if (!enCurso && form.hasta.value <= form.desde.value) {
+    marcarErrorCampo(form.hasta, 'La hora de fin debe ser posterior a la de inicio.');
+    form.hasta.focus();
+    return;
+  }
   const cuerpo = {
     reservaId: reserva.id,
     responsable: form.responsable.value.trim(),
     asistentes: Number(form.asistentes.value),
-    fin: `${reserva.inicio.slice(0, 10)}T${form.hasta.value}`,
+    ...(!enCurso && { inicio: `${dia}T${form.desde.value}` }),
+    fin: `${dia}T${form.hasta.value}`,
     motivo: form.motivo.value.trim(),
   };
   try {
     await conCarga(form.querySelector('button[type="submit"]'), 'Enviando…', () => pedir('/api/solicitudes', { metodo: 'POST', cuerpo }));
-    toasts.exito(`Solicitud enviada: ${nombreEspacio(reserva.espacioId)} hasta las ${form.hasta.value}. Un admin la revisará; la respuesta te llega aquí y en la pestaña Solicitudes.`);
+    const franja = enCurso ? `hasta las ${form.hasta.value}` : `el ${fechaCorta(dia)} de ${form.desde.value} a ${form.hasta.value}`;
+    toasts.exito(`Solicitud enviada: ${nombreEspacio(reserva.espacioId)} ${franja}. Un admin la revisará; la respuesta te llega aquí y en la pestaña Solicitudes.`);
     solicitando = null;
     form.remove();
     await refrescar();
@@ -292,86 +329,6 @@ function llenarSelectEspacios(espacios) {
   reemplazarOpciones(select, opciones, 'Elige un espacio');
 }
 
-// ---------- Préstamo ----------
-
-async function enviarPrestamo(evento) {
-  evento.preventDefault();
-  const form = evento.currentTarget;
-  if (!validarCompletos(form)) return;
-
-  const cuerpo = { recursoId: form.recursoId.value, persona: form.persona.value.trim() };
-  const boton = form.querySelector('button[type="submit"]');
-  try {
-    await conCarga(boton, 'Prestando…', () => pedir('/api/prestamos', { metodo: 'POST', cuerpo }));
-    toasts.exito(`Equipo prestado: ${nombreRecurso(cuerpo.recursoId)} a ${cuerpo.persona}.`);
-    form.reset();
-    await refrescar();
-  } catch (error) {
-    mostrarAviso(form, error.message);
-    toasts.error(error);
-  }
-}
-
-function llenarSelectRecursos(recursos) {
-  const select = document.querySelector('#form-prestamo select[name="recursoId"]');
-  const opcion = (r) => el('option', { value: r.id }, `${r.nombre} · ${etiqueta(ESTADOS_RECURSO, r.estado)}`);
-
-  // Separar equipos que se llevan (sin sala) de los fijos de cada sala
-  const moviles = recursos.filter((r) => !r.espacioId);
-  const fijos = recursos.filter((r) => r.espacioId);
-  const grupos = [
-    moviles.length && el('optgroup', { label: 'Equipos para llevar' }, moviles.map(opcion)),
-    fijos.length && el('optgroup', { label: 'Equipos fijos de sala' }, fijos.map(opcion)),
-  ].filter(Boolean);
-
-  reemplazarOpciones(select, grupos, 'Elige un equipo');
-}
-
-// ---------- Devolución ----------
-
-function dibujarPrestamos(prestamos, recursos) {
-  const lista = document.getElementById('lista-prestamos');
-  const activos = prestamos.filter((p) => p.estado === 'activo');
-
-  if (!activos.length) {
-    lista.replaceChildren(el('li', { className: 'vacio' }, 'No hay préstamos activos. Presta un equipo con el formulario de arriba.'));
-    return;
-  }
-
-  lista.replaceChildren(...activos.map((prestamo) => {
-    const recurso = recursos.find((r) => r.id === prestamo.recursoId);
-    return el('li', { className: 'item' },
-      el('div', { className: 'item__cabeza' },
-        el('span', { className: 'item__titulo' }, recurso?.nombre ?? prestamo.recursoId),
-        el('span', { className: 'item__meta dato' }, fechaCorta(prestamo.fecha))),
-      el('span', { className: 'item__meta' }, `Lo tiene ${prestamo.persona}`),
-      el('div', { className: 'item__acciones' },
-        el('button', {
-          type: 'button', className: 'btn btn--secundario btn--chico',
-          onClick: (e) => devolver(prestamo, 'disponible', e.currentTarget),
-        }, 'Devolver en buen estado'),
-        el('button', {
-          type: 'button', className: 'btn btn--peligro btn--chico',
-          onClick: (e) => devolver(prestamo, 'danado', e.currentTarget),
-        }, 'Devolver con daño')),
-    );
-  }));
-}
-
-async function devolver(prestamo, estadoFinal, boton) {
-  try {
-    await conCarga(boton, 'Registrando…', () =>
-      pedir(`/api/prestamos/${encodeURIComponent(prestamo.id)}/devolver`, { metodo: 'POST', cuerpo: { estadoFinal } }));
-    const nombre = nombreRecurso(prestamo.recursoId);
-    toasts.exito(estadoFinal === 'danado'
-      ? `Devolución registrada: ${nombre} quedó marcado como dañado.`
-      : `Devolución registrada: ${nombre} vuelve a estar disponible.`);
-    await refrescar();
-  } catch (error) {
-    toasts.error(error);
-  }
-}
-
 // ---------- Utilidades de formulario ----------
 
 // Revisa los campos obligatorios; marca el primero vacío y le da el foco
@@ -408,18 +365,18 @@ function limpiarErrorCampo(campo) {
   campo.removeAttribute('aria-describedby');
 }
 
-// Aviso persistente debajo del botón con el motivo del rechazo del backend
-function mostrarAviso(form, mensaje) {
-  let aviso = form.querySelector('.aviso');
+// Aviso persistente debajo del botón con el motivo del rechazo del backend (y, si hay, un botón con qué hacer)
+function mostrarAviso(form, mensaje, accion = null) {
+  let aviso = form.querySelector(':scope > .aviso');
   if (!mensaje) {
     aviso?.remove();
     return;
   }
   if (!aviso) {
-    aviso = el('p', { className: 'aviso', role: 'alert' });
+    aviso = el('div', { className: 'aviso', role: 'alert' });
     form.append(aviso);
   }
-  aviso.textContent = mensaje;
+  aviso.replaceChildren(el('p', {}, mensaje), accion && el('div', { className: 'aviso__accion' }, accion));
 }
 
 // Cambia las opciones de un select conservando la que estaba elegida
@@ -433,11 +390,10 @@ function nombreEspacio(id) {
   return obtenerEstado().espacios.find((e) => e.id === id)?.nombre ?? id;
 }
 
-function nombreRecurso(id) {
-  return obtenerEstado().recursos.find((r) => r.id === id)?.nombre ?? id;
-}
-
 const hora = (fechaHora) => fechaHora?.slice(11, 16) ?? '';
+
+// Dos franjas "YYYY-MM-DDTHH:mm" se cruzan (la misma regla que src/domain/fechas.js)
+const seSolapan = (inicioA, finA, inicioB, finB) => inicioA < finB && inicioB < finA;
 
 // "2026-10-16T14:05" -> "16/10 14:05"
 function fechaCorta(fechaHora) {

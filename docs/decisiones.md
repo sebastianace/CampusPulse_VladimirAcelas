@@ -174,7 +174,7 @@ miles de ejemplos. Fine-tuning sirve para estilo o clasificación a gran escala,
 obliga a usar solo los fragmentos; y el código descarta toda respuesta sin una cita válida. Está medido con preguntas
 que no tienen respuesta (`docs/evaluacion-rag.md`).
 
-**¿Qué pasa si Gemini o `pulse-ai` se caen?** La app sigue: reservas, préstamos e incidencias funcionan con los
+**¿Qué pasa si Gemini o `pulse-ai` se caen?** La app sigue: reservas e incidencias funcionan con los
 formularios. Solo falla la parte de IA, con un mensaje claro y nunca con una respuesta inventada.
 
 **¿Por qué pgvector y no Qdrant?** Porque ya tengo PostgreSQL, quiero filtrar con SQL por estado y equipo en la misma

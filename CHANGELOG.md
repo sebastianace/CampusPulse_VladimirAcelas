@@ -18,24 +18,35 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
   del inventario fuera de servicio y un aviso en la app cuando llega una nueva. Es la pestaña con la que abre la app para
   soporte técnico. Botón **Atender**: la incidencia queda "en atención" a nombre de quien la tomó
   (`POST /api/incidencias/:id/atender`, migración `008_atencion_incidencias.sql`).
-- **Solicitudes de salón:** si un salón está reservado pero nadie lo usa, otra persona lo pide desde la reserva en curso
-  y un admin aprueba o rechaza en la pestaña **Solicitudes** (contador y avisos en la app, ya no por correo a TI). Al
-  aprobar, la reserva original termina en ese momento y se crea la nueva en la misma transacción. Migración
-  `007_solicitudes_salon.sql`; rutas `GET`, `POST` y `PATCH /api/solicitudes`.
+- **Solicitudes de salón:** si el salón que alguien necesita ya está reservado, lo pide a un admin, que aprueba o
+  rechaza en la pestaña **Solicitudes** (contador y avisos en la app, ya no por correo a TI). Sirve para una reserva en
+  curso (nadie llegó: al aprobar, la original termina en ese momento) y para una futura (al aprobar, la original
+  conserva lo que le sobre antes o después de la franja pedida, o se cancela si la cubría entera). Se pide con
+  "Solicitar este salón" en la lista de reservas o con "Pedirle el salón a un admin" en el aviso de "ya está
+  reservado", que llena la solicitud con lo que se intentó reservar. Todo en la misma transacción. Migraciones
+  `007_solicitudes_salon.sql` y `011_solicitud_franja.sql`; rutas `GET`, `POST` y `PATCH /api/solicitudes`.
 - Las reservas guardan quién las creó (`creadaPor`) y solo esa persona o un admin las edita o cancela.
-- Pestaña **Inventario** (admin y soporte técnico) para poner cada equipo y sala en su estado real:
-  `PATCH /api/recursos/:id` y `PATCH /api/espacios/:id`. Lo que una incidencia abierta tiene fuera de servicio no se
-  cambia a mano (se resuelve la incidencia) y los préstamos siguen en la pestaña Prestar. `GET /api/recursos` trae
-  `cambiosPermitidos`, así los botones salen de `TRANSICIONES_RECURSO`.
+- Pestaña **Inventario** (admin y soporte técnico): la lista de trabajo de TI. Muestra solo los equipos **dañados o en
+  reparación**, primero los dañados, y deja enviarlos a reparación o marcarlos disponibles (`PATCH /api/recursos/:id`);
+  al quedar disponible, el equipo sale de la lista. Las salas no aparecen: una sala se inhabilita y se rehabilita con su
+  incidencia. Lo que una incidencia abierta tiene fuera de servicio no se cambia a mano (se resuelve la incidencia).
+  `GET /api/recursos` trae `cambiosPermitidos`, así los botones salen de `TRANSICIONES_RECURSO`.
 
 ### Quitado
+- **Préstamos de equipos:** en el campus no se prestan equipos. Sale la pestaña **Prestar**, las rutas `/api/prestamos`,
+  las reglas de préstamo (`MAX_PRESTAMOS_POR_PERSONA`) y el estado "prestado" de los equipos. La migración
+  `010_sin_prestamos.sql` cierra los préstamos activos, devuelve a disponible lo que figuraba prestado y quita "prestado"
+  del `CHECK`; la tabla `prestamos` se queda como historial. La base de conocimiento ahora dice que el campus no presta
+  equipos, y las preguntas 5 y 11 de la evaluación del RAG cambian en consecuencia (hay que volver a correr
+  `npm run evaluar-rag` para actualizar `docs/evaluacion-rag.md`).
 - La pestaña **Datos** y el botón "Restaurar". La validación del CSV oficial sigue igual (la sala inválida queda en gris
-  en el plano y aparece en Inventario) y el reporte sigue en `GET /api/calidad-datos`. Restaurar los datos iniciales
+  en el plano) y el reporte sigue en `GET /api/calidad-datos`. Restaurar los datos iniciales
   pasa a la terminal: `npm run restaurar` (sin borrar cuentas). Se quita `POST /api/restaurar`.
 
 ### Cambiado
-- El almacén escribe, tabla por tabla, primero los `UPDATE` y luego los `INSERT` (antes, todos los `INSERT` primero):
-  así cortar una reserva y crear la que la reemplaza no choca con la restricción `EXCLUDE`.
+- El almacén escribe primero todos los `DELETE` (de hijos a padres) y luego, tabla por tabla, los `UPDATE` y después los
+  `INSERT` (antes, los `INSERT` primero y los `DELETE` al final): así cortar o cancelar una reserva y crear la que la
+  reemplaza no choca con la restricción `EXCLUDE`.
 - **Toda incidencia va a Soporte TI** (`REGLAS.AREA_RESPONSABLE`): en el campus, TI es el único equipo que resuelve los
   problemas técnicos y de infraestructura. El campo "Área responsable" sale del formulario, la IA ya no lo decide (prompt
   de triaje 1.4) y el flujo de n8n deja el Switch por área y avisa directo a Soporte TI. Las incidencias y los avisos

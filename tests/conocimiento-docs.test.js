@@ -43,8 +43,9 @@ describe('knowledge/ dice lo mismo que el código', () => {
     }
   });
 
-  test('límite de préstamos', () => {
-    assert.match(doc('prestamo-de-equipos.md'), new RegExp(`${REGLAS.MAX_PRESTAMOS_POR_PERSONA} préstamos`));
+  test('el campus no presta equipos', () => {
+    assert.match(doc('prestamo-de-equipos.md'), /no presta equipos/);
+    assert.equal(REGLAS.TRANSICIONES_RECURSO.prestado, undefined);
   });
 
   test('aforos del archivo oficial', () => {

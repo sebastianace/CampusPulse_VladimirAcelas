@@ -50,7 +50,7 @@ Pregunta: ¿Quién ganó el mundial de fútbol de 2014?
 Resultado: depende_del_historial=false, pregunta="¿Quién ganó el mundial de fútbol de 2014?"
 (Es una pregunta completa de otro tema: no se mezcla con la conversación anterior.)
 
-Conversación: Persona: ¿Cuántos equipos puedo tener prestados? / Pulse: Hasta 2.
+Conversación: Persona: ¿Puedo pedir un portátil prestado? / Pulse: No, el campus no presta equipos.
 Pregunta: ¿Y cómo reporto un equipo dañado?
 Resultado: depende_del_historial=false, pregunta="¿Y cómo reporto un equipo dañado?"
 (Cambia de tema y se entiende sola.)
@@ -116,7 +116,7 @@ def prompt_reranking(pregunta: str, fragmentos) -> str:
 
 def prompt_respuesta(pregunta: str, historial: list[dict], fragmentos) -> str:
     return construir_prompt(
-        rol="Respondes preguntas sobre el campus (salas, reservas, préstamos, incidencias) usando SOLO los fragmentos de documentos que se te entregan, y dices en qué fragmentos te apoyaste.",
+        rol="Respondes preguntas sobre el campus (salas, reservas, equipos, incidencias) usando SOLO los fragmentos de documentos que se te entregan, y dices en qué fragmentos te apoyaste.",
         tono=tono_de_pulse("Responde en español, en dos o tres frases como máximo, en un solo párrafo. Ve directo a la respuesta, sin saludar ni presentarte."),
         politicas=[
             "Responde únicamente con información que esté escrita en los fragmentos. Si varios fragmentos dicen cosas distintas, menciona la diferencia.",

@@ -41,8 +41,8 @@ Doce tablas, más `schema_migrations` (qué migraciones ya se aplicaron):
 | `espacios` | Salas del campus (id, nombre, tipo, aforo, estado) |
 | `recursos` | Equipos; `espacio_id` puede ser `NULL` si no tienen sala |
 | `reservas` | Reservas de espacios, con la restricción de no solapamiento y quién la creó (`creada_por`) |
-| `solicitudes_salon` | Pedidos de un salón con reserva en curso, y la decisión del admin |
-| `prestamos` | Préstamos de equipos |
+| `solicitudes_salon` | Pedidos de un salón ya reservado (en curso o a futuro), y la decisión del admin |
+| `prestamos` | Historial de préstamos de equipos. El campus ya no presta equipos: desde `010_sin_prestamos.sql` no hay préstamos activos ni equipos "prestado" |
 | `incidencias` | Incidencias; `ia` (jsonb) guarda lo que sugirió la IA |
 | `usuarios` | Cuentas, con rol `admin`, `profesor` o `soporte_tecnico`, quién la creó (`creado_por`) y si tiene contraseña temporal |
 | `sesiones` | Sesiones activas (se guarda el hash del token, no el token) |
@@ -53,13 +53,15 @@ Doce tablas, más `schema_migrations` (qué migraciones ya se aplicaron):
 
 Las migraciones están en [`db/migrations/`](../db/migrations/): `001_extensiones.sql`,
 `002_esquema.sql`, `003_orden.sql`, `004_embeddings.sql`, `005_notificaciones.sql`, `006_inhabilito_espacio.sql`,
-`007_solicitudes_salon.sql`, `008_atencion_incidencias.sql` (quién atiende cada incidencia) y `009_cuentas.sql` (quién creó
-cada cuenta y contraseñas temporales). Cada archivo corre en una transacción; lo aplicado queda en `schema_migrations`.
+`007_solicitudes_salon.sql`, `008_atencion_incidencias.sql` (quién atiende cada incidencia), `009_cuentas.sql` (quién creó
+cada cuenta y contraseñas temporales), `010_sin_prestamos.sql` (cierra los préstamos activos, devuelve a disponible lo
+prestado y quita el estado "prestado") y `011_solicitud_franja.sql` (franja de una solicitud de salón a futuro). Cada archivo corre en una transacción; lo aplicado queda en `schema_migrations`.
 
 ### `solicitudes_salon` y `reservas.creada_por` (migración 007)
 
-Una solicitud pide un salón con una reserva en curso: guarda la reserva pedida (`reserva_id`), quién la pide
-(`solicitante`), de quién era la reserva (`afectado`), los datos de la reserva nueva (`responsable`, `asistentes`, `fin`),
+Una solicitud pide un salón ya reservado: guarda la reserva pedida (`reserva_id`; queda en null si al aprobar se cancela
+entera), quién la pide (`solicitante`), de quién era la reserva (`afectado`), los datos de la reserva nueva (`responsable`,
+`asistentes`, `inicio`, `fin`; `inicio` es null si la reserva estaba en curso: la nueva empieza al aprobar, migración 011),
 el `motivo` y la decisión (`estado`: pendiente, aprobada o rechazada; `decidida_por`, `fecha_decision`, `nota_decision`,
 `reserva_nueva_id`). `reservas.creada_por` guarda qué usuario creó cada reserva (null en las anteriores).
 
@@ -145,9 +147,10 @@ transacción**:
 1. `BEGIN` y un bloqueo de escritura (`pg_advisory_xact_lock`): una escritura a la vez.
 2. **Foto:** lee las tablas y arma el objeto `db`.
 3. Llama a `cambio(db)`: las reglas lo modifican. Si lanzan un error, `ROLLBACK` y no se guarda nada.
-4. **Diferencias:** compara `db` con la foto y ejecuta solo los `UPDATE`, `INSERT` y `DELETE` necesarios. Tabla por
-   tabla, de padres a hijos, primero los `UPDATE` y luego los `INSERT` (así, al aprobar una solicitud de salón, la
-   reserva original se corta antes de insertar la nueva); los `DELETE` van al final, de hijos a padres.
+4. **Diferencias:** compara `db` con la foto y ejecuta solo los `DELETE`, `UPDATE` e `INSERT` necesarios. Primero todos
+   los `DELETE`, de hijos a padres; luego, tabla por tabla y de padres a hijos, los `UPDATE` y después los `INSERT`. Así,
+   al aprobar una solicitud de salón, la reserva original se cancela o se corta antes de insertar la nueva. Si una regla
+   borra una fila padre, antes quita las referencias de los hijos que también cambian (`quitarReserva`).
 5. `COMMIT`.
 
 Cada tabla tiene un repositorio en [`src/data/repos/`](../src/data/repos/) que traduce entre sus filas

@@ -107,7 +107,6 @@
     <aside class="panel tablero__acciones">
       <nav class="pestanas" role="tablist" aria-label="Acciones">
         <button role="tab" class="pestana" aria-selected="true" aria-controls="tab-reservar" id="p-reservar">Reservar</button>
-        <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-prestar" id="p-prestar">Prestar</button>
         <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-reportar" id="p-reportar">Reportar</button>
         <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-incidencias" id="p-incidencias">
           Incidencias <span class="contador" id="contador-incidencias" hidden></span>
@@ -166,26 +165,6 @@
         </ul>
       </section>
 
-      <!-- Prestar y devolver equipos -->
-      <section class="pestana__cuerpo" role="tabpanel" id="tab-prestar" aria-labelledby="p-prestar" hidden>
-        <form class="formulario" id="form-prestamo" novalidate>
-          <label class="campo">
-            <span>Equipo</span>
-            <select name="recursoId" required></select>
-          </label>
-          <label class="campo">
-            <span>Persona</span>
-            <input name="persona" type="text" autocomplete="name" required>
-          </label>
-          <button class="btn btn--primario" type="submit">Prestar equipo</button>
-        </form>
-
-        <h3 class="subtitulo">Préstamos activos</h3>
-        <ul class="lista" id="lista-prestamos">
-          <li class="vacio">Cargando préstamos…</li>
-        </ul>
-      </section>
-
       <!-- Reportar incidencia: flujo vertical con IA -->
       <section class="pestana__cuerpo" role="tabpanel" id="tab-reportar" aria-labelledby="p-reportar" hidden>
         <form class="formulario" id="form-triaje" novalidate>
@@ -222,23 +201,18 @@
         </ul>
       </section>
 
-      <!-- Solicitudes de salón: pedir un salón reservado que nadie usa; un admin decide -->
+      <!-- Solicitudes de salón: pedir un salón que ya está reservado (en curso o a futuro); un admin decide -->
       <section class="pestana__cuerpo" role="tabpanel" id="tab-solicitudes" aria-labelledby="p-solicitudes" hidden>
         <ul class="lista" id="lista-solicitudes">
           <li class="vacio">Cargando solicitudes…</li>
         </ul>
       </section>
 
-      <!-- Inventario (admin y soporte técnico): estado real de equipos y salas -->
+      <!-- Inventario (admin y soporte técnico): solo los equipos que necesitan arreglo -->
       <section class="pestana__cuerpo" role="tabpanel" id="tab-inventario" aria-labelledby="p-inventario" hidden>
-        <p class="nota">Deja cada equipo y sala como está en la realidad. Lo que una incidencia abierta tiene fuera de servicio se rehabilita resolviendo la incidencia.</p>
-        <h3 class="subtitulo">Equipos</h3>
+        <p class="nota">Equipos dañados o en reparación. Cuando uno quede arreglado, márcalo disponible y sale de la lista. Lo que una incidencia abierta tiene fuera de servicio se rehabilita resolviendo la incidencia.</p>
         <ul class="lista" id="lista-inventario-equipos">
           <li class="vacio">Cargando equipos…</li>
-        </ul>
-        <h3 class="subtitulo">Salas</h3>
-        <ul class="lista" id="lista-inventario-salas">
-          <li class="vacio">Cargando salas…</li>
         </ul>
       </section>
 
