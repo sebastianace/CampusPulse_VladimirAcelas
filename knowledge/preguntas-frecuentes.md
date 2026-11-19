@@ -9,9 +9,9 @@ cuenta del sistema es la del administrador y, después de ella, nadie más puede
 
 ## ¿Qué puede hacer cada rol?
 
-El administrador crea cuentas, restaura los datos iniciales y resuelve incidencias. El soporte técnico resuelve
-incidencias. El profesor reserva salas, pide préstamos y reporta incidencias, pero no puede resolverlas ni crear
-cuentas ni restaurar datos.
+El administrador crea cuentas, resuelve incidencias y actualiza el inventario. El soporte técnico resuelve
+incidencias y actualiza el inventario (el estado de equipos y salas). El profesor reserva salas, pide préstamos y
+reporta incidencias, pero no puede resolverlas, ni cambiar el inventario, ni crear cuentas.
 
 ## ¿Qué pasa si me equivoco muchas veces en la clave?
 

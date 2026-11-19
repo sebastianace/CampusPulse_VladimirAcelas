@@ -6,7 +6,7 @@ Guion de la demo, plan B, preguntas difíciles y plan de estudio. Pensado para u
 
 - [ ] `docker compose up -d --build` y `npm run n8n:preparar` sin errores; `docker compose ps` muestra los 5 servicios.
 - [ ] `npm test` en verde (y los tests de Python de `pulse-ai`).
-- [ ] Botón **Restaurar** (admin) para empezar con los datos iniciales; Mailpit vacío (<http://localhost:8025>).
+- [ ] `npm run restaurar` para empezar con los datos iniciales (no borra las cuentas); Mailpit vacío (<http://localhost:8025>).
 - [ ] Una cuenta de **profesor** creada para mostrar los permisos.
 - [ ] Probar una vez cada paso del guion: la cuota de Gemini se recupera en un minuto; **no ensayar justo antes** de presentar.
 - [ ] Capturas o un video corto de respaldo por si falla internet (ver plan B).
@@ -17,7 +17,7 @@ Guion de la demo, plan B, preguntas difíciles y plan de estudio. Pensado para u
 | Min. | Qué muestro | Qué digo (idea, no texto de memoria) |
 |---|---|---|
 | 0:00 | Portada del README | **Problema:** reservas en hojas sueltas, incidencias por WhatsApp, nadie sabe qué sala está libre ni qué está dañado. **Solución:** un tablero en vivo con reglas claras y una IA que ayuda, pero no decide. |
-| 0:40 | Mapa del campus | Los colores salen de las reglas: libre, ocupada, inhabilitada. Datos oficiales del CSV con su reporte de calidad. |
+| 0:40 | Mapa del campus | Los colores salen de las reglas: libre, ocupada, inhabilitada. Datos oficiales del CSV: un registro inválido no rompe la app, la sala sale en gris. |
 | 1:10 | Reservar Skilab para 40 personas | **Rechazada por la regla de aforo** (20 puestos). Luego dos reservas que se cruzan: la base de datos también lo impide. |
 | 1:50 | Reportar "El video beam de Apolo no prende y huele a quemado" | **Triaje con IA:** sugiere categoría, prioridad crítica y equipo, y explica por qué. El área no la elige nadie: todo va a Soporte TI, el único equipo que resuelve lo técnico y la infraestructura. **Yo confirmo**: la IA no guarda nada sola. Solo el video beam queda en reparación y **Apolo se sigue reservando**: se inhabilita lo más específico (la sala completa solo si hay riesgo de la sala, como una gotera cerca de los enchufes). |
 | 2:40 | Reportar "El proyector de Apolo no enciende, sale olor a quemado" | **Embeddings:** "¿Es la misma incidencia?" con ~97 % de parecido. Sumo el reporte en vez de duplicar. |

@@ -90,12 +90,8 @@ test('profesor y soporte técnico no pueden crear cuentas (403) y sin sesión es
   assert.equal((await pedir('/api/usuarios', 'POST', {})).status, 401);
 });
 
-test('POST /api/restaurar: solo admin (profesor y soporte -> 403, sin sesión -> 401)', async () => {
-  for (const usuario of ['profe', 'tecnico']) {
-    assert.equal((await pedir('/api/restaurar', 'POST', null, (await entrar(usuario)).cookie)).status, 403, usuario);
-  }
-  assert.equal((await pedir('/api/restaurar', 'POST', null, (await entrar('jefa')).cookie)).status, 200);
-  assert.equal((await pedir('/api/restaurar', 'POST')).status, 401);
+test('restaurar ya no es una ruta de la API (404 aun para el admin): se hace con npm run restaurar', async () => {
+  assert.equal((await pedir('/api/restaurar', 'POST', null, (await entrar('jefa')).cookie)).status, 404);
 });
 
 test('resolver una incidencia: admin y soporte técnico sí; profesor -> 403', async () => {

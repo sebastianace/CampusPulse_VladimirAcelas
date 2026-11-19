@@ -5,7 +5,6 @@ import { iniciarMapa, dibujarMapa } from './mapa.js';
 import { iniciarFormularios, actualizarFormularios } from './formularios.js';
 import { iniciarIncidencias, dibujarIncidencias } from './incidencias.js';
 import { iniciarTimeline, dibujarTimeline } from './timeline.js';
-import { iniciarCalidad, cargarCalidad } from './calidad.js';
 import { iniciarComando } from './comando.js';
 import { dibujarPresion } from './presion.js';
 import { iniciarDemo } from './demo.js';
@@ -131,7 +130,6 @@ function iniciarTablero() {
   iniciarFormularios({ refrescar, mostrarPestana });
   iniciarIncidencias({ refrescar, mostrarPestana });
   iniciarTimeline();
-  iniciarCalidad({ refrescar });
   iniciarUsuarios();
   iniciarInventario({ refrescar, mostrarPestana });
   iniciarComando({ mostrarPestana });
@@ -142,8 +140,7 @@ function iniciarTablero() {
   suscribir(dibujarIncidencias);
   suscribir(dibujarPresion);
   suscribir(dibujarInventario);
-  // El reporte de calidad se carga después de los espacios (los usa para nombrar los grises)
-  refrescar().then(cargarCalidad);
+  refrescar();
   activarRefrescoAutomatico();
 }
 

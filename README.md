@@ -150,9 +150,9 @@ El detalle de cada cambio está en [CHANGELOG.md](CHANGELOG.md).
   "Crear una cuenta" (usuario de 3 a 30 caracteres y contraseña de al menos 8): esa cuenta es
   `admin`. Después el registro se cierra (el login oculta "Crear una cuenta") y el admin crea las
   demás desde la pestaña **Usuarios** (`POST /api/usuarios`).
-- La interfaz oculta lo que el rol no puede hacer (el botón "Restaurar", "Marcar como resuelta" y
-  la pestaña Usuarios); aun así, quien impide las acciones es el servidor, con 403.
-- **Tres roles:** `admin` (crea cuentas y restaura datos), `profesor` (reserva, presta y reporta)
+- La interfaz oculta lo que el rol no puede hacer ("Marcar como resuelta" y las pestañas
+  Inventario y Usuarios); aun así, quien impide las acciones es el servidor, con 403.
+- **Tres roles:** `admin` (crea cuentas), `profesor` (reserva, presta y reporta)
   y `soporte_tecnico` (además resuelve incidencias, lo que rehabilita espacios y equipos, y
   actualiza el **Inventario**: el estado real de cada equipo y sala). La
   tabla de permisos está en [docs/contrato-api.md](docs/contrato-api.md).
@@ -162,8 +162,9 @@ El detalle de cada cambio está en [CHANGELOG.md](CHANGELOG.md).
 - Tras **5 intentos fallidos** del mismo usuario desde la misma IP en 15 minutos, el login
   responde `429` hasta que pase la ventana (`src/auth/intentos.js`). Los contadores viven en
   memoria y se borran al reiniciar el servidor.
-- **Restaurar datos** no borra las cuentas, y las sesiones sobreviven a los reinicios de
-  `npm run dev` (útil en el reto en vivo).
+- `npm run restaurar` (en la terminal) vuelve a los datos iniciales sin borrar las cuentas, y las
+  sesiones sobreviven a los reinicios de `npm run dev` (útil en el reto en vivo). Ya no hay botón
+  "Restaurar" en la app: borrar todo con un clic era un riesgo sin beneficio para el campus.
 - Si venías de la versión con `data/auth.json`, copia tus cuentas con `npm run importar-cuentas`
   (los hashes se copian tal cual; las sesiones no, así que vuelve a iniciar sesión).
 
@@ -413,7 +414,7 @@ error claro y el formulario manual, nunca con una respuesta inventada.
 | `npm run n8n:preparar` | Crea las credenciales en n8n, importa y activa los flujos de `n8n/` y reinicia n8n |
 | `npm run conocimiento` | Recarga `knowledge/` en la base vectorial (necesita `pulse-ai` levantado) |
 | `npm run evaluar-rag` | Hace las 15 preguntas de prueba del RAG, con y sin reranking (gasta cuota de Gemini, ~8 min) |
-| `npm run semilla` | Carga espacios, recursos y calidad de datos en PostgreSQL |
+| `npm run restaurar` (o `npm run semilla`) | Vuelve a los datos iniciales: carga espacios, recursos y calidad de datos en PostgreSQL y borra reservas, préstamos e incidencias. No toca las cuentas |
 | `npm run medir-triaje` | Mide el triaje sin ejemplos y con ellos (24 llamadas a Gemini, ~5 min; gasta cuota) |
 
 Abre `http://localhost:3000` y crea una cuenta con **Crear una cuenta** (solo la primera vez).
@@ -423,8 +424,8 @@ se usa el formulario manual. **Sin PostgreSQL no arranca**: si ves "No hay conex
 abre Docker Desktop y corre `docker compose up -d db`.
 
 La primera vez que arranca, la app carga en PostgreSQL los datos de `data/raw/espacios.csv`,
-`data/seed/espacios-extra.json` y `data/seed/recursos.json`. El botón **Restaurar**
-(`POST /api/restaurar`) vuelve a ese estado inicial.
+`data/seed/espacios-extra.json` y `data/seed/recursos.json`. `npm run restaurar` vuelve a ese
+estado inicial.
 
 ## Suposiciones sobre los datos
 

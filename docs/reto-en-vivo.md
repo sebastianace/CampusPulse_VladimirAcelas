@@ -50,7 +50,7 @@ Con `npm run dev`, al guardar `reglas.js` el servidor se reinicia solo en 1 o 2 
 - **Error de sintaxis al guardar** (falta una coma o un corchete): la terminal de `npm run dev`
   muestra la línea exacta. Corregir y guardar de nuevo.
 - **La pantalla no cambia**: recargar el navegador (`F5`).
-- **Datos de pruebas anteriores estorban**: pestaña **Datos → Restaurar datos iniciales**.
+- **Datos de pruebas anteriores estorban**: `npm run restaurar` en otra terminal (no borra las cuentas).
 - **Volver al valor original**: deshacer con `Ctrl+Z` en el editor y guardar.
 
 ## Dónde se aplica cada regla (por si el jurado pregunta)

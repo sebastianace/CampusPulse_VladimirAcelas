@@ -24,7 +24,6 @@ sin esperar a que P1 termine.
 | `POST /api/incidencias` | `{descripcion, categoria, prioridad, espacioId, recursoId, inhabilitar, inhabilitarEspacio, origen, ia}` | `201` + la incidencia con `area`, `inhabilito` e `inhabilitoEspacio`. El área siempre es `REGLAS.AREA_RESPONSABLE` (`Soporte TI`): no se envía y, si llega otra, se ignora. Se inhabilita lo más específico: el equipo si lo hay; la sala solo con `inhabilitarEspacio: true` (opcional) o si no hay equipo | P1 |
 | `PATCH /api/incidencias/:id` | `{estado: "resuelta"}` | `200` (rehabilita exactamente lo que la incidencia dejó fuera de servicio). Solo `admin` y `soporte_tecnico`; otro rol → `403` | P1 |
 | `GET /api/calidad-datos` | — | `{cargados, validos, inconsistentes: [{fila, motivo}]}` | P1 |
-| `POST /api/restaurar` | — | `200` (recrea `db.json` desde `raw` y `seed`). Solo `admin`; otro rol → `403` | P1 |
 | `POST /api/auth/registro` | `{usuario, nombre, clave}` | `201 {usuario, nombre, rol}` y abre sesión (cookie). Solo crea la primera cuenta (`admin`); después `403 REGISTRO_CERRADO` | P2 |
 | `GET /api/auth/estado` | — | `200 {registroAbierto}`; es público. El login lo usa para ocultar "Crear una cuenta" | P2 |
 | `GET /api/usuarios` | — | `200 [{usuario, nombre, rol}]` (nunca trae las claves). Solo `admin` | P2 |
@@ -99,7 +98,7 @@ cuenta antigua sin rol, o con un rol que ya no existe (`camper`, `coordinador`),
 | Reservar, prestar y reportar incidencias | sí | sí | sí |
 | Resolver incidencias (rehabilita espacios y equipos) | sí | no | sí |
 | Crear cuentas | sí | no | no |
-| Restaurar datos | sí | no | no |
+| Actualizar el inventario (estado de equipos y salas) | sí | no | sí |
 
 ## Fechas
 
