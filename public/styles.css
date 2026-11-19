@@ -675,6 +675,7 @@ option { color: var(--texto); background: var(--placa-alta); }
 .item__acciones { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
 .item[data-estado="resuelta"] { opacity: 0.6; }
 .item__texto { margin: 0; font-size: 13px; }
+.soporte__resumen { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .solicitud { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--linea); }
 .solicitud__decision { display: grid; gap: 6px; margin-top: 4px; }
 .solicitud__nota { min-height: 40px; }
@@ -706,6 +707,20 @@ option { color: var(--texto); background: var(--placa-alta); }
   color: var(--texto);
   box-shadow: var(--sombra);
 }
+
+.dialogo {
+  width: min(420px, calc(100vw - 32px));
+  padding: 20px;
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+  background: var(--placa);
+  color: var(--texto);
+  box-shadow: var(--sombra);
+}
+.dialogo::backdrop { background: rgb(6 8 12 / 0.7); backdrop-filter: blur(2px); }
+.dialogo__titulo { font-size: 16px; margin: 0 0 4px; }
+.clave-temporal { display: grid; gap: 6px; margin-top: 6px; padding: 10px; border: 1px dashed var(--ocupada); border-radius: var(--radio-sm); }
+.clave-temporal code { font-family: var(--f-dato); font-size: 18px; letter-spacing: 0.08em; user-select: all; }
 
 .comando::backdrop { background: rgb(6 8 12 / 0.7); backdrop-filter: blur(2px); }
 
@@ -950,7 +965,8 @@ option { color: var(--texto); background: var(--placa-alta); }
 @media (max-width: 640px) {
   .barra { flex-wrap: wrap; gap: 12px; padding: 12px 16px; position: static; }
   .presion { order: 3; flex-basis: 100%; max-width: none; }
-  .barra__acciones { gap: 10px; }
+  .barra__acciones { gap: 10px; flex-wrap: wrap; } /* con "Contraseña" y "Salir" no caben en una línea */
+  .sesion__nombre { max-width: 110px; }
   .btn--ia kbd { display: none; }
   .tablero { padding: 16px; gap: 16px; }
   .panel { padding: 16px; }

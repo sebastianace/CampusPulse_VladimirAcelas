@@ -44,7 +44,7 @@ Doce tablas, más `schema_migrations` (qué migraciones ya se aplicaron):
 | `solicitudes_salon` | Pedidos de un salón con reserva en curso, y la decisión del admin |
 | `prestamos` | Préstamos de equipos |
 | `incidencias` | Incidencias; `ia` (jsonb) guarda lo que sugirió la IA |
-| `usuarios` | Cuentas, con rol `admin`, `profesor` o `soporte_tecnico` |
+| `usuarios` | Cuentas, con rol `admin`, `profesor` o `soporte_tecnico`, quién la creó (`creado_por`) y si tiene contraseña temporal |
 | `sesiones` | Sesiones activas (se guarda el hash del token, no el token) |
 | `calidad_datos` | Reporte de calidad del CSV oficial (una sola fila) |
 | `incidencias_embeddings` | El embedding (`vector(768)`, índice HNSW coseno) de cada incidencia, para buscar parecidas |
@@ -52,8 +52,9 @@ Doce tablas, más `schema_migrations` (qué migraciones ya se aplicaron):
 | `incidencias_notificaciones` | A quién avisó n8n de cada incidencia, por qué canal y cuándo |
 
 Las migraciones están en [`db/migrations/`](../db/migrations/): `001_extensiones.sql`,
-`002_esquema.sql`, `003_orden.sql`, `004_embeddings.sql`, `005_notificaciones.sql`, `006_inhabilito_espacio.sql` y
-`007_solicitudes_salon.sql`. Cada archivo corre en una transacción; lo aplicado queda en `schema_migrations`.
+`002_esquema.sql`, `003_orden.sql`, `004_embeddings.sql`, `005_notificaciones.sql`, `006_inhabilito_espacio.sql`,
+`007_solicitudes_salon.sql`, `008_atencion_incidencias.sql` (quién atiende cada incidencia) y `009_cuentas.sql` (quién creó
+cada cuenta y contraseñas temporales). Cada archivo corre en una transacción; lo aplicado queda en `schema_migrations`.
 
 ### `solicitudes_salon` y `reservas.creada_por` (migración 007)
 

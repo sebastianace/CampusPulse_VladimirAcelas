@@ -21,7 +21,7 @@ import usuariosRouter from './routes/usuarios.js';
 import solicitudesRouter from './routes/solicitudes.js';
 import iaRouter from './routes/ia.js';
 import integracionesRouter from './routes/integraciones.js';
-import authRouter, { exigirRol, exigirSesion } from './routes/auth.js';
+import authRouter, { exigirSesion } from './routes/auth.js';
 
 const CARPETA_PUBLICA = fileURLToPath(new URL('../public', import.meta.url));
 
@@ -45,7 +45,7 @@ app.use('/api/solicitudes', solicitudesRouter); // pedir un salón ocupado; apro
 app.use('/api/prestamos', prestamosRouter);
 app.use('/api/incidencias', incidenciasRouter);
 app.use('/api/calidad-datos', calidadRouter);
-app.use('/api/usuarios', exigirRol('admin'), usuariosRouter); // crear cuentas: solo admin
+app.use('/api/usuarios', usuariosRouter); // crear cuentas y contraseñas temporales: solo admin (lo exige el router)
 app.use('/api/ia', iaRouter); // dueño: P2
 
 // Cualquier otra ruta /api que no exista responde 404 en formato JSON.

@@ -72,9 +72,9 @@ test('el admin crea profesores y soporte técnico, y ellos pueden entrar', async
   }
 });
 
-test('el admin no puede crear otro admin ni un rol que no existe (422)', async () => {
+test('el admin no puede crear un rol que no existe (422); crear otros admins se prueba en cuentas.test.js', async () => {
   const admin = await entrar('jefa');
-  for (const rol of ['admin', 'camper', undefined]) {
+  for (const rol of ['camper', 'coordinador', undefined]) {
     const { status } = await pedir('/api/usuarios', 'POST', { usuario: 'nuevo', nombre: 'Nuevo', clave: CLAVE, rol }, admin.cookie);
     assert.equal(status, 422, `rol ${rol}`);
   }
@@ -126,7 +126,8 @@ test('GET /api/usuarios: el admin ve las cuentas sin claves; los demás reciben 
   const { status, cuerpo } = await pedir('/api/usuarios', 'GET', null, admin.cookie);
   assert.equal(status, 200);
   assert.deepEqual(cuerpo.map((u) => u.usuario).sort(), ['jefa', 'profe', 'tecnico']);
-  assert.ok(cuerpo.every((u) => Object.keys(u).sort().join() === 'nombre,rol,usuario'), 'sin hash de clave');
+  assert.ok(cuerpo.every((u) => !Object.keys(u).some((k) => /clave_hash|^clave$|hash/i.test(k))), 'sin hash de clave');
+  assert.ok(cuerpo.every((u) => 'creadoPor' in u && 'creado' in u), 'con quién la creó y cuándo');
 
   for (const usuario of ['profe', 'tecnico']) {
     assert.equal((await pedir('/api/usuarios', 'GET', null, (await entrar(usuario)).cookie)).status, 403, usuario);

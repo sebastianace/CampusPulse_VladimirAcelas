@@ -283,7 +283,8 @@ export function dibujarIncidencias({ incidencias }) {
   lista.replaceChildren(...ordenadas.map(crearItemIncidencia));
 }
 
-function crearItemIncidencia(incidencia) {
+/** Tarjeta de una incidencia. La usan esta lista y el panel de Soporte TI (extra: más líneas, como la antigüedad). */
+export function crearItemIncidencia(incidencia, extra = null) {
   const resuelta = incidencia.estado === 'resuelta';
   const lugar = [nombreEspacio(incidencia.espacioId), nombreRecurso(incidencia.recursoId)].filter(Boolean).join(' · ');
 
@@ -300,17 +301,37 @@ function crearItemIncidencia(incidencia) {
           `${incidencia.reportesAdicionales} reporte${incidencia.reportesAdicionales > 1 ? 's' : ''} más`)
         : null,
       ...(incidencia.notificaciones ?? []).map((n) => el('span', { className: 'etiqueta', title: `Aviso enviado por ${n.canal}` }, `Avisada: ${n.area}`)),
+      !resuelta && incidencia.atendidaPor
+        ? el('span', { className: 'etiqueta etiqueta--ia', title: `Desde las ${horaCorta(incidencia.fechaAtencion)}` }, `En atención: ${incidencia.atendidaPorNombre ?? incidencia.atendidaPor}`)
+        : null,
       resuelta ? el('span', { className: 'etiqueta etiqueta--resuelta' }, 'Resuelta') : null),
     lugar ? el('span', { className: 'item__meta' }, lugar) : null,
+    extra,
     !resuelta && fueraDeServicio(incidencia).length
       ? el('span', { className: 'item__alerta' }, `Fuera de servicio: ${fueraDeServicio(incidencia).join(' · ')}`)
       : null,
     resuelta || !puede('resolverIncidencias') ? null : el('div', { className: 'item__acciones' },
+      incidencia.atendidaPor ? null : el('button', {
+        type: 'button', className: 'btn btn--primario btn--chico',
+        onClick: (e) => atender(incidencia, e.currentTarget),
+      }, 'Atender'),
       el('button', {
         type: 'button', className: 'btn btn--secundario btn--chico',
         onClick: (e) => resolver(incidencia, e.currentTarget),
       }, 'Marcar como resuelta')),
   );
+}
+
+// Soporte toma la incidencia: el resto del equipo ve que ya alguien va en camino.
+async function atender(incidencia, boton) {
+  try {
+    await conCarga(boton, 'Tomando…', () =>
+      pedir(`/api/incidencias/${encodeURIComponent(incidencia.id)}/atender`, { metodo: 'POST' }));
+    toasts.exito('La incidencia quedó a tu nombre: el equipo ve que ya la estás atendiendo.');
+    await refrescar();
+  } catch (error) {
+    toasts.error(error);
+  }
 }
 
 async function resolver(incidencia, boton) {

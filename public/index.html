@@ -42,6 +42,7 @@
       </button>
       <span class="sesion" id="sesion" hidden>
         <span class="sesion__nombre" id="sesion-nombre"></span>
+        <button class="btn btn--secundario btn--chico" id="btn-clave" type="button" title="Cambiar mi contraseña">Contraseña</button>
         <button class="btn btn--secundario btn--chico" id="cerrar-sesion" type="button">Salir</button>
       </span>
     </div>
@@ -110,6 +111,9 @@
         <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-reportar" id="p-reportar">Reportar</button>
         <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-incidencias" id="p-incidencias">
           Incidencias <span class="contador" id="contador-incidencias" hidden></span>
+        </button>
+        <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-soporte" id="p-soporte" hidden>
+          Soporte TI <span class="contador" id="contador-soporte" hidden></span>
         </button>
         <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-solicitudes" id="p-solicitudes">
           Solicitudes <span class="contador" id="contador-solicitudes" hidden></span>
@@ -210,6 +214,14 @@
         </ul>
       </section>
 
+      <!-- Soporte TI (soporte técnico y admin): todas las incidencias abiertas, de la más urgente a la menos -->
+      <section class="pestana__cuerpo" role="tabpanel" id="tab-soporte" aria-labelledby="p-soporte" hidden>
+        <div class="soporte__resumen" id="resumen-soporte"></div>
+        <ul class="lista" id="lista-soporte">
+          <li class="vacio">Cargando incidencias…</li>
+        </ul>
+      </section>
+
       <!-- Solicitudes de salón: pedir un salón reservado que nadie usa; un admin decide -->
       <section class="pestana__cuerpo" role="tabpanel" id="tab-solicitudes" aria-labelledby="p-solicitudes" hidden>
         <ul class="lista" id="lista-solicitudes">
@@ -230,7 +242,7 @@
         </ul>
       </section>
 
-      <!-- Cuentas (solo admin): crear profesores y soporte técnico -->
+      <!-- Cuentas (solo admin): crear profesores, soporte técnico y otros admins; contraseñas temporales -->
       <section class="pestana__cuerpo" role="tabpanel" id="tab-usuarios" aria-labelledby="p-usuarios" hidden>
         <form class="formulario" id="form-usuario" novalidate>
           <label class="campo">
@@ -247,6 +259,7 @@
               <select name="rol" required>
                 <option value="profesor">Profesor</option>
                 <option value="soporte_tecnico">Soporte técnico</option>
+                <option value="admin">Administrador</option>
               </select>
             </label>
           </div>
@@ -295,15 +308,32 @@
     </button>
   </div>
 
-  <!-- Personas que reservan salas: se despliegan al escribir el responsable -->
-  <datalist id="lista-responsables">
-    <option value="Dani Mendoza">Director comercial</option>
-    <option value="Karen Celis">Director Formación</option>
-    <option value="Juliana Caceres">Director Admin y Financiera</option>
-    <option value="Maria Fernanda Cala">Líder de Coordinación</option>
-    <option value="Paola Granados">Coordinadora de procesos Comerciales</option>
-    <option value="Alexandra Villamizar">Coordinador IA Academy</option>
-  </datalist>
+  <!-- Personas que reservan salas: los nombres de las cuentas reales (GET /api/usuarios/nombres) -->
+  <datalist id="lista-responsables"></datalist>
+
+  <!-- Cambiar mi contraseña (obligatorio si la contraseña es temporal) -->
+  <dialog class="dialogo" id="dialogo-clave" aria-labelledby="titulo-clave">
+    <form class="formulario" id="form-clave" novalidate>
+      <h2 class="dialogo__titulo" id="titulo-clave">Cambiar mi contraseña</h2>
+      <p class="nota" id="nota-clave" hidden>Tu contraseña es temporal: cámbiala para seguir usando Campus Pulse.</p>
+      <label class="campo">
+        <span>Contraseña actual</span>
+        <input name="claveActual" type="password" autocomplete="current-password" required>
+      </label>
+      <label class="campo">
+        <span>Contraseña nueva (mínimo 8 caracteres)</span>
+        <input name="claveNueva" type="password" autocomplete="new-password" minlength="8" required>
+      </label>
+      <label class="campo">
+        <span>Repite la contraseña nueva</span>
+        <input name="repetir" type="password" autocomplete="new-password" minlength="8" required>
+      </label>
+      <div class="item__acciones">
+        <button class="btn btn--primario" type="submit">Cambiar contraseña</button>
+        <button class="btn btn--secundario" type="button" id="cancelar-clave">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
 
   <div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
 

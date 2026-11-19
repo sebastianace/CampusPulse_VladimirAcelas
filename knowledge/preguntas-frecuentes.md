@@ -13,6 +13,12 @@ El administrador crea cuentas, resuelve incidencias y actualiza el inventario. E
 incidencias y actualiza el inventario (el estado de equipos y salas). El profesor reserva salas, pide préstamos y
 reporta incidencias, pero no puede resolverlas, ni cambiar el inventario, ni crear cuentas.
 
+## ¿Qué hago si olvidé mi contraseña?
+
+Pídele a un administrador una contraseña temporal. Te la entrega en persona y, al entrar con ella, Campus Pulse te
+pide cambiarla antes de seguir. Para cambiar tu contraseña cuando quieras, usa el botón Contraseña de la barra
+superior.
+
 ## ¿Qué pasa si me equivoco muchas veces en la clave?
 
 Después de 5 intentos fallidos en 15 minutos, el inicio de sesión se bloquea por un rato para ese usuario y esa

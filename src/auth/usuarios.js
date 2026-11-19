@@ -3,10 +3,14 @@
 // ---------------------------------------------------------------------
 // - No hay usuarios ni contraseñas en el repositorio: la primera cuenta se
 //   crea desde la pantalla de inicio (registro) y es admin; las demás las
-//   crea un admin.
+//   crea un admin (que puede crear también otros admins). Cada cuenta guarda
+//   quién la creó (creado_por).
+// - Si alguien olvida su contraseña, un admin le pone una temporal
+//   (restablecerClave) y la persona debe cambiarla al entrar. Si el que la
+//   olvidó es el único admin: npm run restablecer-admin (src/auth/restablecer-admin.js).
 // - Las contraseñas se guardan con hash scrypt y sal aleatoria; nunca
 //   en texto plano. Las sesiones se guardan con el hash del token.
-// - Todo vive en PostgreSQL (tablas usuarios y sesiones). "Restaurar datos"
+// - Todo vive en PostgreSQL (tablas usuarios y sesiones). npm run restaurar
 //   no lo toca, y las sesiones sobreviven a los reinicios del servidor.
 // =====================================================================
 
@@ -19,9 +23,10 @@ export const HORAS_SESION = 8;          // tiempo que dura una sesión
 const MIN_LARGO_CLAVE = 8;              // largo mínimo de la contraseña
 const FORMATO_USUARIO = /^[a-z0-9._-]{3,30}$/; // minúsculas, números, punto, guion
 
-// Roles: el primer usuario registrado es admin; el admin crea a los demás (profesor o soporte técnico).
+// Roles: el primer usuario registrado es admin; un admin crea a los demás (también otros admins, para que
+// el campus no dependa de una sola persona).
 export const ROLES = ['admin', 'profesor', 'soporte_tecnico'];
-export const ROLES_CREABLES = ['profesor', 'soporte_tecnico']; // los que un admin puede crear
+export const ROLES_CREABLES = ['admin', 'profesor', 'soporte_tecnico']; // los que un admin puede crear
 const ROL_POR_DEFECTO = 'profesor'; // al importar cuentas antiguas sin rol o con un rol que ya no existe
 
 // 401: no hay sesión o las credenciales no son válidas.
@@ -47,6 +52,20 @@ const hashToken = (token) => createHash('sha256').update(token).digest('hex');
 
 // Lo que se devuelve al cliente: nunca el hash de la clave.
 const publico = ({ usuario, nombre, rol }) => ({ usuario, nombre, rol: ROLES.includes(rol) ? rol : ROL_POR_DEFECTO });
+// En el login y en /yo, además, si tiene que cambiar la contraseña temporal.
+const deSesion = (fila) => ({ ...publico(fila), ...(fila.debe_cambiar_clave && { debeCambiarClave: true }) });
+
+// Contraseña temporal: 12 caracteres sin los que se confunden (0/O, 1/l/I). Se muestra una sola vez.
+const LETRAS_TEMPORAL = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
+export function claveTemporal() {
+  return [...randomBytes(12)].map((b) => LETRAS_TEMPORAL[b % LETRAS_TEMPORAL.length]).join('');
+}
+
+function validarClaveNueva(clave) {
+  if (typeof clave !== 'string' || clave.length < MIN_LARGO_CLAVE) {
+    throw new DatosInvalidosError(`La contraseña debe tener al menos ${MIN_LARGO_CLAVE} caracteres`);
+  }
+}
 
 // ---------- validación de datos (422) ----------
 
@@ -78,9 +97,10 @@ function prepararUsuario(datos) {
 
 // Inserta el usuario con el rol indicado. La clave primaria impide repetidos, incluso si dos
 // peticiones piden el mismo usuario a la vez.
-async function insertarUsuario(ejecutor, { usuario, nombre, claveHash }, rol) {
+async function insertarUsuario(ejecutor, { usuario, nombre, claveHash }, rol, creadoPor = null) {
   try {
-    await ejecutor.query('INSERT INTO usuarios (usuario, nombre, rol, clave_hash) VALUES ($1, $2, $3, $4)', [usuario, nombre, rol, claveHash]);
+    await ejecutor.query('INSERT INTO usuarios (usuario, nombre, rol, clave_hash, creado_por) VALUES ($1, $2, $3, $4, $5)',
+      [usuario, nombre, rol, claveHash, creadoPor]);
   } catch (error) {
     if (error.code === USUARIO_REPETIDO) throw new ErrorApi(409, 'USUARIO_EXISTE', `El usuario "${usuario}" ya existe`);
     throw error;
@@ -126,24 +146,73 @@ export async function listarUsuarios() {
   return rows.map(publico);
 }
 
-/** Cuenta creada por un admin. El rol debe ser uno de ROLES_CREABLES. Devuelve {usuario, nombre, rol}. */
-export async function crearCuenta(datos) {
+/**
+ * Las cuentas para la pestaña Usuarios (solo admin), sin claves:
+ * [{usuario, nombre, rol, creado, creadoPor, creadoPorNombre, debeCambiarClave}].
+ * creadoPor null = la primera cuenta (se registró sola) o una cuenta anterior a la migración 009.
+ */
+export async function listarCuentas() {
+  const { rows } = await obtenerPool().query(
+    `SELECT u.usuario, u.nombre, u.rol, to_char(u.creado AT TIME ZONE 'America/Bogota', 'YYYY-MM-DD"T"HH24:MI') AS creado,
+            u.creado_por, c.nombre AS creado_por_nombre, u.debe_cambiar_clave
+     FROM usuarios u LEFT JOIN usuarios c ON c.usuario = u.creado_por ORDER BY u.creado, u.usuario`);
+  return rows.map((f) => ({
+    ...publico(f), creado: f.creado, creadoPor: f.creado_por, creadoPorNombre: f.creado_por_nombre, debeCambiarClave: f.debe_cambiar_clave,
+  }));
+}
+
+/**
+ * Cuenta creada por un admin (creadoPor = su usuario). El rol debe ser uno de ROLES_CREABLES.
+ * Devuelve {usuario, nombre, rol}.
+ */
+export async function crearCuenta(datos, creadoPor = null) {
   if (!ROLES_CREABLES.includes(datos?.rol)) {
     throw new DatosInvalidosError(`El rol debe ser uno de: ${ROLES_CREABLES.join(', ')}`);
   }
-  return insertarUsuario(obtenerPool(), prepararUsuario(datos), datos.rol);
+  return insertarUsuario(obtenerPool(), prepararUsuario(datos), datos.rol, creadoPor);
+}
+
+/**
+ * Le pone una contraseña temporal a la cuenta, cierra todas sus sesiones y la obliga a cambiarla al entrar.
+ * La usa un admin (POST /api/usuarios/:usuario/clave) y npm run restablecer-admin. Devuelve {usuario, claveTemporal}.
+ * ejecutor: el pool o un cliente de PostgreSQL (el script usa su propio pool).
+ */
+export async function restablecerClave(usuario, ejecutor = obtenerPool()) {
+  const temporal = claveTemporal();
+  const { rowCount } = await ejecutor.query('UPDATE usuarios SET clave_hash = $2, debe_cambiar_clave = true WHERE usuario = $1',
+    [usuario, hashClave(temporal)]);
+  if (rowCount === 0) throw new ErrorApi(404, 'NO_ENCONTRADO', `No existe el usuario "${usuario}"`);
+  await ejecutor.query('DELETE FROM sesiones WHERE usuario = $1', [usuario]);
+  return { usuario, claveTemporal: temporal };
+}
+
+/**
+ * "Cambiar mi contraseña": {claveActual, claveNueva}. Comprueba la actual, guarda la nueva, quita la marca de
+ * contraseña temporal y cierra las demás sesiones de la persona (la actual sigue abierta).
+ */
+export async function cambiarClave(usuario, datos, tokenActual) {
+  const claveActual = typeof datos?.claveActual === 'string' ? datos.claveActual : '';
+  validarClaveNueva(datos?.claveNueva);
+  if (datos.claveNueva === claveActual) throw new DatosInvalidosError('La contraseña nueva debe ser distinta de la actual');
+  const pool = obtenerPool();
+  const { rows } = await pool.query('SELECT clave_hash FROM usuarios WHERE usuario = $1', [usuario]);
+  if (!rows[0] || !claveCorrecta(claveActual, rows[0].clave_hash)) {
+    throw new NoAutorizadoError('La contraseña actual no es correcta', 'CREDENCIALES_INVALIDAS');
+  }
+  await pool.query('UPDATE usuarios SET clave_hash = $2, debe_cambiar_clave = false WHERE usuario = $1', [usuario, hashClave(datos.claveNueva)]);
+  await pool.query('DELETE FROM sesiones WHERE usuario = $1 AND token_hash <> $2', [usuario, hashToken(tokenActual ?? '')]);
 }
 
 /** Comprueba usuario y contraseña. Devuelve {usuario, nombre, rol} o lanza 401. */
 export async function autenticar(datos) {
   const { usuario, clave } = validarCredenciales(datos);
-  const { rows } = await obtenerPool().query('SELECT usuario, nombre, rol, clave_hash FROM usuarios WHERE usuario = $1', [usuario]);
+  const { rows } = await obtenerPool().query('SELECT usuario, nombre, rol, clave_hash, debe_cambiar_clave FROM usuarios WHERE usuario = $1', [usuario]);
   const encontrado = rows[0];
   // Mismo mensaje si el usuario no existe o la clave falla: no se revela cuál de los dos
   if (!encontrado || !claveCorrecta(clave, encontrado.clave_hash)) {
     throw new NoAutorizadoError('Usuario o contraseña incorrectos', 'CREDENCIALES_INVALIDAS');
   }
-  return publico(encontrado);
+  return deSesion(encontrado);
 }
 
 /** Abre una sesión para el usuario y devuelve el token (va en la cookie). */
@@ -160,9 +229,9 @@ export async function crearSesion(usuario) {
 export async function usuarioDeSesion(token) {
   if (!token) return null;
   const { rows } = await obtenerPool().query(
-    `SELECT u.usuario, u.nombre, u.rol FROM sesiones s JOIN usuarios u USING (usuario)
+    `SELECT u.usuario, u.nombre, u.rol, u.debe_cambiar_clave FROM sesiones s JOIN usuarios u USING (usuario)
      WHERE s.token_hash = $1 AND s.expira > now()`, [hashToken(token)]);
-  return rows[0] ? publico(rows[0]) : null;
+  return rows[0] ? deSesion(rows[0]) : null;
 }
 
 /** Cierra la sesión del token (si existe). */
