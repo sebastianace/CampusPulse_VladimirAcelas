@@ -66,6 +66,10 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 - Semilla más realista: todos los equipos empiezan disponibles salvo el Portátil HP 03 (dañado), que usa el Modo demo.
 
 ### Corregido
+- En el celular, el botón "Modo demo" (fijo abajo) tapaba los últimos botones de la página y su transparencia mezclaba
+  los textos: ahora es opaco y la página deja espacio al final.
+- Ícono de Campus Pulse en la pestaña del navegador (`public/favicon.svg`); antes el navegador pedía `/favicon.ico` y
+  recibía 404.
 - `npm run n8n:preparar` copia los flujos al contenedor con `docker compose cp` y comprueba cuántos importó. Antes los
   leía del volumen `./n8n:/workflows`, que en macOS puede aparecer vacío: n8n se quedaba con los flujos viejos sin avisar
   (por ejemplo, con el Switch por área que ya se había quitado).
