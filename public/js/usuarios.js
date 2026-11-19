@@ -1,6 +1,7 @@
 // Pestaña "Usuarios" (solo admin): crear cuentas (profesor, soporte técnico u otro admin;
-// POST /api/usuarios), ver quién creó cada una (GET /api/usuarios) y darle una contraseña
-// temporal a quien olvidó la suya (POST /api/usuarios/:usuario/clave).
+// POST /api/usuarios), ver quién creó cada una (GET /api/usuarios), darle una contraseña
+// temporal a quien olvidó la suya (POST /api/usuarios/:usuario/clave) y poner el correo al
+// que le llegan los avisos de sus reservas y solicitudes (PATCH /api/usuarios/:usuario).
 
 import { pedir } from './api.js';
 import { el, conCarga } from './dom.js';
@@ -31,12 +32,15 @@ async function cargarUsuarios() {
           el('span', { className: 'etiqueta' }, nombreDeRol(u.rol))),
         el('span', { className: 'item__meta dato' }, u.usuario),
         el('span', { className: 'item__meta' }, `${origen} · ${fecha(u.creado)}`),
+        el('span', { className: 'item__meta' }, u.correo ? `Avisos a ${u.correo}` : 'Sin correo: los avisos le llegan solo en la app.'),
         u.debeCambiarClave ? el('span', { className: 'item__meta' }, 'Tiene una contraseña temporal sin cambiar.') : null);
-      if (u.usuario !== yo) {
-        item.append(el('div', { className: 'item__acciones' },
-          el('button', { type: 'button', className: 'btn btn--secundario btn--chico', onClick: (e) => restablecer(u, item, e.currentTarget) },
-            'Contraseña temporal')));
-      }
+      item.append(el('div', { className: 'item__acciones' },
+        el('button', { type: 'button', className: 'btn btn--secundario btn--chico', onClick: () => editarCorreo(u, item) },
+          u.correo ? 'Cambiar correo' : 'Agregar correo'),
+        u.usuario !== yo
+          ? el('button', { type: 'button', className: 'btn btn--secundario btn--chico', onClick: (e) => restablecer(u, item, e.currentTarget) },
+            'Contraseña temporal')
+          : null));
       return item;
     }));
   } catch (error) {
@@ -45,6 +49,32 @@ async function cargarUsuarios() {
 }
 
 const fecha = (fechaHora) => (fechaHora ? `${fechaHora.slice(8, 10)}/${fechaHora.slice(5, 7)}/${fechaHora.slice(0, 4)}` : '');
+
+// Abre, dentro de la cuenta, un campo para el correo de avisos. Vacío = quitarlo.
+function editarCorreo(cuenta, item) {
+  if (item.querySelector('.form-correo')) return;
+  const entrada = el('input', { name: 'correo', type: 'email', value: cuenta.correo ?? '', autocomplete: 'off', autocapitalize: 'none',
+    placeholder: 'ej. ana.gomez@campuslands.com', 'aria-label': `Correo de ${cuenta.nombre}` });
+  const form = el('form', { className: 'formulario form-correo', noValidate: true },
+    el('label', { className: 'campo' }, el('span', {}, 'Correo para avisos (vacío para quitarlo)'), entrada),
+    el('div', { className: 'item__acciones' },
+      el('button', { type: 'submit', className: 'btn btn--primario btn--chico' }, 'Guardar correo'),
+      el('button', { type: 'button', className: 'btn btn--secundario btn--chico', onClick: () => form.remove() }, 'Cancelar')));
+  form.addEventListener('submit', async (evento) => {
+    evento.preventDefault();
+    try {
+      const { correo } = await conCarga(form.querySelector('button[type="submit"]'), 'Guardando…', () =>
+        pedir(`/api/usuarios/${encodeURIComponent(cuenta.usuario)}`, { metodo: 'PATCH', cuerpo: { correo: entrada.value.trim() } }));
+      toasts.exito(correo ? `Los avisos de ${cuenta.nombre} llegarán a ${correo}.` : `${cuenta.nombre} ya no recibe avisos por correo.`);
+      await cargarUsuarios();
+    } catch (error) {
+      toasts.error(error);
+      entrada.focus();
+    }
+  });
+  item.append(form);
+  entrada.focus();
+}
 
 // Para quien olvidó su contraseña: el servidor genera una temporal, cierra sus sesiones y la obliga a cambiarla.
 async function restablecer(cuenta, item, boton) {

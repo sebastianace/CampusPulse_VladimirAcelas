@@ -22,6 +22,7 @@ import { DatosInvalidosError, ErrorApi } from '../domain/errors.js';
 export const HORAS_SESION = 8;          // tiempo que dura una sesión
 const MIN_LARGO_CLAVE = 8;              // largo mínimo de la contraseña
 const FORMATO_USUARIO = /^[a-z0-9._-]{3,30}$/; // minúsculas, números, punto, guion
+const FORMATO_CORREO = /^[^@\s]+@[^@\s]+\.[^@\s]+$/; // el mismo CHECK de 012_correo.sql
 
 // Roles: el primer usuario registrado es admin; un admin crea a los demás (también otros admins, para que
 // el campus no dependa de una sola persona).
@@ -69,6 +70,14 @@ function validarClaveNueva(clave) {
 
 // ---------- validación de datos (422) ----------
 
+/** Correo opcional para los avisos: "" o ausente -> null; con formato inválido -> 422. */
+export function limpiarCorreo(valor) {
+  const correo = String(valor ?? '').trim().toLowerCase();
+  if (!correo) return null;
+  if (correo.length > 120 || !FORMATO_CORREO.test(correo)) throw new DatosInvalidosError('El correo no tiene un formato válido (ej. ana.gomez@campuslands.com)');
+  return correo;
+}
+
 function validarCredenciales(datos) {
   const usuario = String(datos?.usuario ?? '').trim().toLowerCase();
   const clave = typeof datos?.clave === 'string' ? datos.clave : '';
@@ -92,15 +101,15 @@ function prepararUsuario(datos) {
   if (clave.length < MIN_LARGO_CLAVE) {
     throw new DatosInvalidosError(`La contraseña debe tener al menos ${MIN_LARGO_CLAVE} caracteres`);
   }
-  return { usuario, nombre, claveHash: hashClave(clave) };
+  return { usuario, nombre, correo: limpiarCorreo(datos?.correo), claveHash: hashClave(clave) };
 }
 
 // Inserta el usuario con el rol indicado. La clave primaria impide repetidos, incluso si dos
 // peticiones piden el mismo usuario a la vez.
-async function insertarUsuario(ejecutor, { usuario, nombre, claveHash }, rol, creadoPor = null) {
+async function insertarUsuario(ejecutor, { usuario, nombre, correo, claveHash }, rol, creadoPor = null) {
   try {
-    await ejecutor.query('INSERT INTO usuarios (usuario, nombre, rol, clave_hash, creado_por) VALUES ($1, $2, $3, $4, $5)',
-      [usuario, nombre, rol, claveHash, creadoPor]);
+    await ejecutor.query('INSERT INTO usuarios (usuario, nombre, rol, clave_hash, creado_por, correo) VALUES ($1, $2, $3, $4, $5, $6)',
+      [usuario, nombre, rol, claveHash, creadoPor, correo]);
   } catch (error) {
     if (error.code === USUARIO_REPETIDO) throw new ErrorApi(409, 'USUARIO_EXISTE', `El usuario "${usuario}" ya existe`);
     throw error;
@@ -148,16 +157,16 @@ export async function listarUsuarios() {
 
 /**
  * Las cuentas para la pestaña Usuarios (solo admin), sin claves:
- * [{usuario, nombre, rol, creado, creadoPor, creadoPorNombre, debeCambiarClave}].
+ * [{usuario, nombre, rol, correo, creado, creadoPor, creadoPorNombre, debeCambiarClave}].
  * creadoPor null = la primera cuenta (se registró sola) o una cuenta anterior a la migración 009.
  */
 export async function listarCuentas() {
   const { rows } = await obtenerPool().query(
     `SELECT u.usuario, u.nombre, u.rol, to_char(u.creado AT TIME ZONE 'America/Bogota', 'YYYY-MM-DD"T"HH24:MI') AS creado,
-            u.creado_por, c.nombre AS creado_por_nombre, u.debe_cambiar_clave
+            u.creado_por, c.nombre AS creado_por_nombre, u.debe_cambiar_clave, u.correo
      FROM usuarios u LEFT JOIN usuarios c ON c.usuario = u.creado_por ORDER BY u.creado, u.usuario`);
   return rows.map((f) => ({
-    ...publico(f), creado: f.creado, creadoPor: f.creado_por, creadoPorNombre: f.creado_por_nombre, debeCambiarClave: f.debe_cambiar_clave,
+    ...publico(f), correo: f.correo, creado: f.creado, creadoPor: f.creado_por, creadoPorNombre: f.creado_por_nombre, debeCambiarClave: f.debe_cambiar_clave,
   }));
 }
 
@@ -170,6 +179,27 @@ export async function crearCuenta(datos, creadoPor = null) {
     throw new DatosInvalidosError(`El rol debe ser uno de: ${ROLES_CREABLES.join(', ')}`);
   }
   return insertarUsuario(obtenerPool(), prepararUsuario(datos), datos.rol, creadoPor);
+}
+
+/** Cambia el correo para avisos de una cuenta ("" lo quita). Devuelve {usuario, correo}. */
+export async function cambiarCorreo(usuario, correo) {
+  const limpio = limpiarCorreo(correo);
+  const { rowCount } = await obtenerPool().query('UPDATE usuarios SET correo = $2 WHERE usuario = $1', [usuario, limpio]);
+  if (rowCount === 0) throw new ErrorApi(404, 'NO_ENCONTRADO', `No existe el usuario "${usuario}"`);
+  return { usuario, correo: limpio };
+}
+
+/** Nombre y correo de cada cuenta pedida (las que no existen no aparecen): Map usuario -> {nombre, correo}. */
+export async function contactosDe(usuarios) {
+  if (!usuarios.length) return new Map();
+  const { rows } = await obtenerPool().query('SELECT usuario, nombre, correo FROM usuarios WHERE usuario = ANY($1)', [usuarios]);
+  return new Map(rows.map((f) => [f.usuario, { nombre: f.nombre, correo: f.correo }]));
+}
+
+/** Usuarios de las cuentas admin (para avisarles de una solicitud de salón nueva). */
+export async function admins() {
+  const { rows } = await obtenerPool().query("SELECT usuario FROM usuarios WHERE rol = 'admin' ORDER BY creado");
+  return rows.map((f) => f.usuario);
 }
 
 /**

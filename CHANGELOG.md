@@ -7,6 +7,12 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 ## [Sin publicar]
 
 ### Agregado
+- **Avisos por correo** de lo que cambia en una reserva: a quien tiene la reserva cuando se la piden, a los admins
+  cuando llega una solicitud, a quien la pidió cuando se aprueba o rechaza, a quien la tenía cuando se aprueba (cómo
+  quedó su reserva o que se canceló) y al dueño cuando un admin le edita o cancela una reserva. Campus Pulse decide a
+  quién y qué (`src/domain/avisos.js`) y n8n lo entrega con el flujo nuevo **Aviso de cambio en una reserva**
+  (`pulseAvisoReserva`, webhook firmado). Cada cuenta tiene un **correo opcional** (al crearla o con "Agregar correo"
+  en Usuarios; `PATCH /api/usuarios/:usuario`, migración `012_correo.sql`). Un correo que falla nunca deshace el cambio.
 - **Tiempo de respuesta de TI** en el panel Soporte TI (admin y soporte técnico): cuánto tarda TI en tomar una
   incidencia y en resolverla en los últimos 7 días, en total y por prioridad, más la incidencia que más lleva esperando
   sin que nadie la tome. Usa la mediana (una incidencia olvidada no dispara el número) y muestra el promedio como
@@ -60,6 +66,9 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 - Semilla más realista: todos los equipos empiezan disponibles salvo el Portátil HP 03 (dañado), que usa el Modo demo.
 
 ### Corregido
+- `npm run n8n:preparar` copia los flujos al contenedor con `docker compose cp` y comprueba cuántos importó. Antes los
+  leía del volumen `./n8n:/workflows`, que en macOS puede aparecer vacío: n8n se quedaba con los flujos viejos sin avisar
+  (por ejemplo, con el Switch por área que ya se había quitado).
 - Una incidencia de un equipo ya no deja fuera de servicio toda la sala. Se inhabilita **lo más específico**: el equipo si
   lo hay; la sala completa solo si se elige "Toda la sala" (`inhabilitarEspacio: true`) o si no hay equipo. Al resolverla
   se rehabilita exactamente lo que se apagó. El formulario cambia la casilla por tres opciones: "Nada", "Solo el equipo"
