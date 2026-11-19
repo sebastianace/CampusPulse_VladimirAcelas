@@ -678,6 +678,18 @@ option { color: var(--texto); background: var(--placa-alta); }
 .item__acciones { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
 .item[data-estado="resuelta"] { opacity: 0.6; }
 .item__texto { margin: 0; font-size: 13px; }
+/* Tiempo de respuesta de TI (panel Soporte TI) */
+.indicadores { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--linea); }
+.indicadores .subtitulo { margin-top: 0; }
+.indicadores__cifras { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+.cifra { display: grid; gap: 2px; padding: 10px 12px; border-radius: var(--radio-sm); background: var(--placa-alta); border: 1px solid var(--linea); }
+.cifra__valor { font-size: 22px; font-weight: 600; color: var(--texto); }
+.cifra__etiqueta { font-size: 12.5px; color: var(--tenue); }
+.indicadores__tabla { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 8px; }
+.indicadores__tabla th { text-align: left; font-weight: 600; color: var(--tenue); font-size: 12px; padding: 4px 6px 4px 0; border-bottom: 1px solid var(--linea); }
+.indicadores__tabla td { padding: 6px 6px 6px 0; border-bottom: 1px solid var(--linea); }
+.indicadores__tabla td.dato, .indicadores__tabla th.num { text-align: right; }
+.indicadores__alerta { color: var(--ocupada); }
 .soporte__resumen { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 /* Formulario "Solicitar este salón" (no confundir con .solicitud de Ctrl+K) */
 .solicitud-salon { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--linea); }

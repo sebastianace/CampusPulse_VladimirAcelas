@@ -7,6 +7,11 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 ## [Sin publicar]
 
 ### Agregado
+- **Tiempo de respuesta de TI** en el panel Soporte TI (admin y soporte técnico): cuánto tarda TI en tomar una
+  incidencia y en resolverla en los últimos 7 días, en total y por prioridad, más la incidencia que más lleva esperando
+  sin que nadie la tome. Usa la mediana (una incidencia olvidada no dispara el número) y muestra el promedio como
+  referencia. Se calcula con las fechas que ya se guardaban, sin migración: `GET /api/incidencias/indicadores`
+  (`src/domain/indicadores.js`).
 - **Cuentas:** cada cuenta guarda qué admin la creó (la lista de Usuarios lo muestra, con la fecha) y un admin puede
   crear otros admins. **Contraseñas:** un admin da una contraseña temporal a quien olvidó la suya (se muestra una vez,
   cierra sus sesiones y obliga a cambiarla al entrar), botón **Contraseña** para cambiar la propia y

@@ -161,7 +161,8 @@ El detalle de cada cambio está en [CHANGELOG.md](CHANGELOG.md).
 - **Tres roles:** `admin` (crea cuentas), `profesor` (reserva, pide salones ocupados y reporta)
   y `soporte_tecnico` (además trabaja desde el panel **Soporte TI**: todas las incidencias abiertas,
   de la más urgente a la menos, con aviso de las nuevas; las toma "en atención", las resuelve (lo que
-  rehabilita espacios y equipos) y trabaja el **Inventario**: los equipos dañados o en reparación, que marca disponibles cuando quedan arreglados). La
+  rehabilita espacios y equipos), ve el **tiempo de respuesta de TI** de los últimos 7 días (cuánto
+  tarda normalmente en tomar y en resolver una incidencia, por prioridad) y trabaja el **Inventario**: los equipos dañados o en reparación, que marca disponibles cuando quedan arreglados). La
   tabla de permisos está en [docs/contrato-api.md](docs/contrato-api.md).
 - Las contraseñas se guardan con hash `scrypt` y sal aleatoria, y las sesiones con el hash de su
   token, en PostgreSQL (tablas `usuarios` y `sesiones`). La sesión dura 8 horas y viaja en una cookie

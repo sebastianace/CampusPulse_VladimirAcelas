@@ -1,5 +1,7 @@
 // Rutas de incidencias.
 // GET   /api/incidencias      -> [{id, descripcion, categoria, prioridad, area, espacioId, recursoId, estado, origen, ia, reportesAdicionales, notificaciones}]
+// GET   /api/incidencias/indicadores -> tiempo de atención y de resolución de TI (src/domain/indicadores.js).
+//                             Solo admin y soporte_tecnico.
 // POST  /api/incidencias      {descripcion, categoria, prioridad, espacioId, recursoId, inhabilitar, inhabilitarEspacio, origen, ia}
 //                             (el área no se envía: siempre es REGLAS.AREA_RESPONSABLE)
 //                             -> 201 + la incidencia (deja fuera de servicio lo más específico: el equipo si lo hay;
@@ -21,6 +23,7 @@ import { notificarIncidenciaNueva } from '../integraciones/n8n.js';
 import { actualizarDB, leerDB } from '../data/almacen.js';
 import { agregarReporte, contarReportes, listarReportes } from '../data/similares.js';
 import { atenderIncidencia, crearIncidencia, resolverIncidencia } from '../domain/incidencias.js';
+import { indicadoresTI } from '../domain/indicadores.js';
 
 const router = Router();
 
@@ -33,6 +36,10 @@ router.get('/', async (req, res) => {
     ...i, reportesAdicionales: reportes.get(i.id) ?? 0, notificaciones: notificaciones.get(i.id) ?? [],
     ...(i.atendidaPor && { atendidaPorNombre: nombres.get(i.atendidaPor) ?? i.atendidaPor }),
   })));
+});
+
+router.get('/indicadores', exigirRol('admin', 'soporte_tecnico'), async (req, res) => {
+  res.json(indicadoresTI((await leerDB()).incidencias));
 });
 
 router.post('/', async (req, res) => {
