@@ -19,8 +19,8 @@ sin esperar a que P1 termine.
 | `GET /api/incidencias` | — | `[{id, descripcion, categoria, prioridad, area, espacioId, recursoId, estado, origen, ia, reportesAdicionales, notificaciones: [{canal, area, enviado}]}]` (`reportesAdicionales`: personas que confirmaron que era la misma) | P1 |
 | `POST /api/incidencias/:id/reportes` | `{descripcion}` | `201 {reporte: {id, incidenciaId, descripcion, reportadoPor, fecha}, totalReportes}`. Suma el reporte a una incidencia abierta; `404` si no existe, `409 INCIDENCIA_YA_RESUELTA` si ya se resolvió | P1 |
 | `GET /api/incidencias/:id/reportes` | — | `[{id, incidenciaId, descripcion, reportadoPor, fecha}]` | P1 |
-| `POST /api/incidencias` | `{descripcion, categoria, prioridad, area, espacioId, recursoId, inhabilitar, origen, ia}` | `201` + la incidencia (y cambia el estado del espacio o recurso) | P1 |
-| `PATCH /api/incidencias/:id` | `{estado: "resuelta"}` | `200` (rehabilita el espacio o recurso). Solo `admin` y `soporte_tecnico`; otro rol → `403` | P1 |
+| `POST /api/incidencias` | `{descripcion, categoria, prioridad, area, espacioId, recursoId, inhabilitar, inhabilitarEspacio, origen, ia}` | `201` + la incidencia con `inhabilito` e `inhabilitoEspacio`. Se inhabilita lo más específico: el equipo si lo hay; la sala solo con `inhabilitarEspacio: true` (opcional) o si no hay equipo | P1 |
+| `PATCH /api/incidencias/:id` | `{estado: "resuelta"}` | `200` (rehabilita exactamente lo que la incidencia dejó fuera de servicio). Solo `admin` y `soporte_tecnico`; otro rol → `403` | P1 |
 | `GET /api/calidad-datos` | — | `{cargados, validos, inconsistentes: [{fila, motivo}]}` | P1 |
 | `POST /api/restaurar` | — | `200` (recrea `db.json` desde `raw` y `seed`). Solo `admin`; otro rol → `403` | P1 |
 | `POST /api/auth/registro` | `{usuario, nombre, clave}` | `201 {usuario, nombre, rol}` y abre sesión (cookie). Solo crea la primera cuenta (`admin`); después `403 REGISTRO_CERRADO` | P2 |

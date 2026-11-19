@@ -1,7 +1,8 @@
 // Rutas de incidencias.
 // GET   /api/incidencias      -> [{id, descripcion, categoria, prioridad, area, espacioId, recursoId, estado, origen, ia, reportesAdicionales, notificaciones}]
-// POST  /api/incidencias      {descripcion, categoria, prioridad, area, espacioId, recursoId, inhabilitar, origen, ia}
-//                             -> 201 + la incidencia (y cambia el estado del espacio o recurso)
+// POST  /api/incidencias      {descripcion, categoria, prioridad, area, espacioId, recursoId, inhabilitar, inhabilitarEspacio, origen, ia}
+//                             -> 201 + la incidencia (deja fuera de servicio lo más específico: el equipo si lo hay;
+//                             la sala solo con inhabilitarEspacio: true o si no hay equipo)
 // POST  /api/incidencias/:id/reportes {descripcion} -> 201 {reporte, totalReportes}: suma el reporte de
 //                             quien confirmó que es "la misma" incidencia (en vez de crear un duplicado).
 //                             404 si no existe, 409 si ya está resuelta.

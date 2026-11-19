@@ -1,13 +1,18 @@
 // =====================================================================
 // DOMINIO: INCIDENCIAS
 // ---------------------------------------------------------------------
-// Al crear una incidencia, el espacio o recurso afectado se inhabilita si:
-//   - el reporte trae inhabilitar: true, o
+// Al crear una incidencia, algo queda fuera de servicio si:
+//   - el reporte trae inhabilitar: true (o inhabilitarEspacio: true), o
 //   - su prioridad está en REGLAS.PRIORIDADES_QUE_INHABILITAN.
+// Qué queda fuera de servicio: LO MÁS ESPECÍFICO.
+//   - Si hay equipo afectado, solo el equipo: un video beam dañado no
+//     impide dar clase en la sala.
+//   - La sala completa solo si se pide (inhabilitarEspacio: true, por
+//     ejemplo agua cerca de los enchufes) o si no hay equipo afectado.
 // Espacio inhabilitado -> estado "inhabilitado" (no se puede reservar).
 // Recurso inhabilitado -> REGLAS.ESTADO_RECURSO_INHABILITADO.
-// Al resolverla se rehabilita, salvo que otra incidencia abierta lo
-// siga inhabilitando.
+// Al resolverla se rehabilita exactamente lo que se apagó, salvo que otra
+// incidencia abierta lo siga inhabilitando.
 // =====================================================================
 
 import { randomUUID } from 'node:crypto';
@@ -61,7 +66,20 @@ export function debeInhabilitar(inhabilitar, prioridad) {
   return inhabilitar === true || REGLAS.PRIORIDADES_QUE_INHABILITAN.includes(prioridad);
 }
 
-// Cambia el estado del espacio y del recurso afectados.
+/**
+ * Qué queda fuera de servicio: {espacio, recurso} (true o false cada uno).
+ * Lo más específico: el equipo si lo hay; la sala solo si se pide o si no hay equipo.
+ */
+export function queInhabilitar({ inhabilitar, inhabilitarEspacio, prioridad, espacioId, recursoId }) {
+  const pideSala = inhabilitarEspacio === true;
+  if (!debeInhabilitar(inhabilitar === true || pideSala, prioridad)) return { espacio: false, recurso: false };
+  return {
+    recurso: Boolean(recursoId),
+    espacio: Boolean(espacioId) && (pideSala || !recursoId),
+  };
+}
+
+// Cambia el estado del espacio y del recurso indicados (null = no tocarlo).
 // Un espacio "inconsistente" no se toca: su problema es de datos, no de una incidencia.
 function aplicarEstado(db, { espacioId, recursoId }, estadoEspacio, estadoRecurso) {
   const espacio = db.espacios.find((e) => e.id === espacioId);
@@ -70,21 +88,31 @@ function aplicarEstado(db, { espacioId, recursoId }, estadoEspacio, estadoRecurs
   if (recurso) recurso.estado = estadoRecurso;
 }
 
-// true si otra incidencia abierta mantiene inhabilitado el mismo espacio o recurso.
-function sigueInhabilitado(db, incidencia, campo) {
-  return incidencia[campo] !== null && db.incidencias.some((otra) =>
-    otra.id !== incidencia.id && otra.estado === 'abierta' && otra.inhabilito && otra[campo] === incidencia[campo]);
+// ¿Esta incidencia dejó fuera de servicio la sala? ¿Y el equipo?
+const apagoEspacio = (i) => i.inhabilitoEspacio === true && i.espacioId !== null;
+const apagoRecurso = (i) => i.inhabilito === true && i.recursoId !== null;
+
+// true si otra incidencia abierta mantiene fuera de servicio la misma sala (o el mismo equipo).
+function sigueInhabilitado(db, incidencia, apago, campo) {
+  return db.incidencias.some((otra) =>
+    otra.id !== incidencia.id && otra.estado === 'abierta' && apago(otra) && otra[campo] === incidencia[campo]);
 }
 
 // ---------- funciones públicas ----------
 
-/** Crea la incidencia y, si corresponde, inhabilita el espacio o recurso. */
+/** Crea la incidencia y, si corresponde, deja fuera de servicio el equipo o la sala (ver queInhabilitar). */
 export function crearIncidencia(db, datos) {
   const limpia = validarDatosIncidencia(db, datos);
-  const inhabilito = debeInhabilitar(datos.inhabilitar, limpia.prioridad) && Boolean(limpia.espacioId || limpia.recursoId);
-  const incidencia = { id: `inc-${randomUUID().slice(0, 8)}`, ...limpia, estado: 'abierta', inhabilito, fecha: ahoraBogota() };
+  const apagar = queInhabilitar({ ...limpia, inhabilitar: datos.inhabilitar, inhabilitarEspacio: datos.inhabilitarEspacio });
+  const incidencia = {
+    id: `inc-${randomUUID().slice(0, 8)}`, ...limpia, estado: 'abierta',
+    inhabilito: apagar.espacio || apagar.recurso, inhabilitoEspacio: apagar.espacio, fecha: ahoraBogota(),
+  };
 
-  if (inhabilito) aplicarEstado(db, incidencia, 'inhabilitado', REGLAS.ESTADO_RECURSO_INHABILITADO);
+  aplicarEstado(db, {
+    espacioId: apagar.espacio ? limpia.espacioId : null,
+    recursoId: apagar.recurso ? limpia.recursoId : null,
+  }, 'inhabilitado', REGLAS.ESTADO_RECURSO_INHABILITADO);
   db.incidencias.push(incidencia);
   return incidencia;
 }
@@ -98,11 +126,10 @@ export function resolverIncidencia(db, incidenciaId, datos) {
 
   incidencia.estado = 'resuelta';
   incidencia.fechaResolucion = ahoraBogota();
-  if (incidencia.inhabilito) {
-    aplicarEstado(db, {
-      espacioId: sigueInhabilitado(db, incidencia, 'espacioId') ? null : incidencia.espacioId,
-      recursoId: sigueInhabilitado(db, incidencia, 'recursoId') ? null : incidencia.recursoId,
-    }, 'disponible', 'disponible');
-  }
+  // Solo se rehabilita lo que esta incidencia apagó y que ninguna otra abierta mantiene apagado.
+  aplicarEstado(db, {
+    espacioId: apagoEspacio(incidencia) && !sigueInhabilitado(db, incidencia, apagoEspacio, 'espacioId') ? incidencia.espacioId : null,
+    recursoId: apagoRecurso(incidencia) && !sigueInhabilitado(db, incidencia, apagoRecurso, 'recursoId') ? incidencia.recursoId : null,
+  }, 'disponible', 'disponible');
   return incidencia;
 }

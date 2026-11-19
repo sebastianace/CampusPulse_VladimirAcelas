@@ -124,6 +124,20 @@ sigue el mismo método: **síntoma → hipótesis → experimento → causa raí
   Como el few-shot ya no mejoraba y cuesta 420 tokens más por llamada, quedó desactivado por defecto.
 - **Lección.** Medir antes de afirmar que una técnica funciona. Y una instrucción ambigua no la arreglan los ejemplos.
 
+### 14. Reportar el video beam dejaba fuera de servicio todo el salón
+- **Síntoma.** En las pruebas del 15 de noviembre reporté "el video beam de Apolo no sirve" y marqué "Dejar fuera de servicio
+  el espacio o equipo afectado". Quería apagar solo el equipo, pero Apolo quedó inhabilitado y ya no se podía reservar.
+- **Hipótesis.** (a) La prioridad crítica inhabilita todo; (b) la regla apaga todo lo que trae la incidencia.
+- **Experimento.** En la base, la incidencia era manual y de prioridad media (descartada a): la casilla la marqué yo. En el
+  código, `aplicarEstado` cambiaba el espacio **y** el recurso; y la IA siempre llena el espacio donde está el equipo.
+- **Causa raíz.** La casilla decía "espacio **o** equipo" pero el código hacía "espacio **y** equipo". Venía de la v1.1.1 y
+  ninguna regla de `reglas.js` lo pedía.
+- **Corrección.** Se inhabilita lo más específico (el equipo si lo hay) y la sala solo si se elige "Toda la sala". La
+  columna `inhabilito_espacio` recuerda qué se apagó para rehabilitar exactamente eso. Los tests nuevos de
+  `tests/reglas.test.js` reproducen el fallo: con el código anterior fallan 3 y con la corrección pasan todos.
+- **Lección.** Si el texto de la interfaz y el código dicen cosas distintas, uno de los dos está mal. Probar el sistema
+  como lo usaría alguien del campus encuentra errores que los tests no buscaban.
+
 ## Qué se aprendió en general
 1. **Reproducir fuera de la interfaz** (curl, un script) separa los errores del navegador de los del servidor o del modelo.
 2. **Leer el log antes de adivinar:** en los casos 2, 4, 6 y 7 la causa estaba escrita en el log.

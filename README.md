@@ -341,8 +341,9 @@ Además:
   la reserva no choca consigo misma. **Cancelar** (`DELETE /api/reservas/:id`) la elimina.
 - Una reserva que **ya empezó** no se puede editar ni cancelar.
 - Una incidencia con `inhabilitar: true` o con una prioridad de `PRIORIDADES_QUE_INHABILITAN`
-  inhabilita el espacio o equipo afectado. Al resolverla se rehabilita, salvo que otra incidencia
-  abierta lo siga inhabilitando.
+  deja fuera de servicio **lo más específico**: el equipo afectado si lo hay (la sala se sigue
+  reservando); la sala completa solo con `inhabilitarEspacio: true` o si no hay equipo. Al resolverla
+  se rehabilita exactamente lo que se apagó, salvo que otra incidencia abierta lo siga inhabilitando.
 
 ## Instalación y ejecución
 

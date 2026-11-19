@@ -97,13 +97,15 @@ describe('Transacciones', () => {
 });
 
 describe('Incidencias y préstamos: cambios en varias tablas a la vez', () => {
-  const critica = { descripcion: 'El video beam de Apolo huele a quemado', categoria: 'tecnologia', prioridad: 'critica', area: 'Soporte TI', espacioId: 'apolo', recursoId: 'rec-01', origen: 'ia', ia: { razon: 'Riesgo', modelo: 'prueba', sugerencia: { prioridad: 'critica' } } };
+  // "Toda la sala" (inhabilitarEspacio): así una sola escritura cambia incidencias, espacios y recursos a la vez.
+  const critica = { descripcion: 'El video beam de Apolo huele a quemado', categoria: 'tecnologia', prioridad: 'critica', area: 'Soporte TI', espacioId: 'apolo', recursoId: 'rec-01', inhabilitarEspacio: true, origen: 'ia', ia: { razon: 'Riesgo', modelo: 'prueba', sugerencia: { prioridad: 'critica' } } };
 
-  test('una incidencia crítica se guarda junto con el estado nuevo del espacio y del equipo', async () => {
+  test('una incidencia crítica de toda la sala se guarda junto con el estado nuevo del espacio y del equipo', async () => {
     const creada = await actualizarDB((db) => crearIncidencia(db, critica));
     const db = await leerDB();
     assert.equal(db.espacios.find((e) => e.id === 'apolo').estado, 'inhabilitado');
     assert.equal(db.recursos.find((r) => r.id === 'rec-01').estado, REGLAS.ESTADO_RECURSO_INHABILITADO);
+    assert.equal(db.incidencias[0].inhabilitoEspacio, true, 'inhabilito_espacio se guarda en la base');
     assert.deepEqual(db.incidencias, [creada]);
     assert.deepEqual(db.incidencias[0].ia, critica.ia, 'el jsonb vuelve igual');
     assert.ok(!('fechaResolucion' in db.incidencias[0]), 'abierta: sin fechaResolucion');

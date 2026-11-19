@@ -650,7 +650,12 @@ option { color: var(--texto); background: var(--placa-alta); }
 }
 
 .interruptor { display: flex; align-items: center; gap: 10px; font-size: 14px; }
-.interruptor input { width: 18px; min-height: 18px; accent-color: var(--inhabilitado); }
+.interruptor input { width: 18px; min-height: 18px; accent-color: var(--inhabilitado); flex: none; }
+/* "¿Qué queda fuera de servicio?": tres opciones; cada fila mide al menos 44 px para tocarla con el dedo */
+.opciones-alcance { border: 0; margin: 0; padding: 0; min-width: 0; gap: 2px; }
+.opciones-alcance legend { padding: 0; margin-bottom: 4px; font-size: 12px; font-weight: 600; color: var(--tenue); }
+.opciones-alcance .interruptor { min-height: 44px; }
+.opciones-alcance .interruptor:has(input:disabled) { opacity: 0.45; }
 
 /* ---------- Listas (préstamos, incidencias) ---------- */
 .lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
