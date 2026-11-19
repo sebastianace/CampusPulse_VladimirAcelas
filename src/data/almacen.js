@@ -2,7 +2,7 @@
 // ALMACÉN DE DATOS EN POSTGRESQL
 // ---------------------------------------------------------------------
 // Almacén de datos (reemplazó al viejo data/db.json). Interfaz asíncrona:
-//   leerDB()              -> { espacios, recursos, reservas, prestamos, incidencias, calidadDatos }
+//   leerDB()              -> { espacios, recursos, reservas, solicitudes, prestamos, incidencias, calidadDatos }
 //   actualizarDB(cambio)  -> lee, aplica "cambio(db)" y guarda, todo en una transacción
 //   restaurarDB()         -> deja la base en el estado inicial (semilla)
 // Las reglas de src/domain/ no cambian: siguen recibiendo y modificando un objeto "db".
@@ -11,7 +11,10 @@
 //   1. BEGIN y bloqueo de escritura (solo una escritura a la vez).
 //   2. Foto: se leen las tablas y se arma el objeto db.
 //   3. Se llama a cambio(db): las reglas modifican db. Si lanzan un error, ROLLBACK y no se guarda nada.
-//   4. Diferencias: se compara db con la foto y se hacen solo los INSERT, UPDATE y DELETE necesarios.
+//   4. Diferencias: se compara db con la foto y se hacen solo los UPDATE, INSERT y DELETE necesarios.
+//      Tabla por tabla (de padres a hijos): primero los UPDATE y luego los INSERT. Así, al aprobar una
+//      solicitud de salón, la reserva original se corta ANTES de insertar la nueva y la restricción
+//      EXCLUDE no las ve cruzadas. Los DELETE van al final, de hijos a padres.
 //   5. COMMIT.
 // Con el bloqueo, las reglas ven siempre el estado más reciente, igual que con el viejo db.json (donde Node
 // atendía una escritura a la vez). Si por algún motivo dos escrituras se cruzan, la restricción EXCLUDE
@@ -25,10 +28,11 @@ import { incidencias } from './repos/incidencias.js';
 import { prestamos } from './repos/prestamos.js';
 import { recursos } from './repos/recursos.js';
 import { reservas } from './repos/reservas.js';
+import { solicitudes } from './repos/solicitudes.js';
 
-// Orden de los padres a los hijos: los INSERT van en este orden y los DELETE en el inverso,
+// Orden de los padres a los hijos: los UPDATE e INSERT van en este orden y los DELETE en el inverso,
 // para no romper las claves foráneas.
-const REPOS = { espacios, recursos, reservas, prestamos, incidencias };
+const REPOS = { espacios, recursos, reservas, solicitudes, prestamos, incidencias };
 const NOMBRES = Object.keys(REPOS);
 const BLOQUEO_ESCRITURA = 727275; // número cualquiera; distinto al de las migraciones
 
@@ -76,29 +80,29 @@ async function ejecutar(cliente, repo, objeto, db, sql, valores) {
 }
 
 async function guardarDiferencias(cliente, antes, db) {
-  const nuevos = [];
-  const cambiados = [];
   const borrados = [];
   for (const nombre of NOMBRES) {
+    const nuevos = [];
+    const cambiados = [];
     const vistos = new Set();
     for (const objeto of db[nombre]) {
       vistos.add(objeto.id);
       const anterior = antes[nombre].get(objeto.id);
-      if (anterior === undefined) nuevos.push([nombre, objeto]);
-      else if (anterior !== JSON.stringify(objeto)) cambiados.push([nombre, objeto]);
+      if (anterior === undefined) nuevos.push(objeto);
+      else if (anterior !== JSON.stringify(objeto)) cambiados.push(objeto);
     }
     for (const id of antes[nombre].keys()) if (!vistos.has(id)) borrados.push([nombre, id]);
-  }
 
-  for (const [nombre, objeto] of nuevos) {
+    // Primero los UPDATE (por ejemplo, cortar una reserva) y luego los INSERT (la reserva que la reemplaza).
     const { tabla, columnas, aFila } = REPOS[nombre];
-    const marcas = columnas.map((_, i) => `$${i + 1}`).join(', ');
-    await ejecutar(cliente, REPOS[nombre], objeto, db, `INSERT INTO ${tabla} (${columnas.join(', ')}) VALUES (${marcas})`, aFila(objeto));
-  }
-  for (const [nombre, objeto] of cambiados) {
-    const { tabla, columnas, aFila } = REPOS[nombre];
-    const asignaciones = columnas.slice(1).map((c, i) => `${c} = $${i + 2}`).join(', ');
-    await ejecutar(cliente, REPOS[nombre], objeto, db, `UPDATE ${tabla} SET ${asignaciones} WHERE ${columnas[0]} = $1`, aFila(objeto));
+    for (const objeto of cambiados) {
+      const asignaciones = columnas.slice(1).map((c, i) => `${c} = $${i + 2}`).join(', ');
+      await ejecutar(cliente, REPOS[nombre], objeto, db, `UPDATE ${tabla} SET ${asignaciones} WHERE ${columnas[0]} = $1`, aFila(objeto));
+    }
+    for (const objeto of nuevos) {
+      const marcas = columnas.map((_, i) => `$${i + 1}`).join(', ');
+      await ejecutar(cliente, REPOS[nombre], objeto, db, `INSERT INTO ${tabla} (${columnas.join(', ')}) VALUES (${marcas})`, aFila(objeto));
+    }
   }
   for (const [nombre, id] of borrados.reverse()) {
     const { tabla, columnas } = REPOS[nombre];

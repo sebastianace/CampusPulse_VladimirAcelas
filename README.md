@@ -343,6 +343,15 @@ Además:
 - **Editar** una reserva (`PATCH /api/reservas/:id`) vuelve a pasar por todas las reglas de arriba;
   la reserva no choca consigo misma. **Cancelar** (`DELETE /api/reservas/:id`) la elimina.
 - Una reserva que **ya empezó** no se puede editar ni cancelar.
+- Solo **quien creó la reserva o un admin** la edita o la cancela (las reservas anteriores a la
+  migración 007 no tienen dueño registrado: solo las toca un admin).
+- **Solicitudes de salón:** si un salón está reservado pero nadie lo usa (el profesor de las 9:00 no
+  llegó), otra persona lo solicita desde la reserva en curso ("Solicitar este salón"). Un **admin**
+  aprueba o rechaza en la pestaña **Solicitudes**; al aprobar, en una sola transacción, la reserva
+  original termina en ese momento y se crea la nueva. La solicitud se "ensaya" al pedirla, así que no
+  se puede pedir algo que violaría una regla (aforo, horario, cruce con la siguiente reserva). Los
+  avisos son en la app: contador y toast para el admin, y toast para quien pidió y para quien tenía
+  la reserva.
 - Una incidencia con `inhabilitar: true` o con una prioridad de `PRIORIDADES_QUE_INHABILITAN`
   deja fuera de servicio **lo más específico**: el equipo afectado si lo hay (la sala se sigue
   reservando); la sala completa solo con `inhabilitarEspacio: true` o si no hay equipo. Al resolverla

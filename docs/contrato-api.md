@@ -11,10 +11,13 @@ sin esperar a que P1 termine.
 | `GET /api/recursos` | — | `[{id, nombre, tipo, espacioId, estado, cambiosPermitidos}]` (`cambiosPermitidos`: estados a los que Inventario lo puede pasar, según `TRANSICIONES_RECURSO`) | P1 |
 | `PATCH /api/recursos/:id` | `{estado}` | `200` + el recurso. Inventario: respeta `TRANSICIONES_RECURSO`; `409 USAR_PRESTAMOS` si se pide `prestado` o el equipo está prestado; `409 INCIDENCIA_ABIERTA` si una incidencia abierta lo tiene fuera de servicio. Solo `admin` y `soporte_tecnico`; otro rol → `403` | P1 |
 | `PATCH /api/espacios/:id` | `{estado: "disponible" \| "inhabilitado"}` | `200` + el espacio. Inventario: `409 INCIDENCIA_ABIERTA` si una incidencia abierta la inhabilitó; `409 ESPACIO_INCONSISTENTE` si su dato del CSV es inconsistente. Solo `admin` y `soporte_tecnico`; otro rol → `403` | P1 |
-| `GET /api/reservas?fecha=YYYY-MM-DD` | — | `[{id, espacioId, responsable, asistentes, inicio, fin}]` | P1 |
-| `POST /api/reservas` | `{espacioId, responsable, asistentes, inicio, fin}` | `201` + la reserva | P1 |
-| `PATCH /api/reservas/:id` | Los campos a cambiar de `{espacioId, responsable, asistentes, inicio, fin}` | `200` + la reserva editada (vuelve a pasar por todas las reglas) | P1 |
-| `DELETE /api/reservas/:id` | — | `200` + la reserva cancelada | P1 |
+| `GET /api/reservas?fecha=YYYY-MM-DD` | — | `[{id, espacioId, responsable, asistentes, inicio, fin, creadaPor}]` (`creadaPor`: usuario que la creó; `null` en las anteriores a la migración 007) | P1 |
+| `POST /api/reservas` | `{espacioId, responsable, asistentes, inicio, fin}` | `201` + la reserva (`creadaPor` = el usuario con sesión) | P1 |
+| `PATCH /api/reservas/:id` | Los campos a cambiar de `{espacioId, responsable, asistentes, inicio, fin}` | `200` + la reserva editada (vuelve a pasar por todas las reglas). Solo quien la creó o un `admin`; otra persona → `403` | P1 |
+| `DELETE /api/reservas/:id` | — | `200` + la reserva cancelada. Solo quien la creó o un `admin`; otra persona → `403` | P1 |
+| `GET /api/solicitudes` | — | `[{id, reservaId, espacioId, solicitante, afectado, responsable, asistentes, fin, motivo, estado, fecha, decididaPor?, fechaDecision?, notaDecision?, reservaNuevaId?, reservaOriginal}]`. El `admin` ve todas; los demás, las que pidieron y las que tocan su reserva (`afectado`) | P1 |
+| `POST /api/solicitudes` | `{reservaId, responsable, asistentes, fin, motivo}` | `201` + la solicitud `pendiente`. `409 RESERVA_NO_EN_CURSO`, `ES_TU_RESERVA`, `SOLICITUD_REPETIDA`, o el error de la regla de reservas que violaría al aprobarla | P1 |
+| `PATCH /api/solicitudes/:id` | `{decision: "aprobar" \| "rechazar", nota?}` | `200` + la solicitud. Aprobar corta la reserva original en ese momento y crea la nueva en la misma transacción; las otras pendientes de esa reserva quedan rechazadas. `409 SOLICITUD_YA_DECIDIDA`. Solo `admin`; otro rol → `403` | P1 |
 | `GET /api/prestamos` | — | `[{id, recursoId, persona, estado, fecha}]` | P1 |
 | `POST /api/prestamos` | `{recursoId, persona}` | `201` + el préstamo | P1 |
 | `POST /api/prestamos/:id/devolver` | `{estadoFinal: "disponible" \| "danado"}` | `200` + el préstamo | P1 |
@@ -96,6 +99,9 @@ cuenta antigua sin rol, o con un rol que ya no existe (`camper`, `coordinador`),
 | Acción | admin | profesor | soporte_tecnico |
 |---|---|---|---|
 | Reservar, prestar y reportar incidencias | sí | sí | sí |
+| Editar o cancelar una reserva | todas | las suyas | las suyas |
+| Solicitar un salón ocupado | sí | sí | sí |
+| Aprobar o rechazar solicitudes de salón | sí | no | no |
 | Resolver incidencias (rehabilita espacios y equipos) | sí | no | sí |
 | Crear cuentas | sí | no | no |
 | Actualizar el inventario (estado de equipos y salas) | sí | no | sí |

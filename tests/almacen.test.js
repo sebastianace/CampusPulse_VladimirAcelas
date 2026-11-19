@@ -46,7 +46,7 @@ describe('Reservas: crear, editar y cancelar', () => {
   test('lo que crea una regla queda guardado, con la misma forma', async () => {
     const creada = await actualizarDB((db) => crearReserva(db, reserva()));
     assert.deepEqual((await leerDB()).reservas, [creada]);
-    assert.deepEqual(Object.keys(creada), ['id', 'espacioId', 'responsable', 'asistentes', 'inicio', 'fin']);
+    assert.deepEqual(Object.keys(creada), ['id', 'espacioId', 'responsable', 'asistentes', 'inicio', 'fin', 'creadaPor']);
   });
 
   test('editar actualiza solo esa fila y conserva el id', async () => {

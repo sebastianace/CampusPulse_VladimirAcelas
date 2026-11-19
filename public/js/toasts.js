@@ -1,12 +1,18 @@
-// Avisos flotantes: verde para éxito, rojo para error.
+// Avisos flotantes: verde para éxito, rojo para error, ámbar para avisos (algo que le pasó a otra persona o a ti).
 
 const DURACION_EXITO_MS = 4000;
 const DURACION_ERROR_MS = 6000; // los errores se leen con más calma (clic para cerrar antes)
+const DURACION_AVISO_MS = 9000; // los avisos llegan sin que la persona los espere: duran más
 
 const contenedor = () => document.getElementById('toasts');
 
 export function exito(mensaje) {
   mostrar({ mensaje, tipo: 'exito', duracion: DURACION_EXITO_MS });
+}
+
+// Aviso de algo que pasó (una solicitud nueva, una decisión): no es un error ni un éxito propio
+export function aviso(mensaje) {
+  mostrar({ mensaje, tipo: 'aviso', duracion: DURACION_AVISO_MS });
 }
 
 // Acepta un texto o un Error (si es ErrorApi, muestra también su código)

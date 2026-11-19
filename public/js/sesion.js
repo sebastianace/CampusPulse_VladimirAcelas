@@ -7,6 +7,7 @@ const PERMISOS = {
   resolverIncidencias: ['admin', 'soporte_tecnico'],
   gestionarUsuarios: ['admin'],
   gestionarInventario: ['admin', 'soporte_tecnico'],
+  decidirSolicitudes: ['admin'],
 };
 
 const NOMBRES_ROL = {
@@ -22,6 +23,14 @@ export function guardarSesion(datos) {
 }
 
 export const nombreDeRol = (rol) => NOMBRES_ROL[rol] ?? rol;
+
+/** La sesión actual ({usuario, nombre, rol}) o null. */
+export const sesionActual = () => sesion;
+
+/** ¿Puede editar o cancelar esta reserva? Quien la creó o un admin (el servidor lo vuelve a revisar). */
+export function puedeTocarReserva(reserva) {
+  return Boolean(sesion && (sesion.rol === 'admin' || (reserva.creadaPor && reserva.creadaPor === sesion.usuario)));
+}
 
 /** ¿El usuario actual puede hacer esa acción? Sin sesión conocida, no. */
 export function puede(accion) {
