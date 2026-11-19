@@ -55,6 +55,13 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
   pasa a la terminal: `npm run restaurar` (sin borrar cuentas). Se quita `POST /api/restaurar`.
 
 ### Cambiado
+- **Pantalla de inicio de sesión nueva**, con el estilo de la de Campuslands (cielo oscuro, brillo morado, dos tarjetas
+  y botones morados, sin usar su logo ni sus imágenes): a la derecha "Inicia sesión" (primero en el celular) y a la
+  izquierda qué es Campus Pulse; mientras no hay cuentas, ahí se crea la primera (admin).
+- **Mapa del ala este** como la usa el campus: Clonai (dos mesas largas), las Cabinas y solo dos salas amarillas en la
+  franja bajo Hunters; sin el balcón de condensadores. El **Salón Morado** es privado (no se reserva, nadie entra a
+  pasear) y ahí está Diego Tarazona con su equipo. El espacio oficial de 6 puestos ("Amarillas verdes") ahora es la
+  **Sala de reuniones** (la antigua sala de juntas), que se reserva.
 - El almacén escribe primero todos los `DELETE` (de hijos a padres) y luego, tabla por tabla, los `UPDATE` y después los
   `INSERT` (antes, los `INSERT` primero y los `DELETE` al final): así cortar o cancelar una reserva y crear la que la
   reemplaza no choca con la restricción `EXCLUDE`.

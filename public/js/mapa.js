@@ -221,7 +221,7 @@ function dibujarTooltip() {
     const info = persona.clase ? salas.get(persona.clase) : null;
     const clase = info ? nombreVisible(info.espacio) : null;
     contenido = persona.rol === 'diego'
-      ? [el('strong', {}, 'Diego Tarazona'), el('span', {}, 'Fundador de Campuslands · En reunión en la sala de juntas')]
+      ? [el('strong', {}, 'Diego Tarazona'), el('span', {}, 'Fundador de Campuslands · Salón Morado (privado)')]
       : persona.rol === 'trabajador'
       ? [el('strong', {}, 'Trabajador'), el('span', {}, 'Bettermedia · zona privada')]
       : persona.rol === 'trabajadora'

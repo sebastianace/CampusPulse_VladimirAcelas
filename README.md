@@ -147,9 +147,9 @@ El detalle de cada cambio está en [CHANGELOG.md](CHANGELOG.md).
 
 - Toda la API (salvo `/api/auth/*`) exige una sesión. Sin sesión, la interfaz lleva a
   `login.html` y, al entrar, vuelve a la página que se estaba usando (también `movil.html`).
-- **No hay usuarios ni contraseñas en el repositorio.** La primera vez se crea una cuenta desde
-  "Crear una cuenta" (usuario de 3 a 30 caracteres y contraseña de al menos 8): esa cuenta es
-  `admin`. Después el registro se cierra (el login oculta "Crear una cuenta") y un admin crea las
+- **No hay usuarios ni contraseñas en el repositorio.** La primera vez, la pantalla de inicio muestra
+  "Crea la primera cuenta" (usuario de 3 a 30 caracteres y contraseña de al menos 8): esa cuenta es
+  `admin`. Después el registro se cierra (esa tarjeta pasa a explicar qué es Campus Pulse) y un admin crea las
   demás desde la pestaña **Usuarios** (`POST /api/usuarios`), también otros admins, para que el campus
   no dependa de una sola persona. La lista muestra **quién creó cada cuenta** y cuándo.
 - **Si alguien olvida su contraseña,** un admin le da una **contraseña temporal** desde Usuarios: se
@@ -438,7 +438,7 @@ error claro y el formulario manual, nunca con una respuesta inventada.
 | `npm run restaurar` (o `npm run semilla`) | Vuelve a los datos iniciales: carga espacios, recursos y calidad de datos en PostgreSQL y borra reservas, solicitudes, préstamos antiguos e incidencias. No toca las cuentas |
 | `npm run medir-triaje` | Mide el triaje sin ejemplos y con ellos (24 llamadas a Gemini, ~5 min; gasta cuota) |
 
-Abre `http://localhost:3000` y crea una cuenta con **Crear una cuenta** (solo la primera vez).
+Abre `http://localhost:3000` y crea la cuenta del administrador en **Crea la primera cuenta** (solo la primera vez).
 
 Sin la clave de Gemini la aplicación funciona igual: las funciones de IA muestran un error claro y
 se usa el formulario manual. **Sin PostgreSQL no arranca**: si ves "No hay conexión con PostgreSQL",

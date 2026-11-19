@@ -23,7 +23,9 @@ export const SALA_POR_ESPACIO = {
   skilab: 'salon1',
   blanca: 'reunionB',
   azul: 'reunionA',
-  'amarillas-verdes': 'morado',
+  // El espacio oficial de 6 puestos es la sala de reuniones (antes se dibujaba en el Salón Morado,
+  // que es privado: ahí no entran profesores ni campers y no se reserva).
+  'amarillas-verdes': 'juntas',
   'ping-pong-1': 'pingpong1',
   'ping-pong-2': 'pingpong2',
 };
@@ -35,10 +37,9 @@ const HUELLA = [
   [90, 61, 22, 31],  // Bermedia
   [106, 29, 56, 20], // franja norte del centro
   [106, 49, 46, 43], // Central 1 y Central 2
-  [152, 49, 10, 35], // cabinas, Clonai y sala de juntas
-  [161, 28, 24, 32], // Hunters y salas amarillas
+  [152, 49, 10, 35], // Clonai y sala de reuniones
+  [161, 28, 24, 32], // Hunters, cabinas y salas amarillas
   [185, 47, 7, 13],  // escalera de emergencia
-  [162, 60, 5, 24],  // condensadores del este
 ];
 
 // Fachada de vidrio semicircular que cubre el auditorio y Hunters
@@ -65,7 +66,8 @@ const SALAS = [
   { id: 'islas', nombre: 'Sala de islas', area: 44.3, x: 106, y: 49, w: 15, h: 11, piso: 'alfombra', muro: 'vidrio', puertas: [['n', 6, 2]], tipo: 'islas' },
   { id: 'bermedia', nombre: 'Bettermedia', privada: true, area: 166.3, x: 90, y: 61, w: 22, h: 31, piso: 'madera', muro: 'solido', puertas: [['e', 1, 3]], tipo: 'bermedia' },
   // Este
-  { id: 'morado', nombre: 'Salón Morado', rotulo: true, area: 20.4, x: 137, y: 29, w: 8, h: 11, piso: 'morado', muro: 'vidrio', puertas: [['s', 5, 2]], tipo: 'cabinas' },
+  // Salón Morado: privado (dirección). No se reserva y nadie entra a pasear.
+  { id: 'morado', nombre: 'Salón Morado', privada: true, area: 20.4, x: 137, y: 29, w: 8, h: 11, piso: 'morado', muro: 'vidrio', puertas: [['s', 5, 2]], tipo: 'cabinas' },
   { id: 'reunionA', nombre: 'Sala azul', rotulo: true, area: 25.5, x: 145, y: 29, w: 8, h: 11, piso: 'alfombra', muro: 'vidrio', puertas: [['s', 3, 2]], tipo: 'reunionRedonda' },
   { id: 'reunionB', nombre: 'Sala blanca', rotulo: true, area: 25.2, x: 153, y: 29, w: 8, h: 11, piso: 'alfombra', muro: 'vidrio', puertas: [['s', 3, 2]], tipo: 'reunionRedonda' },
   {
@@ -79,8 +81,8 @@ const SALAS = [
     puertasExtra: [
       ...[40, 41, 42, 43, 44, 45, 46, 47].map((y) => [161, y]), // abierta al pasillo
       [161, 21], [161, 22], [161, 23],                         // hacia el auditorio
-      [163, 54], [164, 54], [169, 54], [170, 54],              // hacia las salas amarillas
-      [175, 54], [176, 54], [181, 54], [182, 54],
+      [166, 54], [167, 54],                                    // hacia las cabinas
+      [175, 54], [176, 54], [181, 54], [182, 54],              // hacia las salas amarillas
     ],
   },
   // Mesas de ping-pong de Hunters: se reservan como una sala, pero sin muros
@@ -89,14 +91,15 @@ const SALAS = [
     id: `pingpong${n}`, nombre: `Ping-pong ${n}`, x: n === 1 ? 164 : 176, y: 38, w: 5, h: 9,
     piso: 'madera', muro: 'ninguno', puertas: [], tipo: 'pingpong',
   })),
-  // Donde el plano tiene los lockers (42,3 m²): cuatro salitas amarillas
-  ...[1, 2, 3, 4].map((n) => ({
-    id: `amarilla${n}`, nombre: `Amarilla ${n}`, area: 10.6, x: 161 + (n - 1) * 6, y: 55, w: 6, h: 5,
+  // Franja bajo Hunters, de oeste a este: Clonai (dos mesas largas), las cabinas y dos salitas amarillas
+  { id: 'clonai', nombre: 'Clonai', x: 152, y: 55, w: 9, h: 10, piso: 'alfombra', muro: 'vidrio', puertas: [['o', 2, 1]], tipo: 'clonai' },
+  { id: 'cabinas', nombre: 'Cabinas', x: 161, y: 55, w: 12, h: 5, piso: 'alfombra', muro: 'vidrio', puertas: [['n', 5, 2]], tipo: 'cabinasDobles' },
+  ...[1, 2].map((n) => ({
+    id: `amarilla${n}`, nombre: `Amarilla ${n}`, area: 10.6, x: 173 + (n - 1) * 6, y: 55, w: 6, h: 5,
     piso: 'amarillo', muro: 'vidrio', puertas: [['n', 2, 2]], tipo: 'salaAmarilla',
   })),
-  { id: 'cabinas', nombre: 'Cabinas', x: 152, y: 55, w: 9, h: 5, piso: 'alfombra', muro: 'vidrio', puertas: [['o', 2, 1]], tipo: 'cabinasDobles' },
-  { id: 'clonai', nombre: 'Clonai', x: 152, y: 60, w: 9, h: 5, piso: 'alfombra', muro: 'vidrio', puertas: [['o', 2, 1]], tipo: 'clonai' },
-  { id: 'juntas', nombre: 'Sala de juntas', x: 152, y: 65, w: 9, h: 18, piso: 'alfombra', muro: 'vidrio', puertas: [['o', 8, 2]], tipo: 'juntas' },
+  // Sala de reuniones: se reserva (es el espacio oficial "Amarillas verdes", de 6 puestos)
+  { id: 'juntas', nombre: 'Sala de reuniones', rotulo: true, area: 40.5, x: 152, y: 65, w: 9, h: 18, piso: 'alfombra', muro: 'vidrio', puertas: [['o', 8, 2]], tipo: 'juntas' },
 ];
 
 /** Nombre con que el campus conoce un espacio de la API, o null si se usa el de la API. */
@@ -115,7 +118,6 @@ const ZONAS = [
   { id: 'central2', nombre: 'Central 2', area: 209.3, rects: [[137, 49, 15, 43], [152, 49, 9, 6]], piso: 'madera' },
   { id: 'balconN', rects: [[60, 24, 46, 4]], piso: 'balcon', bloquea: true },
   { id: 'balconS', rects: [[60, 61, 30, 5]], piso: 'balcon', bloquea: true },
-  { id: 'balconE', rects: [[162, 60, 5, 24]], piso: 'balcon', bloquea: true },
 ];
 
 // Puertas de los ascensores: por aquí llegan y se van las personas
@@ -356,17 +358,20 @@ const GENERADORES = {
     }
   },
 
+  // Dos puestos dobles con monitor, uno a cada lado (la puerta queda en medio)
   cabinasDobles(s, a) {
-    a.poner('divisor', s.x + 5, s.y + 1, 1, 2); // deja pasar por la fila de abajo
-    for (const x of [s.x + 2, s.x + 6]) {
+    for (const x of [s.x + 1, s.x + s.w - 3]) {
       a.poner('escritorio', x, s.y + 1, 2, 1, { monitor: true, mira: 'n' });
       a.sentar(x, s.y + 2, 'n');
     }
   },
 
+  // Clonai: dos mesas largas de 6 puestos
   clonai(s, a) {
-    a.poner('escritorio', s.x + 2, s.y + 1, 6, 1, { mira: 'n' });
-    for (let x = s.x + 2; x < s.x + 8; x++) a.sentar(x, s.y + 2, 'n');
+    for (const y of [s.y + 1, s.y + 6]) {
+      a.poner('escritorio', s.x + 2, y, 6, 1, { mira: 'n' });
+      for (let x = s.x + 2; x < s.x + 8; x++) a.sentar(x, y + 1, 'n');
+    }
   },
 
   juntas(s, a) {
@@ -550,5 +555,4 @@ const GENERADORES = {
 
   balconN(z, a) { for (let x = 61; x < 104; x += 4) a.decorar('condensador', x, 25, 3, 2); },
   balconS(z, a) { for (let x = 61; x < 88; x += 4) a.decorar('condensador', x, 62, 3, 2); },
-  balconE(z, a) { for (let y = 61; y < 82; y += 4) a.decorar('condensador', 163, y, 3, 3); },
 };

@@ -271,7 +271,7 @@ describe('Con PostgreSQL', () => {
     const f = new Date();
     f.setDate(f.getDate() + 10);
     while (!REGLAS.DIAS_HABILES.includes(f.getDay())) f.setDate(f.getDate() + 1);
-    const dia = f.toISOString().slice(0, 10);
+    const dia = `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`; // fecha local (toISOString es UTC: de noche ya es mañana)
     const creada = await pedir('/api/reservas', 'POST', { espacioId: 'cosmos', responsable: 'Ana', asistentes: 5, inicio: `${dia}T10:00`, fin: `${dia}T11:00` }, cookies.ana);
     assert.equal(creada.status, 201);
     assert.equal(creada.cuerpo.creadaPor, 'ana');
@@ -283,7 +283,7 @@ describe('Con PostgreSQL', () => {
     const f = new Date();
     f.setDate(f.getDate() + 10);
     while (!REGLAS.DIAS_HABILES.includes(f.getDay())) f.setDate(f.getDate() + 1);
-    const dia = f.toISOString().slice(0, 10);
+    const dia = `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`; // fecha local (toISOString es UTC: de noche ya es mañana)
     const deAna = (await pedir('/api/reservas', 'POST', { espacioId: 'cosmos', responsable: 'Ana', asistentes: 20, inicio: `${dia}T09:00`, fin: `${dia}T11:00` }, cookies.ana)).cuerpo;
     const igual = { espacioId: 'cosmos', responsable: 'Luis', asistentes: 20, inicio: `${dia}T09:00`, fin: `${dia}T11:00` };
     assert.equal((await pedir('/api/reservas', 'POST', igual, cookies.luis)).cuerpo.error.codigo, 'RESERVA_SOLAPADA', 'reservar directo sigue sin dejar');

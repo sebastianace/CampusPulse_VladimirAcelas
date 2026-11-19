@@ -42,7 +42,12 @@ export function iniciarComando(opciones) {
 function nuevaConversacion() {
   turnos = [];
   resultado().replaceChildren();
+  document.getElementById('form-comando')?.reset();
 }
+
+// El enlace para empezar de cero aparece en toda respuesta de Pulse: pregunta, recomendación de sala o error.
+const botonNuevaConversacion = () =>
+  el('button', { type: 'button', className: 'enlace', onClick: nuevaConversacion }, 'Empezar una conversación nueva');
 
 // Los turnos como mensajes para el servidor: lo que la persona preguntó y lo que Pulse respondió.
 function historialParaEnviar() {
@@ -88,7 +93,7 @@ async function enviar(evento) {
 function dibujarConversacion() {
   resultado().replaceChildren(
     ...turnos.map((turno, i) => crearTurno(turno, i === turnos.length - 1)),
-    el('button', { type: 'button', className: 'enlace', onClick: nuevaConversacion }, 'Empezar una conversación nueva'),
+    botonNuevaConversacion(),
   );
   const filas = resultado().querySelectorAll('.turno');
   filas[filas.length - 1]?.scrollIntoView({ block: 'nearest' });
@@ -162,6 +167,8 @@ function dibujarRecomendacion({ solicitud, opciones = [], explicacion, modelo, m
       ? el('ol', { className: 'lista opciones' },
         opciones.map((opcion, i) => crearOpcion(opcion, i, solicitud, responsable)))
       : el('p', { className: 'vacio' }, 'Prueba con otro horario o menos personas.'),
+
+    botonNuevaConversacion(),
   );
 
   responsable.focus();
@@ -240,6 +247,7 @@ function dibujarError(error) {
       : el('p', { className: 'nota' }, error.codigo === 'SOLICITUD_INCOMPLETA'
         ? 'Reescribe el pedido con cuántas personas, qué día y de qué hora a qué hora.'
         : 'Revisa el mensaje e inténtalo de nuevo.'),
+    botonNuevaConversacion(),
   );
 }
 
