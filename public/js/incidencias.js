@@ -10,7 +10,7 @@
 
 import { pedir } from './api.js';
 import { el, conCarga } from './dom.js';
-import { CATEGORIAS, PRIORIDADES, etiqueta } from './catalogos.js';
+import { CATEGORIAS, ETIQUETAS_CATEGORIA, PRIORIDADES, etiqueta } from './catalogos.js';
 import { obtenerEstado } from './estado.js';
 import { puede } from './sesion.js';
 import * as toasts from './toasts.js';
@@ -79,6 +79,8 @@ function abrirFormulario({ modo, descripcion, sugerencia = {}, motivoFallo }) {
         el('span', { className: 'sello-ia__modelo' }, sugerencia.modelo ? ` · ${sugerencia.modelo}` : ''))
       : el('p', { className: 'tarjeta-manual__titulo' }, 'Registrar incidencia a mano'),
     motivoFallo ? el('p', { className: 'aviso', role: 'alert' }, motivoFallo) : null,
+    // La IA detectó que no es para TI (aseo, seguridad, bienestar...): se dice a quién avisar
+    esIA && sugerencia.aviso ? el('p', { className: 'aviso', role: 'alert' }, sugerencia.aviso) : null,
     esIA && sugerencia.razon ? el('p', { className: 'razon-ia' }, sugerencia.razon) : null,
     campoTexto('descripcion', 'Descripción', descripcion),
     el('div', { className: 'fila' },
@@ -294,7 +296,7 @@ export function crearItemIncidencia(incidencia, extra = null) {
       el('span', { className: 'item__meta dato' }, horaCorta(incidencia.fecha))),
     el('div', { className: 'etiquetas' },
       el('span', { className: `etiqueta etiqueta--${incidencia.prioridad}` }, etiqueta(PRIORIDADES, incidencia.prioridad)),
-      el('span', { className: 'etiqueta' }, etiqueta(CATEGORIAS, incidencia.categoria)),
+      el('span', { className: 'etiqueta' }, etiqueta(ETIQUETAS_CATEGORIA, incidencia.categoria)),
       incidencia.origen === 'ia' ? el('span', { className: 'etiqueta etiqueta--ia', title: incidencia.ia?.razon ?? '' }, 'Clasificada por IA') : null,
       incidencia.reportesAdicionales > 0
         ? el('span', { className: 'etiqueta', title: 'Personas que confirmaron que era la misma incidencia' },

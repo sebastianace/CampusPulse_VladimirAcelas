@@ -47,6 +47,10 @@ export const REGLAS = {
   // problemas técnicos y de infraestructura: el área no la elige la persona ni la IA, la pone el código.
   AREA_RESPONSABLE: 'Soporte TI',
 
+  // A quién se le avisa lo que NO es para TI (aseo, seguridad, bienestar, convivencia...). La IA lo detecta
+  // y la pantalla de reportes lo dice en vez de mandarle a TI algo que no puede resolver.
+  CONTACTO_FUERA_DE_TI: 'Coordinación',
+
   // Prioridades de incidencia que inhabilitan automáticamente el espacio o
   // recurso afectado, aunque no se marque "inhabilitar".
   // Ejemplo de cambio: ['alta', 'critica'].
@@ -118,8 +122,13 @@ export const ESTADOS_ESPACIO = ['disponible', 'inhabilitado', 'inconsistente'];
 // Estados posibles de un recurso tecnológico (portátil, video beam, etc.).
 export const ESTADOS_RECURSO = ['disponible', 'danado', 'en_reparacion'];
 
-// Categorías de una incidencia.
-export const CATEGORIAS = ['infraestructura', 'tecnologia', 'aseo', 'seguridad', 'bienestar', 'otro'];
+// Categorías con las que se registra una incidencia nueva. En el campus hay 2 técnicos de TI y cada uno
+// atiende una de estas dos: lo que no es técnico ni de infraestructura no lo resuelve TI.
+export const CATEGORIAS = ['infraestructura', 'tecnologia'];
+
+// Categorías que se usaban antes del 21 nov 2026. Ya no se pueden elegir, pero las incidencias que las tienen
+// siguen en el historial con su categoría (no se reescribe el pasado) y la base las acepta (CHECK de 002_esquema.sql).
+export const CATEGORIAS_ANTERIORES = ['aseo', 'seguridad', 'bienestar', 'otro'];
 
 // Prioridades de una incidencia, de menor a mayor.
 export const PRIORIDADES = ['baja', 'media', 'alta', 'critica'];

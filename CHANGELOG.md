@@ -6,6 +6,15 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Cambiado (pedidos de Campuslands, 21 nov 2026)
+- **Solo dos categorías de incidencia: Infraestructura y Tecnología.** En el campus hay 2 técnicos de TI y cada uno
+  atiende una. Aseo, seguridad, bienestar y "otro" ya no se pueden elegir (`POST /api/incidencias` responde 422), pero
+  las incidencias anteriores conservan su categoría (`CATEGORIAS_ANTERIORES`; la base las sigue aceptando).
+- **"Esto no es para Soporte TI".** El triaje (prompt 1.5) decide primero `paraTI`: si el reporte es de aseo,
+  seguridad, bienestar o convivencia, la categoría queda vacía y la pantalla dice que hay que avisarle a Coordinación
+  (`REGLAS.CONTACTO_FUERA_DE_TI`). La persona puede elegir la categoría a mano si cree que sí es para TI. Medido con
+  Gemini: los 4 reportes que no son de TI se detectan en los 12 casos de prueba (ver `docs/biblioteca-prompts.md`).
+
 ### Corregido (revisión general antes de la reunión)
 - **Aprobar una solicitud de salón ya no borra una reserva de otra sala.** Si el dueño había movido su reserva a otra
   sala mientras la solicitud esperaba, aprobarla se la cancelaba igual (solo se comparaban las horas). Ahora solo se le

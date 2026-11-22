@@ -4,8 +4,8 @@
 
 ## Qué es una incidencia
 
-Una incidencia es un reporte de algo que falla en el campus: un equipo que no enciende, una silla rota, una fuga
-de agua o un problema de seguridad. Cualquier persona con sesión puede reportarla.
+Una incidencia es un reporte de algo técnico o de infraestructura que falla en el campus: un equipo que no
+enciende, una silla rota, una fuga de agua o un tomacorriente dañado. Cualquier persona con sesión puede reportarla.
 
 ## Cómo reportar
 
@@ -15,9 +15,17 @@ equipo afectado. La persona revisa la sugerencia y confirma; la IA nunca registr
 
 ## Categorías, prioridades y quién la atiende
 
-Las categorías son: infraestructura, tecnología, aseo, seguridad, bienestar y otro. Las prioridades, de menor a
-mayor, son: baja, media, alta y crítica. Todas las incidencias las atiende Soporte TI, que es el equipo que
-resuelve los problemas técnicos y de infraestructura del campus; por eso no hay que elegir un área.
+Hay dos categorías: infraestructura (instalaciones, muebles, electricidad, agua, puertas) y tecnología (equipos,
+red, software, audio y video). Son las dos que atiende Soporte TI: en el campus hay dos técnicos y cada uno se
+encarga de una. Las prioridades, de menor a mayor, son: baja, media, alta y crítica. Todas las incidencias las
+atiende Soporte TI; por eso no hay que elegir un área.
+
+## Lo que no es para Soporte TI
+
+Los temas de aseo, seguridad de las personas, bienestar o convivencia no los resuelve Soporte TI y no se
+registran como incidencia. Si se describen en "Clasificar con IA", la pantalla avisa que no es para TI y que hay
+que avisarle a Coordinación; si hay riesgo para alguien, hay que hacerlo de inmediato. Las incidencias de esos
+temas registradas antes del 21 de noviembre de 2026 siguen en el historial con su categoría.
 
 ## Incidencias críticas
 

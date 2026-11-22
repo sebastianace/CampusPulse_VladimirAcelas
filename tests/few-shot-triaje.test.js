@@ -24,7 +24,10 @@ const CATALOGO = { espacios, recursos };
 
 // Revisa que una clasificación sea válida: enums, IDs del catálogo y la regla de inhabilitar.
 function assertClasificacionValida(c, nombre) {
-  assert.ok(CATEGORIAS.includes(c.categoria), `${nombre}: categoría`);
+  assert.equal(typeof c.paraTI, 'boolean', `${nombre}: paraTI`);
+  // Lo que no es para TI no tiene categoría: las dos que hay son las de los técnicos de TI
+  if (c.paraTI) assert.ok(CATEGORIAS.includes(c.categoria), `${nombre}: categoría`);
+  else assert.equal(c.categoria, null, `${nombre}: sin categoría si no es para TI`);
   assert.ok(PRIORIDADES.includes(c.prioridad), `${nombre}: prioridad`);
   assert.ok(!('area' in c), `${nombre}: el área ya no la decide la IA (toda incidencia va a TI)`);
   assert.ok(c.espacioId === null || espacios.some((e) => e.id === c.espacioId), `${nombre}: espacioId ${c.espacioId} no existe`);
