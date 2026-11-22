@@ -61,7 +61,8 @@ Una sala marcada como inhabilitada o inconsistente no se puede reservar. Una sal
 automáticamente cuando se reporta una incidencia crítica sobre ella, y vuelve a estar disponible cuando se
 resuelve la incidencia.
 
-## Mesas de ping-pong
+## Zona Hunters y mesas de ping-pong
 
-Las dos mesas de ping-pong de Hunters (de 4 puestos cada una) se pueden reservar directamente, pero el asistente
-de reservas nunca las recomienda para reuniones o clases.
+Hunters es una zona común: ahí están las mesas de ping-pong, la sala de estar y la cocineta. No se reserva, ni
+Hunters ni las mesas de ping-pong. Si algo se daña en Hunters (por ejemplo, una mesa de ping-pong rota o una luz
+que no prende), se reporta como incidencia eligiendo "Zona Hunters" como espacio afectado.

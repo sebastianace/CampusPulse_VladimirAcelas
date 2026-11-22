@@ -5,7 +5,7 @@
 
 import { pedir } from './api.js';
 import { el, conCarga } from './dom.js';
-import { ESTADOS_ESPACIO, etiqueta } from './catalogos.js';
+import { ESTADOS_ESPACIO, etiqueta, soloReservables } from './catalogos.js';
 import { ahoraBogota, cambiarFecha, obtenerEstado } from './estado.js';
 import { puedeTocarReserva, sesionActual } from './sesion.js';
 import * as toasts from './toasts.js';
@@ -326,7 +326,7 @@ export function avisoLlegada(reserva) {
 
 function llenarSelectEspacios(espacios) {
   const select = document.querySelector('#form-reserva select[name="espacioId"]');
-  const opciones = [...espacios]
+  const opciones = soloReservables(espacios)
     .sort((a, b) => (a.nombre ?? '').localeCompare(b.nombre ?? ''))
     .map((e) => {
       // Las salas no disponibles se pueden elegir: el backend explica por qué no se reservan

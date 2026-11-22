@@ -10,6 +10,7 @@
 // Es un indicador visual: no bloquea nada. Las reglas las aplica el backend.
 
 import { el } from './dom.js';
+import { soloReservables } from './catalogos.js';
 
 const PESO_SALAS = 0.4;
 const PESO_EQUIPOS = 0.3;
@@ -22,7 +23,8 @@ const UMBRAL_ALTA = 70;  // desde aquí, roja: "Campus bajo presión alta"
 /** Devuelve el valor total y el desglose de cada componente. */
 export function calcularPresion({ espacios, recursos, incidencias }) {
   // Las salas con datos inconsistentes no cuentan: no forman parte de la operación
-  const salas = espacios.filter((e) => e.estado !== 'inconsistente');
+  // ni las zonas comunes como Hunters, que no son salas
+  const salas = soloReservables(espacios).filter((e) => e.estado !== 'inconsistente');
   const salasPresionadas = salas.filter((e) => e.estado === 'inhabilitado' || e.ocupadoAhora).length;
   const equiposFuera = recursos.filter((r) => r.estado !== 'disponible').length;
   const abiertas = incidencias.filter((i) => i.estado !== 'resuelta');

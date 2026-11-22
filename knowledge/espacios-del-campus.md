@@ -6,7 +6,8 @@
 ## Aforo de cada espacio
 
 Los espacios y su aforo (puestos) son: Auditorio 100, Sputnik 38, Apolo 34, Artemis 32, Cosmos 25, Skylabs 20,
-Blanca 12, Azul 10 y la Sala de reuniones 6. Además hay dos mesas de ping-pong (Ping-pong 1 y 2) de 4 puestos cada una.
+Blanca 12, Azul 10 y la Sala de reuniones 6. La Zona Hunters es una zona común (con las mesas de ping-pong) y no tiene
+aforo porque no se reserva.
 
 ## Cuál sala es la más grande
 

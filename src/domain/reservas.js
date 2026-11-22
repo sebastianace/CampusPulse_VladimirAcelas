@@ -112,6 +112,11 @@ export function capacidadMaxima(espacio) {
   return Math.floor(espacio.aforo * REGLAS.MARGEN_AFORO);
 }
 
+/** true si el espacio se puede reservar por su tipo (una zona común como Hunters no). */
+export function esReservable(espacio) {
+  return !REGLAS.TIPOS_NO_RESERVABLES.includes(espacio.tipo);
+}
+
 // Regla 1: espacio asignable.
 function esAsignable(espacio) {
   return !REGLAS.ESTADOS_NO_ASIGNABLES.includes(espacio.estado);
@@ -135,6 +140,9 @@ function estaReservado(db, espacioId, inicio, fin, ignorarId = null) {
 
 /** Aplica las reglas 1, 2 y 6 a un espacio concreto y explica cuál falla. */
 function validarEspacio(db, espacio, { asistentes, inicio, fin }, ignorarId = null) {
+  if (!esReservable(espacio)) {
+    throw new ReglaNegocioError('ESPACIO_NO_RESERVABLE', `${espacio.nombre} es una zona común: se pueden reportar daños ahí, pero no se reserva`);
+  }
   if (!esAsignable(espacio)) {
     throw new ReglaNegocioError('ESPACIO_NO_ASIGNABLE', `${espacio.nombre} está ${espacio.estado} y no se puede reservar`);
   }
@@ -252,7 +260,7 @@ export function buscarEspaciosDisponibles(datos, db) {
   validarFranja(inicio, fin);
   const conComputadores = datos.necesitaComputadores === true;
   return db.espacios
-    .filter((e) => esAsignable(e) && cabenAsistentes(e, asistentes) && !estaReservado(db, e.id, inicio, fin))
+    .filter((e) => esReservable(e) && esAsignable(e) && cabenAsistentes(e, asistentes) && !estaReservado(db, e.id, inicio, fin))
     .filter((e) => !conComputadores || tieneComputadores(e))
     .sort((a, b) => capacidadMaxima(a) - capacidadMaxima(b));
 }

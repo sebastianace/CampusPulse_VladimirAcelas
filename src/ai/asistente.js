@@ -11,7 +11,6 @@
 // La IA nunca decide qué sala está libre.
 // =====================================================================
 
-import { REGLAS } from '../config/reglas.js';
 import { leerDB } from '../data/almacen.js';
 import { DatosInvalidosError } from '../domain/errors.js';
 import { ahoraBogota } from '../domain/fechas.js';
@@ -102,9 +101,8 @@ const motivoPorReglas = (espacio, solicitud) =>
  */
 export async function recomendarEspacios(texto, { explicarConIA = true } = {}) {
   const { solicitud, modelo } = await extraerSolicitud(texto);
-  const espacios = buscarEspaciosDisponibles(solicitud, await leerDB())
-    .filter((e) => !REGLAS.TIPOS_FUERA_DE_RECOMENDACION.includes(e.tipo))
-    .slice(0, MAX_OPCIONES);
+  // buscarEspaciosDisponibles ya deja fuera las zonas comunes (REGLAS.TIPOS_NO_RESERVABLES)
+  const espacios = buscarEspaciosDisponibles(solicitud, await leerDB()).slice(0, MAX_OPCIONES);
 
   // Sin opciones no hay nada que explicar: la explicación va vacía (no se
   // escribe un texto propio que la UI mostraría como si fuera de la IA).

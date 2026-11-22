@@ -9,7 +9,7 @@
 //     lectores de pantalla, y para los espacios que no tienen sitio en el plano.
 
 import { el } from './dom.js';
-import { ESTADOS_RECURSO, etiqueta } from './catalogos.js';
+import { ESTADOS_RECURSO, etiqueta, soloReservables } from './catalogos.js';
 import { ahoraBogota, hoyISO } from './estado.js';
 import { construirPlano, SALA_POR_ESPACIO } from './mapa/plano.js';
 import { pintarMundo, BALDOSA } from './mapa/pixel.js';
@@ -89,7 +89,9 @@ export function iniciarMapa() {
 }
 
 /** Se llama con el estado cada vez que llegan datos nuevos de la API. */
-export function dibujarMapa({ espacios, recursos, incidencias, reservas, fecha }) {
+export function dibujarMapa({ espacios: todos, recursos, incidencias, reservas, fecha }) {
+  // Hunters es una zona común: se dibuja como zona del plano, no como sala que se reserva
+  const espacios = soloReservables(todos);
   const ubicados = new Map();
   const sinUbicar = [];
   const ahora = ahoraBogota();

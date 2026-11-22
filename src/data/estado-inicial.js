@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------------
 // Arma los espacios, recursos y el reporte de calidad desde:
 //   data/raw/espacios.csv          capacidad oficial (NUNCA se modifica)
-//   data/seed/espacios-extra.json  mesas de ping-pong (no están en el CSV oficial)
+//   data/seed/espacios-extra.json  Zona Hunters (zona común, no está en el CSV oficial)
 //   data/seed/recursos.json        equipos ficticios
 // No toca ninguna base de datos: src/data/semilla.js lo carga en PostgreSQL.
 // =====================================================================
@@ -12,6 +12,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { cargarEspacios } from './loader.js';
+import { REGLAS } from '../config/reglas.js';
 
 // Carpeta raíz del proyecto (dos niveles arriba de src/data/).
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
@@ -34,12 +35,14 @@ function cargarRecursos(idsEspacios) {
   }
 }
 
-// Espacios reservables que no están en el CSV oficial (las mesas de ping-pong de Hunters).
+// Espacios que no están en el CSV oficial: hoy, la Zona Hunters (zona común donde están las mesas de ping-pong).
 // Un id que ya exista en el CSV se ignora: el oficial manda. Si el archivo falta, no hay extras.
+// Un espacio reservable necesita aforo; una zona común (REGLAS.TIPOS_NO_RESERVABLES) no se reserva y puede no tenerlo.
 function cargarEspaciosExtra(idsOficiales) {
+  const aforoValido = (e) => (Number.isInteger(e.aforo) && e.aforo > 0) || (REGLAS.TIPOS_NO_RESERVABLES.includes(e.tipo) && e.aforo == null);
   try {
     const extras = JSON.parse(readFileSync(RUTAS.espaciosExtra, 'utf8'));
-    return extras.filter((e) => e?.id && !idsOficiales.has(e.id) && Number.isInteger(e.aforo) && e.aforo > 0);
+    return extras.filter((e) => e?.id && !idsOficiales.has(e.id) && aforoValido(e));
   } catch (error) {
     if (existsSync(RUTAS.espaciosExtra)) console.warn(`[estado-inicial] No se pudieron cargar los espacios extra: ${error.message}`);
     return [];

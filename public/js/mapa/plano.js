@@ -26,8 +26,8 @@ export const SALA_POR_ESPACIO = {
   // El espacio oficial de 6 puestos es la sala de reuniones (antes se dibujaba en el Salón Morado,
   // que es privado: ahí no entran profesores ni campers y no se reserva).
   'amarillas-verdes': 'juntas',
-  'ping-pong-1': 'pingpong1',
-  'ping-pong-2': 'pingpong2',
+  // Las mesas de ping-pong ya no son espacios (no se reservan): son muebles de Hunters. Hunters (espacio
+  // 'hunters') es una zona común: no se pinta como sala que se reserva (ver soloReservables en mapa.js).
 };
 
 // Silueta del edificio: rectángulos [x, y, ancho, alto] más la fachada semicircular
@@ -85,8 +85,8 @@ const SALAS = [
       [175, 54], [176, 54], [181, 54], [182, 54],              // hacia las salas amarillas
     ],
   },
-  // Mesas de ping-pong de Hunters: se reservan como una sala, pero sin muros
-  // (van después de Hunters para que el clic y el color caigan sobre la mesa)
+  // Mesas de ping-pong de Hunters: se dibujan como un área sin muros dentro de Hunters, pero no se reservan
+  // (no son espacios de la API; el tooltip las muestra como parte de la zona común)
   ...[1, 2].map((n) => ({
     id: `pingpong${n}`, nombre: `Ping-pong ${n}`, x: n === 1 ? 164 : 176, y: 38, w: 5, h: 9,
     piso: 'madera', muro: 'ninguno', puertas: [], tipo: 'pingpong',
@@ -426,7 +426,7 @@ const GENERADORES = {
     a.decorar('sofa', 170, 34, 6, 1, { mira: 'n' });
     for (let x = 170; x < 176; x += 2) { a.sentar(x, 30, 's', false); a.sentar(x + 1, 34, 'n', false); }
     a.decorar('pantalla', 184, 31, 1, 4, { lado: 'e' });
-    // Juegos (las mesas de ping-pong son salas propias: ver pingpong)
+    // Juegos (las mesas de ping-pong se dibujan aparte: ver pingpong)
     a.poner('futbolin', 171, 42, 3, 2);
     a.parar(170, 42, 'e');
     a.parar(174, 43, 'o');
