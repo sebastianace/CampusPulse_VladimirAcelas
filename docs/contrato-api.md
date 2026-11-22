@@ -37,7 +37,7 @@ sin esperar a que P1 termine.
 | `POST /api/auth/login` | `{usuario, clave}` | `200 {usuario, nombre, rol}` y abre sesión (cookie) | P2 |
 | `POST /api/auth/logout` | — | `200` y cierra la sesión | P2 |
 | `GET /api/auth/yo` | — | `200 {usuario, nombre, rol, debeCambiarClave?}` o `401` (`debeCambiarClave: true` si la contraseña es temporal) | P2 |
-| `POST /api/ia/triaje` | `{descripcion}` | `{categoria, prioridad, espacioId, recursoId, inhabilitar, razon, modelo}` (el área no la decide la IA) | P2 |
+| `POST /api/ia/triaje` | `{descripcion}` | `{paraTI, categoria, prioridad, espacioId, recursoId, inhabilitar, razon, aviso, modelo}` (el área no la decide la IA; si `paraTI` es `false`, `categoria` es `null` y `aviso` dice a quién acudir) | P2 |
 | `POST /api/ia/similares` | `{descripcion, espacioId?, recursoId?}` | `{candidatas: [{id, descripcion, categoria, prioridad, area, espacioId, recursoId, fecha, similitud, reportesAdicionales}], umbral, modelo}`. Incidencias **abiertas** parecidas, de la más a la menos parecida. `503` si el servicio de embeddings falla | P2 |
 | `POST /api/ia/recomendar` | `{texto}` | `{solicitud: {asistentes, inicio, fin, necesitaComputadores}, opciones: [{espacioId, motivo}], explicacion, modelo}` | P2 |
 | `POST /api/ia/preguntar` | `{pregunta, historial?: [{rol: "usuario" \| "pulse", texto}]}` | `{respondido, respuesta, areaSugerida, fragmentos: [{documento, seccion, archivo, texto, similitud, puntaje, usado, ejemplo}], consulta, reranking, modelo}`. Responde con los documentos de `knowledge/` (RAG en `pulse-ai`) y marca en `fragmentos` cuáles usó. Si no están en los documentos, `respondido: false` y no inventa. `503` si `pulse-ai` o Gemini fallan; `422` si el historial es inválido | P2 |
@@ -120,7 +120,9 @@ Son los únicos válidos y viven en `src/config/reglas.js`:
 
 - Estados de espacio: `disponible`, `inhabilitado`, `inconsistente`.
 - Estados de recurso: `disponible`, `prestado`, `danado`, `en_reparacion`.
-- Categorías: `infraestructura`, `tecnologia`, `aseo`, `seguridad`, `bienestar`, `otro`.
+- Categorías de una incidencia nueva: `infraestructura`, `tecnologia` (las de los 2 técnicos de TI).
+  Las anteriores (`aseo`, `seguridad`, `bienestar`, `otro`) solo aparecen en incidencias registradas antes del
+  21 nov 2026: la base las acepta, pero `POST /api/incidencias` responde 422 si llegan (`CATEGORIAS_ANTERIORES`).
 - Prioridades: `baja`, `media`, `alta`, `critica`.
 - Áreas: `Infraestructura`, `Soporte TI`, `Servicios generales`, `Seguridad`, `Bienestar`.
 
@@ -130,7 +132,7 @@ Lo que P2 (IA) importa de P1. Si P1 cambia un nombre, avisa antes.
 
 | Archivo (dueño P1) | Export | Qué devuelve |
 |---|---|---|
-| `src/config/reglas.js` | `CATEGORIAS`, `PRIORIDADES`, `AREAS` | Arrays con los valores cerrados de arriba |
+| `src/config/reglas.js` | `CATEGORIAS`, `CATEGORIAS_ANTERIORES`, `PRIORIDADES`, `AREAS` | Arrays con los valores cerrados de arriba |
 | `src/config/reglas.js` | `REGLAS` | Objeto con las constantes (usa `PRIORIDADES_QUE_INHABILITAN`) |
 | `src/data/almacen.js` | `leerDB()` | `Promise<{espacios, recursos, reservas, prestamos, incidencias, ...}>`: la foto de PostgreSQL (siempre `async`) |
 | `src/domain/reservas.js` | `buscarEspaciosDisponibles({asistentes, inicio, fin})` | Espacios que cumplen todas las reglas, ordenados por mejor ajuste de aforo |

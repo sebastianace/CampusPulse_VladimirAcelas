@@ -13,7 +13,7 @@ import { migrar } from '../src/data/migrar.js';
 import { sembrar } from '../src/data/semilla.js';
 import { crearEstadoInicial } from '../src/data/estado-inicial.js';
 import {
-  AREAS, CATEGORIAS, ESTADOS_ESPACIO, ESTADOS_INCIDENCIA, ESTADOS_PRESTAMO, ESTADOS_RECURSO, ORIGENES_INCIDENCIA, PRIORIDADES,
+  AREAS, CATEGORIAS, CATEGORIAS_ANTERIORES, ESTADOS_ESPACIO, ESTADOS_INCIDENCIA, ESTADOS_PRESTAMO, ESTADOS_RECURSO, ORIGENES_INCIDENCIA, PRIORIDADES,
 } from '../src/config/reglas.js';
 
 const TABLAS = ['calidad_datos', 'espacios', 'incidencias', 'incidencias_embeddings', 'incidencias_notificaciones', 'incidencias_reportes', 'prestamos', 'recursos', 'reservas', 'schema_migrations', 'sesiones', 'solicitudes_salon', 'usuarios'];
@@ -117,7 +117,8 @@ describe('Valores cerrados: la base y src/config/reglas.js coinciden', () => {
     const insertar = (id, c, p, a, o, e) => pool.query(
       `INSERT INTO incidencias (id, descripcion, categoria, prioridad, area, origen, estado, fecha)
        VALUES ($1, 'x', $2, $3, $4, $5, $6, '2026-11-09T10:00')`, [id, c, p, a, o, e]);
-    for (const [i, c] of CATEGORIAS.entries()) await insertar(`inc-c-${i}`, c, 'media', 'Soporte TI', 'manual', 'abierta');
+    // Las categorías anteriores siguen siendo válidas en la base: hay incidencias viejas con ellas
+    for (const [i, c] of [...CATEGORIAS, ...CATEGORIAS_ANTERIORES].entries()) await insertar(`inc-c-${i}`, c, 'media', 'Soporte TI', 'manual', 'abierta');
     for (const [i, p] of PRIORIDADES.entries()) await insertar(`inc-p-${i}`, 'otro', p, 'Soporte TI', 'manual', 'abierta');
     for (const [i, a] of AREAS.entries()) await insertar(`inc-a-${i}`, 'otro', 'media', a, 'manual', 'abierta');
     for (const [i, o] of ORIGENES_INCIDENCIA.entries()) await insertar(`inc-o-${i}`, 'otro', 'media', 'Soporte TI', o, 'abierta');

@@ -46,4 +46,5 @@ escrito en lenguaje natural y explica las opciones que las reglas ya aprobaron.
 ## ¿A quién le pregunto algo que no encuentro aquí?
 
 Para cualquier daño o problema técnico o de las instalaciones, lo más práctico es reportar una incidencia: todas
-llegan a Soporte TI, que es el equipo que las resuelve. Para temas de bienestar, a Bienestar.
+llegan a Soporte TI, que es el equipo que las resuelve. Para temas de aseo, seguridad, bienestar o convivencia, a
+Coordinación: no son incidencias de Soporte TI.

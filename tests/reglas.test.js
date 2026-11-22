@@ -324,9 +324,18 @@ describe('Incidencias', () => {
   test('toda incidencia va a TI: el área no se elige y si llega otra se ignora', () => {
     const db = crearDB();
     for (const area of [undefined, 'Seguridad', 'Cafetería']) {
-      assert.equal(crearIncidencia(db, incidencia({ area, categoria: 'seguridad' })).area, REGLAS.AREA_RESPONSABLE);
+      assert.equal(crearIncidencia(db, incidencia({ area, categoria: 'infraestructura' })).area, REGLAS.AREA_RESPONSABLE);
     }
     assert.equal(REGLAS.AREA_RESPONSABLE, 'Soporte TI');
+  });
+
+  test('solo se registran incidencias de infraestructura o tecnología: las categorías anteriores ya no', () => {
+    const db = crearDB();
+    for (const categoria of ['infraestructura', 'tecnologia']) assert.equal(crearIncidencia(db, incidencia({ categoria })).categoria, categoria);
+    for (const categoria of ['aseo', 'seguridad', 'bienestar', 'otro']) {
+      assert.throws(() => crearIncidencia(db, incidencia({ categoria })), { status: 422 }, categoria);
+    }
+    assert.equal(db.incidencias.length, 2);
   });
 
   test('valores fuera de los enums o IDs inexistentes se rechazan', () => {

@@ -21,7 +21,7 @@ schema JSON y se vuelve a validar en `src/ai/validar.js`.
 
 | Prompt | Archivo | Lo usa | Versión |
 |---|---|---|---|
-| Triaje de incidencias | `prompts/triaje.js` | `POST /api/ia/triaje` | 1.4 |
+| Triaje de incidencias | `prompts/triaje.js` | `POST /api/ia/triaje` | 1.5 |
 | Extracción de la solicitud de reserva | `prompts/solicitud.js` | `POST /api/ia/recomendar`, paso 1 | 1.0 |
 | Explicación de las salas recomendadas | `prompts/explicacion.js` | `POST /api/ia/recomendar`, paso 3 | 1.1 |
 | Intención del mensaje (reservar o preguntar) | `prompts/intencion.js` | `POST /api/ia/asistente` | 1.0 |
@@ -34,6 +34,18 @@ y la misma personalidad de Pulse. Un test de Node comprueba que las conductas de
 lugares (`tests/conocimiento-docs.test.js`).
 
 ## Historial de versiones
+
+### 1.5: solo infraestructura y tecnología, y "esto no es para TI"
+- **Decisión de negocio (21 nov 2026):** en el campus hay 2 técnicos de TI y cada uno atiende una categoría. Aseo,
+  seguridad, bienestar y "otro" se quitaron de `CATEGORIAS` y quedan en `CATEGORIAS_ANTERIORES` solo para el historial.
+- **Problema que evita:** con 2 categorías, la IA metería "se regó café en el pasillo" a la fuerza en infraestructura y
+  le llegaría a TI, que no lo resuelve. Por eso el prompt pide primero `paraTI` (true o false) y la categoría solo si
+  es para TI. Con `paraTI: false` la respuesta trae `aviso` (a quién acudir, `REGLAS.CONTACTO_FUERA_DE_TI`) y la persona
+  igual puede elegir la categoría a mano si cree que sí es para TI.
+- `validar.js` deja la categoría en `null` cuando `paraTI` es `false`, aunque la IA mande una. Si la IA no manda
+  `paraTI`, se asume `true`: decide la persona.
+- El conjunto de prueba y los ejemplos few-shot cambian: los casos de aseo, bienestar y seguridad esperan
+  `paraTI: false` y categoría `null`, y la medición cuenta el campo `paraTI`.
 
 ### 1.4: el triaje ya no decide el área
 - **Decisión de negocio:** en el campus, TI es el único equipo que resuelve los problemas técnicos y de infraestructura.

@@ -14,9 +14,16 @@ export const ESTADOS_RECURSO = {
   en_reparacion: 'En reparación',
 };
 
+// Las que se pueden elegir al reportar: en el campus hay 2 técnicos de TI, uno por categoría.
 export const CATEGORIAS = {
   infraestructura: 'Infraestructura',
   tecnologia: 'Tecnología',
+};
+
+// Etiquetas de todas las categorías, incluidas las anteriores al 21 nov 2026 (aseo, seguridad...):
+// las incidencias viejas se siguen mostrando con su categoría.
+export const ETIQUETAS_CATEGORIA = {
+  ...CATEGORIAS,
   aseo: 'Aseo',
   seguridad: 'Seguridad',
   bienestar: 'Bienestar',

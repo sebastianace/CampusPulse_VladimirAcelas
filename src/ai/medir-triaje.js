@@ -23,7 +23,7 @@ import { promptTriaje } from './prompts/triaje.js';
 import { crearSchema } from './triaje.js';
 import { validarTriaje } from './validar.js';
 
-export const CAMPOS = ['categoria', 'prioridad', 'espacioId', 'recursoId', 'inhabilitar'];
+export const CAMPOS = ['paraTI', 'categoria', 'prioridad', 'espacioId', 'recursoId', 'inhabilitar'];
 const PAUSA_MS = 13_000; // 5 peticiones por minuto en la capa gratis de Gemini
 
 /** Compara el triaje obtenido con el esperado campo por campo. Sin triaje (error), todo falla. */
@@ -62,7 +62,7 @@ const porcentaje = (parte, total) => `${Math.round((parte / total) * 100)}%`;
 
 function imprimir(titulo, resumen) {
   console.log(`\n${titulo}`);
-  console.log(`  exactos (los 6 campos): ${resumen.exactos}/${resumen.total} (${porcentaje(resumen.exactos, resumen.total)})   errores de la IA: ${resumen.errores}`);
+  console.log(`  exactos (todos los campos): ${resumen.exactos}/${resumen.total} (${porcentaje(resumen.exactos, resumen.total)})   errores de la IA: ${resumen.errores}`);
   for (const campo of CAMPOS) console.log(`  ${campo.padEnd(10)} ${resumen.porCampo[campo]}/${resumen.total} (${porcentaje(resumen.porCampo[campo], resumen.total)})`);
 }
 

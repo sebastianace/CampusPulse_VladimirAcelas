@@ -36,11 +36,15 @@ function textoLimpio(valor) {
 /**
  * Valida la sugerencia de triaje contra los enums y el catálogo real.
  * catalogo = { espacios: [{id}], recursos: [{id}] }
- * Devuelve {categoria, prioridad, espacioId, recursoId, inhabilitar, razon}.
+ * Devuelve {paraTI, categoria, prioridad, espacioId, recursoId, inhabilitar, razon}.
+ * Si el reporte no es para TI (paraTI false), la categoría queda en null: ninguna de las dos aplica.
  */
 export function validarTriaje(datos, catalogo) {
+  // Solo un false explícito saca el reporte de TI: si la IA no lo dice, la persona decide en el formulario.
+  const paraTI = datos?.paraTI !== false;
   return {
-    categoria: valorPermitido(datos?.categoria, CATEGORIAS),
+    paraTI,
+    categoria: paraTI ? valorPermitido(datos?.categoria, CATEGORIAS) : null,
     prioridad: valorPermitido(datos?.prioridad, PRIORIDADES),
     espacioId: idDelCatalogo(datos?.espacioId, catalogo.espacios),
     recursoId: idDelCatalogo(datos?.recursoId, catalogo.recursos),
