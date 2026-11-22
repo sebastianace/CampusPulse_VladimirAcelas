@@ -1,0 +1,4 @@
+﻿id;nombre;tipo;sala;estado
+EJ-001;Video beam Epson;video_beam;Apolo;disponible
+EJ-002;Portátil Lenovo 01;portatil;;disponible
+EJ-003;Micrófono inalámbrico;microfono;Auditorio;dañado

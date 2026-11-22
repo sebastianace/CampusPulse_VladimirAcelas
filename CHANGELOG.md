@@ -16,6 +16,13 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
   cuadro quieto y la animación se detiene con la pestaña oculta. Si el script o WebGL fallan, el login funciona igual
   (con estrellas, o con estrellas fijas de CSS). Se quitó la línea amarilla "Campus Bucaramanga". Tarjetas de vidrio que
   brillan al escribir, botón **Mostrar / Ocultar** contraseña y aviso de **Bloq Mayús**.
+- **Importar el inventario real desde un CSV de Excel.** `npm run importar-inventario -- archivo.csv`: ensayo por
+  defecto (qué equipos entran, cuáles cambian y los errores con su línea del archivo) y `--aplicar` para guardar;
+  `--quitar-ficticios` quita los 12 equipos de demostración, salvo los que ya tienen incidencias. Todo o nada, el código
+  de inventario (`id`) es la clave (volver a importar no duplica) y el estado de un equipo que ya existe no se pisa.
+  Lee el CSV como lo guarda Excel en español (`;`, Windows-1252, BOM) y reconoce columnas como "Código", "Equipo" o
+  "Ubicación". Plantilla en `data/plantillas/inventario.csv`; los datos reales van en `data/privado/` (ignorada por git).
+  Guía y riesgos (el catálogo completo entra en cada prompt del triaje) en `docs/inventario-importar.md`.
 - **Solo dos categorías de incidencia: Infraestructura y Tecnología.** En el campus hay 2 técnicos de TI y cada uno
   atiende una. Aseo, seguridad, bienestar y "otro" ya no se pueden elegir (`POST /api/incidencias` responde 422), pero
   las incidencias anteriores conservan su categoría (`CATEGORIAS_ANTERIORES`; la base las sigue aceptando).

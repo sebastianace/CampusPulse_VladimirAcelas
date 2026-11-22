@@ -5,3 +5,7 @@ data/auth.json
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Datos reales del campus (inventario de Coordinación, etc.): no se suben al repositorio
+data/privado/*
+!data/privado/.gitkeep
