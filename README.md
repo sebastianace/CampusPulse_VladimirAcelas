@@ -37,7 +37,7 @@ tiene que arreglar el problema.
 Más capturas: [mapa](docs/capturas/02-mapa.png) · [reserva rechazada por aforo](docs/capturas/03-reserva-rechazada.png) ·
 ["no lo sé"](docs/capturas/09-no-se.png) · [aviso de n8n](docs/capturas/11-aviso-n8n.png) ·
 [en el celular](docs/capturas/12-movil.png) · [sin IA](docs/capturas/07-sin-ia.png) ·
-[inicio de sesión](docs/capturas/13-login.png).
+[inicio de sesión](docs/capturas/13-login.png) · [hoja de QR](docs/capturas/14-qr-salas.png).
 
 ## Arquitectura
 
@@ -205,6 +205,19 @@ El detalle de cada cambio está en [CHANGELOG.md](CHANGELOG.md).
   responsable no está, otro técnico puede tomarla, y un admin puede **reasignarla** (botón "Reasignar").
 - El técnico ve "Te tocó a ti" y cuántas son "para ti"; lo que le tocó sale primero entre lo no atendido. Sin responsable
   configurado, la incidencia queda sin asignar (no se pierde). Guarda la tabla `responsables_categoria` (migración 015).
+
+## Códigos QR en las salas
+
+- Cada sala puede tener un QR pegado en la pared que abre `movil.html?sala=<id>`: el reporte de incidencias con la
+  sala ya elegida y un aviso "Estás reportando en Apolo". El QR solo lleva esa dirección (sin claves ni datos): **para
+  reportar hay que tener cuenta**. Sin sesión, la persona llega al inicio de sesión y, al entrar, vuelve a su sala.
+- Un admin los imprime desde **Usuarios → Abrir hoja para imprimir** (`qr.html`): un cartel por sala, 6 por hoja A4
+  con borde para recortar. Se dibujan en el navegador con una librería de QR copiada en `public/js/vendor/` (MIT), sin
+  dependencias nuevas ni rutas nuevas en el servidor.
+- **El hosting aún no está definido,** así que la dirección base no va fija en el código: la hoja usa la del sitio donde
+  se abre y se puede cambiar (queda recordada). Avisa si es `localhost` (el celular no la ve) o una IP de red interna
+  (solo con el Wi-Fi del campus). Cuando haya dominio se abre la hoja desde ahí y se vuelven a imprimir.
+- Detalles, decisiones y cómo se comprobó que se leen: [docs/qr-salas.md](docs/qr-salas.md).
 
 ## Rol de la IA y cómo se controla
 

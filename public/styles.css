@@ -1232,6 +1232,16 @@ option { color: var(--texto); background: var(--placa-alta); }
 .movil__estado { font-size: 15px; color: var(--disponible); }
 .movil__estado[data-alerta="si"] { color: #ff8a87; font-weight: 600; }
 .movil__volver { justify-self: center; padding: 12px; }
+/* Sala que viene del QR: lo primero que se ve, para confirmar que se escaneó la sala correcta */
+.movil__sala {
+  padding: 12px 14px;
+  border-radius: var(--radio);
+  background: var(--placa-alta);
+  border: 1px solid var(--linea);
+  border-left: 4px solid var(--disponible);
+  font-size: 15px;
+}
+.movil__sala strong { font-weight: 700; }
 /* 16px evita que iOS haga zoom al escribir */
 .movil textarea, .movil input, .movil select { font-size: 16px; }
 .movil .btn { min-height: 48px; flex: 1; }
@@ -1285,3 +1295,63 @@ option { color: var(--texto); background: var(--placa-alta); }
 /* Reparto de incidencias: configuración por categoría (pestaña Usuarios) y selector de Reasignar */
 #responsables { margin-top: 12px; }
 .form-reasignar { margin-top: 10px; }
+
+/* ---------- Hoja de QR de las salas (qr.html) ---------- */
+.qr .barra { position: static; }
+.qr__contenido { display: grid; gap: 16px; padding: 16px; max-width: 1000px; margin: 0 auto; }
+.qr__controles { display: grid; gap: 14px; }
+.qr__controles .fila { align-items: end; }
+.qr__acciones { justify-content: flex-end; flex-wrap: wrap; }
+.qr__estado { font-size: 13px; padding: 10px 12px; border-radius: var(--radio-sm); border: 1px solid var(--linea); background: var(--placa-alta); }
+.qr__estado[data-nivel="ok"] { border-color: rgb(63 182 139 / 0.5); }
+.qr__estado[data-nivel="aviso"] { border-color: rgb(232 163 61 / 0.6); background: rgb(232 163 61 / 0.1); }
+.qr__estado[data-nivel="error"] { border-color: rgb(239 83 80 / 0.5); background: rgb(239 83 80 / 0.12); }
+
+.qr__hoja { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+/* El cartel es una hoja blanca con tinta negra: el QR necesita fondo claro para leerse, también en pantalla */
+.qr-cartel {
+  background: #fff;
+  color: #111;
+  border-radius: var(--radio);
+  padding: 18px 16px 14px;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  text-align: center;
+  min-width: 0;
+}
+.qr-cartel__sala { font-family: var(--f-display); font-variation-settings: "wdth" 112; font-weight: 800; font-size: 24px; line-height: 1.1; text-wrap: balance; }
+.qr-cartel__codigo { width: min(100%, 220px); }
+.qr-cartel__codigo svg { display: block; width: 100%; height: auto; }
+.qr-cartel__titulo { font-weight: 700; font-size: 16px; }
+.qr-cartel__pasos { font-size: 13px; color: #444; max-width: 30ch; text-wrap: balance; }
+/* La dirección escrita, por si alguien no puede escanear (y para saber de dónde salió el cartel) */
+.qr-cartel__enlace { font-family: var(--f-dato); font-size: 10.5px; color: #555; overflow-wrap: anywhere; }
+
+@media print {
+  @page { size: A4; margin: 10mm; }
+  /* El fondo oscuro del sitio no se imprime: ni en el cuerpo ni en el margen de la hoja (el del <html>) */
+  :root { color-scheme: light; background: #fff; }
+  body.qr { background: #fff; min-height: 0; }
+  .qr__barra, .qr__controles, #qr-sin-permiso, .toasts { display: none !important; }
+  .qr__contenido { padding: 0; max-width: none; }
+  /* 2 columnas x 3 filas por hoja, con borde punteado para recortar */
+  .qr__hoja { grid-template-columns: repeat(2, 1fr); gap: 0; }
+  .qr-cartel {
+    height: 90mm;
+    padding: 5mm 4mm 4mm;
+    gap: 2mm;
+    border: 1px dashed #888;
+    border-radius: 0;
+    align-content: space-between;
+    overflow: hidden;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .qr-cartel__sala { font-size: 18pt; }
+  .qr-cartel__codigo { width: 46mm; }
+  .qr-cartel__titulo { font-size: 11pt; }
+  .qr-cartel__pasos { font-size: 8.5pt; max-width: 46ch; }
+  .qr-cartel__enlace { font-size: 6.5pt; }
+}
+}
