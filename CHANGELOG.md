@@ -8,12 +8,14 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Cambiado (pedidos de Campuslands, 21 nov 2026)
 - **Nuevo diseño del inicio de sesión.** Sigue la estética de Campuslands (cielo oscuro, brillo morado, dos tarjetas)
-  con un cielo vivo en un `<canvas>`: estrellas en tres capas que se desplazan a distinta velocidad y titilan, estrellas
-  fugaces, un planeta low-poly en 3D con un anillo de partículas que pasa por delante y por detrás, una dona 3D
-  iridiscente y asteroides. El 3D está hecho sin librerías (`public/js/acceso/geometria.js`: mallas, rotación,
-  perspectiva, luz de Lambert y algoritmo del pintor, con tests). El mouse inclina la escena; con "reducir movimiento"
-  se dibuja un solo cuadro quieto y la animación se detiene con la pestaña oculta. Si el script falla, el login funciona
-  igual. Tarjetas de vidrio que brillan al escribir, botón **Mostrar / Ocultar** contraseña y aviso de **Bloq Mayús**.
+  con un cielo vivo: estrellas en tres capas que se desplazan a distinta velocidad y titilan (canvas 2D), estrellas
+  fugaces, y donas y esferas 3D lisas y brillantes, con degradé iridiscente azul, violeta, blanco y rosa. Los objetos se
+  dibujan con WebGL directo, sin librerías (`public/js/acceso/cristal.js`): la luz se calcula píxel por píxel (difusa,
+  destello y borde claro), por eso no se ven facetas. Las mallas y las rotaciones están en
+  `public/js/acceso/geometria.js`, con tests. El mouse inclina la escena; con "reducir movimiento" se dibuja un solo
+  cuadro quieto y la animación se detiene con la pestaña oculta. Si el script o WebGL fallan, el login funciona igual
+  (con estrellas, o con estrellas fijas de CSS). Se quitó la línea amarilla "Campus Bucaramanga". Tarjetas de vidrio que
+  brillan al escribir, botón **Mostrar / Ocultar** contraseña y aviso de **Bloq Mayús**.
 - **Solo dos categorías de incidencia: Infraestructura y Tecnología.** En el campus hay 2 técnicos de TI y cada uno
   atiende una. Aseo, seguridad, bienestar y "otro" ya no se pueden elegir (`POST /api/incidencias` responde 422), pero
   las incidencias anteriores conservan su categoría (`CATEGORIAS_ANTERIORES`; la base las sigue aceptando).

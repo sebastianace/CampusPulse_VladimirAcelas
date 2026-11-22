@@ -1,18 +1,18 @@
 // =====================================================================
 // GEOMETRÍA 3D DEL LOGIN (sin librerías)
 // ---------------------------------------------------------------------
-// Funciones puras para dibujar objetos 3D en un <canvas> 2D:
-//   1. Mallas: icosfera (planeta y asteroides) y toro (la dona).
-//   2. Rotar cada vértice con matrices de rotación.
-//   3. Proyectar en perspectiva: lo lejano se ve más pequeño.
-//   4. Sombrear cada cara con la luz (ley de Lambert) y ordenarlas
-//      de atrás hacia adelante (algoritmo del pintor).
+// Funciones puras que preparan los datos que la tarjeta gráfica dibuja
+// (js/acceso/cristal.js):
+//   1. Mallas: una icosfera (la esfera) y un toro (la dona). Cada vértice
+//      trae su normal, que sirve para calcular la luz píxel por píxel.
+//   2. Matrices de rotación 3x3 para girar los objetos.
+//   3. Ayudas para convertirlo todo al formato de WebGL.
 // No tocan el DOM: se prueban en tests/acceso-geometria.test.js.
 // =====================================================================
 
 // ---------- números aleatorios con semilla ----------
 
-/** Generador con semilla (mulberry32): la misma semilla da el mismo planeta en cada visita. */
+/** Generador con semilla (mulberry32): la misma semilla da la misma secuencia. */
 export function aleatorio(semilla) {
   let a = semilla >>> 0;
   return () => {
@@ -24,11 +24,7 @@ export function aleatorio(semilla) {
   };
 }
 
-// ---------- vectores ----------
-
-const restar = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-const cruz = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-export const punto = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+/** Vector de largo 1 con la misma dirección. */
 export function normalizar(v) {
   const largo = Math.hypot(v[0], v[1], v[2]) || 1;
   return [v[0] / largo, v[1] / largo, v[2] / largo];
@@ -38,11 +34,11 @@ export function normalizar(v) {
 
 /**
  * Icosfera: un icosaedro (20 triángulos) cuyas caras se dividen en 4, `divisiones` veces,
- * llevando cada vértice nuevo a la superficie de la esfera. 0 → 20 caras, 1 → 80, 2 → 320.
- * `relieve` mueve cada vértice hacia adentro o afuera (0 = esfera perfecta) para el aspecto low-poly.
- * Devuelve {vertices: [[x,y,z]], caras: [[i,j,k]], altura: [número por vértice]}.
+ * llevando cada vértice nuevo a la superficie de la esfera. 0 → 20 caras, 1 → 80, 2 → 320, 3 → 1280.
+ * En una esfera de radio 1 la normal de cada vértice es el propio vértice.
+ * Devuelve {vertices: [[x,y,z]], normales: [[x,y,z]], caras: [[i,j,k]]}.
  */
-export function icosfera(divisiones = 2, { relieve = 0, semilla = 1 } = {}) {
+export function icosfera(divisiones = 3) {
   const t = (1 + Math.sqrt(5)) / 2;
   const vertices = [
     [-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0], [0, -1, t], [0, 1, t],
@@ -68,37 +64,53 @@ export function icosfera(divisiones = 2, { relieve = 0, semilla = 1 } = {}) {
       return [[a, ab, ca], [b, bc, ab], [c, ca, bc], [ab, bc, ca]];
     });
   }
-  const azar = aleatorio(semilla);
-  const altura = vertices.map(() => (azar() * 2 - 1) * relieve);
-  return { vertices: vertices.map((v, i) => v.map((c) => c * (1 + altura[i]))), caras, altura };
+  return { vertices, normales: vertices.map((v) => [...v]), caras };
 }
 
 /**
  * Toro (una dona): radio mayor R hasta el centro del tubo y radio menor r del tubo.
- * Las caras son cuadriláteros. `u` (0..1) dice en qué parte de la vuelta grande está cada cara,
- * para pintarla con un color distinto (efecto iridiscente).
+ * `a` es el ángulo en la vuelta grande y `b` el de la vuelta del tubo. Cada vértice es
+ *   ((R + r·cos b)·cos a,  r·sin b,  (R + r·cos b)·sin a)
+ * y su normal apunta del centro del tubo hacia el vértice: (cos b·cos a, sin b, cos b·sin a).
+ * `uv` guarda (a, b) de cada vértice como fracciones de vuelta para dar ondulaciones al color.
+ * La última fila y la última columna repiten la primera (con uv = 1 en vez de 0): si no, en la
+ * costura el uv volvería de 0.99 a 0 y se vería una línea. Hay (segmentos+1)·(lados+1) vértices.
+ * Las caras son cuadriláteros que recorren esa cuadrícula.
  */
-export function toro(R = 1, r = 0.4, segmentos = 28, lados = 12) {
+export function toro(R = 1, r = 0.4, segmentos = 96, lados = 48) {
   const vertices = [];
-  for (let i = 0; i < segmentos; i++) {
+  const normales = [];
+  const uv = [];
+  for (let i = 0; i <= segmentos; i++) {
     const a = (i / segmentos) * Math.PI * 2;
-    for (let j = 0; j < lados; j++) {
+    for (let j = 0; j <= lados; j++) {
       const b = (j / lados) * Math.PI * 2;
-      vertices.push([(R + r * Math.cos(b)) * Math.cos(a), r * Math.sin(b), (R + r * Math.cos(b)) * Math.sin(a)]);
+      const [ca, sa, cb, sb] = [Math.cos(a), Math.sin(a), Math.cos(b), Math.sin(b)];
+      vertices.push([(R + r * cb) * ca, r * sb, (R + r * cb) * sa]);
+      normales.push([cb * ca, sb, cb * sa]);
+      uv.push([i / segmentos, j / lados]);
     }
   }
+  const ancho = lados + 1;
   const caras = [];
-  const u = [];
   for (let i = 0; i < segmentos; i++) {
     for (let j = 0; j < lados; j++) {
-      const i2 = (i + 1) % segmentos;
-      const j2 = (j + 1) % lados;
-      // En este orden la normal apunta hacia afuera del tubo (lo comprueba un test)
-      caras.push([i * lados + j, i * lados + j2, i2 * lados + j2, i2 * lados + j]);
-      u.push(i / segmentos);
+      caras.push([i * ancho + j, i * ancho + j + 1, (i + 1) * ancho + j + 1, (i + 1) * ancho + j]);
     }
   }
-  return { vertices, caras, u };
+  return { vertices, normales, uv, caras };
+}
+
+/**
+ * Lista plana de índices de triángulos (lo que pide la tarjeta gráfica): los triángulos pasan tal cual
+ * y cada cuadrilátero [a,b,c,d] se parte en dos, [a,b,c] y [a,c,d].
+ */
+export function triangulos(caras) {
+  const indices = [];
+  for (const cara of caras) {
+    for (let k = 1; k < cara.length - 1; k++) indices.push(cara[0], cara[k], cara[k + 1]);
+  }
+  return indices;
 }
 
 // ---------- transformaciones ----------
@@ -114,67 +126,7 @@ export function matrizRotacion(ax, ay, az) {
   ];
 }
 
-/** Aplica la matriz m al punto v. */
-export function rotar(m, v) {
-  return [
-    m[0][0] * v[0] + m[0][1] * v[1] + m[0][2] * v[2],
-    m[1][0] * v[0] + m[1][1] * v[1] + m[1][2] * v[2],
-    m[2][0] * v[0] + m[2][1] * v[1] + m[2][2] * v[2],
-  ];
-}
-
-/**
- * Perspectiva: la cámara mira hacia +z desde z = -distancia. Un punto más lejano (z mayor) se ve
- * más pequeño. Devuelve [x, y, z, escala] en píxeles, con (cx, cy) como centro del objeto en pantalla.
- * En pantalla la y crece hacia abajo, por eso se invierte.
- */
-export function proyectar([x, y, z], { cx, cy, tamano, distancia = 4 }) {
-  const escala = distancia / (distancia + z);
-  return [cx + x * tamano * escala, cy - y * tamano * escala, z, escala];
-}
-
-// ---------- luz y orden de dibujo ----------
-
-/** Normal de una cara (hacia afuera si sus vértices van en el orden de la malla). */
-export function normalDeCara(a, b, c) {
-  return normalizar(cruz(restar(b, a), restar(c, a)));
-}
-
-/**
- * Ley de Lambert: una cara iluminada de frente recibe toda la luz y una de lado, nada.
- * `ambiente` es la luz mínima para que la cara oscura no quede negra.
- */
-export function iluminacion(normal, luz, ambiente = 0.22) {
-  return Math.min(1, ambiente + (1 - ambiente) * Math.max(0, punto(normal, luz)));
-}
-
-/** Mezcla dos colores [r,g,b] (t = 0 → a, t = 1 → b). */
-export function mezclar(a, b, t) {
-  return [0, 1, 2].map((i) => Math.round(a[i] + (b[i] - a[i]) * t));
-}
-
-/**
- * Prepara una malla para dibujarla: rota los vértices, descarta las caras de espaldas a la cámara
- * y devuelve las visibles ordenadas de la más lejana a la más cercana (algoritmo del pintor),
- * cada una con sus puntos en pantalla y su brillo (0..1).
- * colorDeCara(indice) da el color base [r,g,b] de cada cara.
- */
-export function carasVisibles(malla, matriz, vista, luz, colorDeCara) {
-  const rotados = malla.vertices.map((v) => rotar(matriz, v));
-  const resultado = [];
-  malla.caras.forEach((cara, indice) => {
-    const pts = cara.map((i) => rotados[i]);
-    const normal = normalDeCara(pts[0], pts[1], pts[2]);
-    // La cámara está en z = -distancia mirando hacia +z: la cara se ve si su normal apunta hacia la cámara
-    const centro = pts.reduce((s, p) => [s[0] + p[0] / pts.length, s[1] + p[1] / pts.length, s[2] + p[2] / pts.length], [0, 0, 0]);
-    const haciaCamara = [-centro[0], -centro[1], -vista.distancia - centro[2]];
-    if (punto(normal, haciaCamara) <= 0) return;
-    resultado.push({
-      puntos: pts.map((p) => proyectar(p, vista)),
-      profundidad: centro[2],
-      brillo: iluminacion(normal, luz),
-      color: colorDeCara(indice),
-    });
-  });
-  return resultado.sort((a, b) => b.profundidad - a.profundidad);
+/** WebGL lee las matrices por columnas; aquí van por filas. Devuelve los 9 números en el orden de WebGL. */
+export function matrizParaGL(m) {
+  return [m[0][0], m[1][0], m[2][0], m[0][1], m[1][1], m[2][1], m[0][2], m[1][2], m[2][2]];
 }

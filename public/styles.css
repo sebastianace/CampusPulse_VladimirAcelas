@@ -211,6 +211,15 @@ body[data-presion="media"] .barra { box-shadow: inset 0 3px 0 var(--ocupada); }
   background-size: 340px 340px;
 }
 .acceso__cielo--vivo { background-image: none; }
+/* Canvas WebGL con las donas y esferas de cristal: justo encima del cielo, debajo de las tarjetas */
+.acceso__objetos {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
 
 .acceso__contenido {
   position: relative;
@@ -242,16 +251,8 @@ body[data-presion="media"] .barra { box-shadow: inset 0 3px 0 var(--ocupada); }
   box-shadow: 0 0 0 0.09em rgb(63 182 139 / 0.3);
   animation: latido 2.4s ease-in-out infinite;
 }
-.acceso__sede {
-  margin: 18px 0 0;
-  font-size: clamp(13px, 1.3vw, 15px);
-  font-weight: 600;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--a-oro);
-}
 .acceso__titulo {
-  margin: 0;
+  margin: 18px 0 0;
   font-family: var(--f-texto);
   font-size: clamp(26px, 4.2vw, 48px);
   font-weight: 600;

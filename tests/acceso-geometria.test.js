@@ -1,23 +1,24 @@
 // =====================================================================
 // TESTS DE LA GEOMETRÍA 3D DEL LOGIN (public/js/acceso/geometria.js)
 // ---------------------------------------------------------------------
-// El cielo del login dibuja un planeta y una dona en 3D sin librerías.
-// Si una normal apunta hacia adentro, la cara se ve "al revés" o
-// desaparece; si el orden de dibujo falla, lo de atrás tapa lo de adelante.
+// El cielo del login dibuja donas y esferas de cristal con WebGL. La luz se
+// calcula con la normal de cada vértice: si una normal apunta hacia adentro
+// el objeto se ve oscuro o "al revés", y si el uv no cubre 0..1 aparece una
+// línea en la costura. Estos tests comprueban esos datos sin abrir un navegador.
 // =====================================================================
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  aleatorio, carasVisibles, icosfera, iluminacion, matrizRotacion, mezclar, normalDeCara, proyectar, punto, rotar, toro,
+  aleatorio, icosfera, matrizParaGL, matrizRotacion, normalizar, toro, triangulos,
 } from '../public/js/acceso/geometria.js';
 
 const largo = (v) => Math.hypot(...v);
-const centro = (pts) => pts.reduce((s, p) => s.map((c, i) => c + p[i] / pts.length), [0, 0, 0]);
 const cerca = (a, b, eps = 1e-9) => Math.abs(a - b) < eps;
+const producto = (m, v) => m.map((fila) => fila[0] * v[0] + fila[1] * v[1] + fila[2] * v[2]);
 
 describe('aleatorio con semilla', () => {
-  test('la misma semilla da la misma secuencia (el planeta es igual en cada visita)', () => {
+  test('la misma semilla da la misma secuencia y todo queda en [0, 1)', () => {
     const [a, b] = [aleatorio(2026), aleatorio(2026)];
     for (let i = 0; i < 5; i++) assert.equal(a(), b());
     const c = aleatorio(7);
@@ -26,81 +27,99 @@ describe('aleatorio con semilla', () => {
 });
 
 describe('icosfera', () => {
-  test('cada división multiplica las caras por 4: 20, 80, 320', () => {
-    assert.deepEqual([0, 1, 2].map((n) => icosfera(n).caras.length), [20, 80, 320]);
+  test('cada división multiplica las caras por 4: 20, 80, 320, 1280', () => {
+    assert.deepEqual([0, 1, 2, 3].map((n) => icosfera(n).caras.length), [20, 80, 320, 1280]);
   });
 
-  test('sin relieve todos los vértices están en la esfera de radio 1', () => {
-    for (const v of icosfera(2).vertices) assert.ok(cerca(largo(v), 1, 1e-12));
+  test('todos los vértices están en la esfera de radio 1 y la normal de cada uno es el propio vértice', () => {
+    const { vertices, normales } = icosfera(3);
+    assert.equal(normales.length, vertices.length);
+    vertices.forEach((v, i) => {
+      assert.ok(cerca(largo(v), 1, 1e-12));
+      assert.deepEqual(normales[i], v);
+    });
   });
 
-  test('las normales de todas las caras apuntan hacia afuera', () => {
-    const { vertices, caras } = icosfera(2);
-    for (const cara of caras) {
-      const pts = cara.map((i) => vertices[i]);
-      assert.ok(punto(normalDeCara(...pts), centro(pts)) > 0);
-    }
-  });
-
-  test('el relieve mueve los vértices dentro del margen pedido', () => {
-    for (const v of icosfera(1, { relieve: 0.1, semilla: 3 }).vertices) assert.ok(largo(v) >= 0.9 - 1e-9 && largo(v) <= 1.1 + 1e-9);
+  test('cabe en los índices de 16 bits que usa WebGL', () => {
+    assert.ok(icosfera(4).vertices.length < 65536);
   });
 });
 
 describe('toro', () => {
-  test('tiene segmentos × lados caras y sus normales apuntan hacia afuera del tubo', () => {
-    const R = 1;
-    const malla = toro(R, 0.4, 24, 10);
+  const R = 1;
+  const r = 0.4;
+  const malla = toro(R, r, 24, 10);
+
+  test('tiene (segmentos+1)·(lados+1) vértices y segmentos·lados caras', () => {
+    assert.equal(malla.vertices.length, 25 * 11);
+    assert.equal(malla.normales.length, 25 * 11);
+    assert.equal(malla.uv.length, 25 * 11);
     assert.equal(malla.caras.length, 240);
-    for (const cara of malla.caras) {
-      const pts = cara.map((i) => malla.vertices[i]);
-      const c = centro(pts);
-      // Centro del tubo más cercano: el punto del círculo grande en la dirección de la cara
-      const ang = Math.atan2(c[2], c[0]);
-      const eje = [R * Math.cos(ang), 0, R * Math.sin(ang)];
-      assert.ok(punto(normalDeCara(pts[0], pts[1], pts[2]), c.map((x, i) => x - eje[i])) > 0);
-    }
+  });
+
+  test('cada normal es unitaria y apunta del centro del tubo hacia el vértice', () => {
+    malla.vertices.forEach((v, i) => {
+      const n = malla.normales[i];
+      assert.ok(cerca(largo(n), 1));
+      // Restar r·normal deja el vértice sobre el círculo grande: radio R y altura 0
+      const eje = v.map((c, k) => c - r * n[k]);
+      assert.ok(cerca(Math.hypot(eje[0], eje[2]), R) && cerca(eje[1], 0));
+    });
+  });
+
+  test('el uv llega hasta 1 en la costura (si no, se ve una línea)', () => {
+    const us = malla.uv.map(([u]) => u);
+    const vs = malla.uv.map(([, v]) => v);
+    assert.equal(Math.min(...us), 0);
+    assert.equal(Math.max(...us), 1);
+    assert.equal(Math.min(...vs), 0);
+    assert.equal(Math.max(...vs), 1);
+  });
+
+  test('la costura repite la posición: el último vértice coincide con el primero', () => {
+    const [primero, ultimo] = [malla.vertices[0], malla.vertices[malla.vertices.length - 1]];
+    assert.ok(primero.every((c, k) => cerca(c, ultimo[k], 1e-12)));
+  });
+
+  test('las caras usan solo vértices que existen', () => {
+    assert.ok(malla.caras.every((cara) => cara.every((i) => i >= 0 && i < malla.vertices.length)));
   });
 });
 
-describe('rotación y proyección', () => {
+describe('triangulos', () => {
+  test('los triángulos pasan igual y cada cuadrilátero se parte en dos', () => {
+    assert.deepEqual(triangulos([[0, 1, 2]]), [0, 1, 2]);
+    assert.deepEqual(triangulos([[0, 1, 2, 3]]), [0, 1, 2, 0, 2, 3]);
+    assert.equal(triangulos(toro(1, 0.4, 24, 10).caras).length, 240 * 6);
+  });
+});
+
+describe('rotación', () => {
   test('rotar no cambia el largo de un vector', () => {
     const m = matrizRotacion(0.7, -1.3, 2.1);
-    for (const v of [[1, 0, 0], [0.3, -2, 5], [-1, 1, 1]]) assert.ok(cerca(largo(rotar(m, v)), largo(v)));
+    for (const v of [[1, 0, 0], [0.3, -2, 5], [-1, 1, 1]]) assert.ok(cerca(largo(producto(m, v)), largo(v)));
   });
 
   test('girar 90° en Y lleva el eje X al eje -Z', () => {
-    const r = rotar(matrizRotacion(0, Math.PI / 2, 0), [1, 0, 0]);
+    const r = producto(matrizRotacion(0, Math.PI / 2, 0), [1, 0, 0]);
     assert.ok(cerca(r[0], 0) && cerca(r[1], 0) && cerca(r[2], -1));
   });
 
-  test('perspectiva: el centro cae en (cx, cy), lo lejano se ve más pequeño y la y de pantalla crece hacia abajo', () => {
-    const vista = { cx: 100, cy: 50, tamano: 10, distancia: 4 };
-    assert.deepEqual(proyectar([0, 0, 0], vista).slice(0, 2), [100, 50]);
-    assert.ok(proyectar([1, 0, 2], vista)[0] - 100 < proyectar([1, 0, -2], vista)[0] - 100);
-    assert.ok(proyectar([0, 1, 0], vista)[1] < 50);
+  test('matrizParaGL entrega los 9 números por columnas, como los lee WebGL', () => {
+    const m = matrizRotacion(0.3, 0.8, -0.4);
+    const gl = matrizParaGL(m);
+    assert.equal(gl.length, 9);
+    // En WebGL la columna c va en gl[3c..3c+2]; el producto M·v es la suma de columnas por v
+    const v = [0.5, -1.2, 2];
+    const esperado = producto(m, v);
+    const desdeGL = [0, 1, 2].map((fila) => gl[fila] * v[0] + gl[3 + fila] * v[1] + gl[6 + fila] * v[2]);
+    desdeGL.forEach((x, k) => assert.ok(cerca(x, esperado[k])));
   });
 });
 
-describe('luz y orden de dibujo', () => {
-  test('la luz va de la luz ambiente (de espaldas) a 1 (de frente)', () => {
-    assert.equal(iluminacion([0, 0, 1], [0, 0, 1]), 1);
-    assert.equal(iluminacion([0, 0, -1], [0, 0, 1], 0.2), 0.2);
-  });
-
-  test('mezclar colores va de un extremo al otro', () => {
-    assert.deepEqual(mezclar([0, 0, 0], [200, 100, 50], 0), [0, 0, 0]);
-    assert.deepEqual(mezclar([0, 0, 0], [200, 100, 50], 0.5), [100, 50, 25]);
-  });
-
-  test('de una esfera se ve menos de la mitad, ordenada de atrás hacia adelante', () => {
-    const malla = icosfera(2);
-    const vista = { cx: 0, cy: 0, tamano: 100, distancia: 4 };
-    const caras = carasVisibles(malla, matrizRotacion(0.3, 0.8, 0), vista, [0, 0, -1], () => [255, 255, 255]);
-    assert.ok(caras.length > 100 && caras.length < 160, `${caras.length} caras visibles`);
-    for (let i = 1; i < caras.length; i++) assert.ok(caras[i - 1].profundidad >= caras[i].profundidad);
-    // Todas miran hacia la cámara (z negativa): ninguna es de la cara oculta
-    assert.ok(caras.every((c) => c.profundidad < 0.35));
-    assert.ok(caras.every((c) => c.brillo > 0 && c.brillo <= 1));
+describe('normalizar', () => {
+  test('deja el vector con largo 1 y no se rompe con el vector cero', () => {
+    assert.ok(cerca(largo(normalizar([3, 4, 12])), 1));
+    assert.deepEqual(normalizar([0, 0, 0]), [0, 0, 0]);
   });
 });
