@@ -5,6 +5,7 @@
 
 import { pedir } from './api.js';
 import { cargarTodo, suscribir } from './estado.js';
+import { soloReservables } from './catalogos.js';
 import { iniciarIncidencias, dibujarIncidencias } from './incidencias.js';
 import * as toasts from './toasts.js';
 
@@ -30,7 +31,7 @@ function dibujarEstadoCampus({ espacios }) {
   texto.dataset.alerta = fuera.length ? 'si' : 'no';
   texto.textContent = fuera.length
     ? `Fuera de servicio: ${fuera.map((e) => e.nombre).join(', ')}.`
-    : `Las ${espacios.length} salas están en servicio.`;
+    : `Las ${soloReservables(espacios).length} salas están en servicio.`;
 }
 
 // Con una contraseña temporal, el servidor no deja usar nada hasta cambiarla: se cambia en el tablero

@@ -5,7 +5,7 @@
 // escriben archivos, así se pueden probar sin base de datos.
 // =====================================================================
 
-import { tieneComputadores } from './reservas.js';
+import { esReservable, tieneComputadores } from './reservas.js';
 
 // true si la reserva está ocurriendo en el instante "ahora" (inicio <= ahora < fin).
 function reservaEnCurso(reserva, ahora) {
@@ -17,11 +17,15 @@ export function estaOcupado(db, espacioId, ahora) {
   return db.reservas.some((r) => r.espacioId === espacioId && reservaEnCurso(r, ahora));
 }
 
-/** Lista de espacios del contrato: [{id, nombre, tipo, aforo, estado, ocupadoAhora, computadores}]. */
+/**
+ * Lista de espacios del contrato: [{id, nombre, tipo, aforo, estado, ocupadoAhora, computadores, reservable}].
+ * reservable: false en las zonas comunes (Hunters): la interfaz las ofrece para reportar, no para reservar.
+ */
 export function listarEspacios(db, ahora) {
   return db.espacios.map((espacio) => ({
     ...espacio,
     ocupadoAhora: estaOcupado(db, espacio.id, ahora),
     computadores: tieneComputadores(espacio),
+    reservable: esReservable(espacio),
   }));
 }

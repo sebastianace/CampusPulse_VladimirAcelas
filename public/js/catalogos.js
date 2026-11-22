@@ -37,6 +37,10 @@ export const PRIORIDADES = {
   critica: 'Crítica',
 };
 
+// Solo los espacios que se reservan: deja fuera las zonas comunes como Hunters (reservable: false en la API),
+// que existen para reportar daños pero no van en el mapa de reservas, la línea de tiempo ni el formulario.
+export const soloReservables = (espacios) => espacios.filter((e) => e.reservable !== false);
+
 // Etiqueta legible para cualquier valor; si llega uno desconocido se muestra tal cual
 export function etiqueta(catalogo, valor) {
   return catalogo[valor] ?? valor ?? '—';

@@ -36,9 +36,10 @@ export const REGLAS = {
   // solo se recomiendan estos. Para agregar una sala basta con sumar su id.
   ESPACIOS_CON_COMPUTADORES: ['apolo', 'spooki', 'artemis', 'skilab'],
 
-  // Tipos de espacio que se reservan directo pero la IA nunca recomienda
-  // (las mesas de ping-pong de Hunters no sirven para una reunión o una clase).
-  TIPOS_FUERA_DE_RECOMENDACION: ['mesa_juego'],
+  // Tipos de espacio que NO se reservan: zonas comunes como Hunters (donde están las mesas de ping-pong).
+  // Existen para poder reportar un daño ahí, pero no aparecen en el mapa de reservas, la línea de tiempo
+  // ni las recomendaciones, y reservarlos se rechaza.
+  TIPOS_NO_RESERVABLES: ['zona_comun'],
 
   // Estados de espacio que impiden reservarlo o recomendarlo.
   ESTADOS_NO_ASIGNABLES: ['inhabilitado', 'inconsistente'],

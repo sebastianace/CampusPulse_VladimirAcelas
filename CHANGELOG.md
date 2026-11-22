@@ -76,6 +76,12 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
   `GET /api/recursos` trae `cambiosPermitidos`, así los botones salen de `TRANSICIONES_RECURSO`.
 
 ### Quitado
+- **Las mesas de ping-pong ya no se reservan.** En el campus no se reservan: están en Hunters, una zona común. En su
+  lugar aparece **Zona Hunters** como espacio afectado al reportar un daño, pero no se reserva: es de tipo
+  `zona_comun` (`REGLAS.TIPOS_NO_RESERVABLES`, que reemplaza a `TIPOS_FUERA_DE_RECOMENDACION`), `POST /api/reservas`
+  responde `409 ESPACIO_NO_RESERVABLE` y no sale en el mapa de reservas, la línea de tiempo, el formulario ni las
+  recomendaciones. `GET /api/espacios` trae `reservable`. Migración `014_zona_hunters.sql`: crea Hunters, le pasa las
+  incidencias que tenían las mesas y borra las mesas con sus reservas.
 - **Préstamos de equipos:** en el campus no se prestan equipos. Sale la pestaña **Prestar**, las rutas `/api/prestamos`,
   las reglas de préstamo (`MAX_PRESTAMOS_POR_PERSONA`) y el estado "prestado" de los equipos. La migración
   `010_sin_prestamos.sql` cierra los préstamos activos, devuelve a disponible lo que figuraba prestado y quita "prestado"

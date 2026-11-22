@@ -339,7 +339,7 @@ editar un valor y guardar (`npm run dev` reinicia el servidor solo).
 | Estado al que pasa un equipo cuando una incidencia lo inhabilita | `ESTADO_RECURSO_INHABILITADO` | en_reparacion |
 | Cambios de estado de un equipo | `TRANSICIONES_RECURSO` | disponible → prestado / en reparación / dañado; prestado → disponible / dañado; dañado → en reparación / disponible; en reparación → disponible |
 | Salas con computadores (si el pedido los necesita, solo se recomiendan estas) | `ESPACIOS_CON_COMPUTADORES` | apolo, spooki, artemis, skilab |
-| Tipos de espacio que la IA nunca recomienda | `TIPOS_FUERA_DE_RECOMENDACION` | mesa_juego |
+| Tipos de espacio que no se reservan (zonas comunes) | `TIPOS_NO_RESERVABLES` | zona_comun |
 | Consultas a la IA por usuario en la ventana | `LIMITE_IA_PETICIONES` / `LIMITE_IA_VENTANA_MINUTOS` | 5 por minuto |
 | Minutos que se guarda la respuesta del triaje | `CACHE_IA_MINUTOS` | 10 |
 | Similitud mínima para sugerir una incidencia parecida (provisional) | `UMBRAL_SIMILITUD_INCIDENCIA` | 0.93 |
@@ -469,8 +469,10 @@ estado inicial.
   Azul, la Sala de reuniones y el Auditorio no. El CSV oficial no trae este dato: lo aportó el equipo
   a partir de su conocimiento de las salas del campus. Vive en `ESPACIOS_CON_COMPUTADORES` de
   `src/config/reglas.js` y se puede cambiar en vivo.
-- **Mesas de ping-pong:** `Ping-pong 1` y `Ping-pong 2` (aforo 4) no están en el CSV oficial; se
-  agregan desde `data/seed/espacios-extra.json`, que no altera `data/raw/` ni el reporte de calidad.
+- **Zona Hunters:** la zona común donde están las mesas de ping-pong. No está en el CSV oficial; se agrega desde
+  `data/seed/espacios-extra.json` (sin tocar `data/raw/` ni el reporte de calidad) para poder **reportar** daños ahí,
+  pero es de tipo `zona_comun` y **no se reserva**. Las mesas de ping-pong ya no son espacios reservables
+  (migración `014_zona_hunters.sql`).
 - Todas las fechas usan el formato `YYYY-MM-DDTHH:mm` en hora local de Bogotá, sin zona horaria.
 
 ## Demo y reto en vivo

@@ -7,7 +7,7 @@ sin esperar a que P1 termine.
 
 | Método y ruta | Cuerpo que recibe | Respuesta OK | Dueño |
 |---|---|---|---|
-| `GET /api/espacios` | — | `[{id, nombre, nombreOficial, tipo, aforo, estado, ocupadoAhora, computadores}]`. `nombre` es el del campus (Sputnik, Skylabs, Sala de reuniones); `nombreOficial`, el del CSV (`src/config/nombres.js`) | P1 |
+| `GET /api/espacios` | — | `[{id, nombre, nombreOficial, tipo, aforo, estado, ocupadoAhora, computadores, reservable}]`. `reservable` es `false` en las zonas comunes (Hunters). `nombre` es el del campus (Sputnik, Skylabs, Sala de reuniones); `nombreOficial`, el del CSV (`src/config/nombres.js`) | P1 |
 | `GET /api/recursos` | — | `[{id, nombre, tipo, espacioId, estado, cambiosPermitidos}]` (`cambiosPermitidos`: estados a los que Inventario lo puede pasar, según `TRANSICIONES_RECURSO`) | P1 |
 | `PATCH /api/recursos/:id` | `{estado}` | `200` + el recurso. Inventario: respeta `TRANSICIONES_RECURSO` (`422` si el estado no existe; `prestado` ya no existe); `409 INCIDENCIA_ABIERTA` si una incidencia abierta lo tiene fuera de servicio. Solo `admin` y `soporte_tecnico`; otro rol → `403` | P1 |
 | `PATCH /api/espacios/:id` | `{estado: "disponible" \| "inhabilitado"}` | `200` + el espacio. La interfaz ya no lo ofrece (Inventario solo lista equipos; una sala se inhabilita con su incidencia). `409 INCIDENCIA_ABIERTA` si una incidencia abierta la inhabilitó; `409 ESPACIO_INCONSISTENTE` si su dato del CSV es inconsistente. Solo `admin` y `soporte_tecnico`; otro rol → `403` | P1 |
@@ -46,9 +46,10 @@ sin esperar a que P1 termine.
 | `GET /api/integraciones/incidencias?fecha=hoy\|YYYY-MM-DD&estado=abierta\|resuelta\|todas` | — | `[{id, descripcion, categoria, prioridad, area, espacioId, recursoId, estado, fecha, reportesAdicionales}]`, sin datos personales. **No usa sesión**: se autentica con el secreto `N8N_SECRETO` en la cabecera `x-pulse-token` (si no coincide, `401 SECRETO_INVALIDO`; sin `N8N_SECRETO` configurado, `503 INTEGRACION_NO_CONFIGURADA`). Lo llama n8n | P2 |
 | `POST /api/integraciones/incidencias/:id/notificada` | `{canal: "correo" \| "telegram", destinatario, area}` | `201 {registrada: true}`, o `200 {registrada: false}` si ese aviso ya estaba registrado (n8n reintenta). Mismo secreto en `x-pulse-token`. `404` si la incidencia no existe | P2 |
 
-Además de los 9 espacios del CSV oficial, `GET /api/espacios` incluye las mesas de ping-pong de
-Hunters (`ping-pong-1`, `ping-pong-2`, tipo `mesa_juego`, aforo 4) desde `data/seed/espacios-extra.json`.
-Se reservan con `POST /api/reservas` como cualquier sala, pero la IA no las recomienda.
+Además de los 9 espacios del CSV oficial, `GET /api/espacios` incluye la **Zona Hunters** (`hunters`, tipo
+`zona_comun`, sin aforo) desde `data/seed/espacios-extra.json`. Sirve para reportar daños en esa zona común (donde
+están las mesas de ping-pong), pero no se reserva: `POST /api/reservas` responde `409 ESPACIO_NO_RESERVABLE` y nunca
+aparece en las recomendaciones (`REGLAS.TIPOS_NO_RESERVABLES`).
 
 ## Errores
 
