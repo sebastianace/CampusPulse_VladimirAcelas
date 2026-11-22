@@ -46,6 +46,23 @@ lugares (`tests/conocimiento-docs.test.js`).
   `paraTI`, se asume `true`: decide la persona.
 - El conjunto de prueba y los ejemplos few-shot cambian: los casos de aseo, bienestar y seguridad esperan
   `paraTI: false` y categoría `null`, y la medición cuenta el campo `paraTI`.
+- **Medido el 22 nov 2026** con `gemini-3.5-flash-lite` (`evaluacion/resultados/triaje-2026-11-22.json`):
+
+  | | Zero-shot | Few-shot |
+  |---|---|---|
+  | `paraTI` | 12/12 | 12/12 |
+  | categoría | 11/12 | 11/12 |
+  | prioridad | 9/12 | 10/12 |
+  | espacio, equipo, inhabilitar | 12/12 | 12/12 |
+  | casos exactos | 8/12 | 9/12 |
+
+  **Lo nuevo funciona:** los 4 reportes que no son de TI (café, estrés, jabón, mochila) se detectan en los dos modos.
+  Los fallos son de prioridad en casos ya marcados como discutibles (café, mochila) o en el proyector que no enciende
+  "en una hora hay clase" (dijo alta, se esperaba media), y uno de categoría: los cables pelados de la consola de sonido
+  salieron como infraestructura (se esperaba tecnología). Ninguno cambia a quién llega el reporte: los dos técnicos son
+  de TI. Los casos exactos bajan frente a 1.3 (10/12) porque ahora se mide un campo más y la prioridad de un reporte
+  que no es de TI ya no importa para el registro. El few-shot gana por un caso (ruido con 12 casos), así que sigue
+  desactivado (`USAR_EJEMPLOS_TRIAJE = false`).
 
 ### 1.4: el triaje ya no decide el área
 - **Decisión de negocio:** en el campus, TI es el único equipo que resuelve los problemas técnicos y de infraestructura.
