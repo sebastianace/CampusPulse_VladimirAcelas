@@ -12,16 +12,14 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <!-- Inspirada en la pantalla de acceso de Campuslands (cielo oscuro, brillo morado, dos tarjetas),
-     sin usar su logo ni sus imágenes: los planetas son CSS. -->
+     sin usar su logo ni sus imágenes. El cielo es un <canvas>: estrellas que se mueven y objetos 3D
+     dibujados sin librerías (js/acceso/espacio.js). Si el script no carga, quedan las estrellas fijas de CSS. -->
 <body class="acceso">
-  <div class="acceso__cielo" aria-hidden="true"></div>
-  <div class="acceso__planeta acceso__planeta--dona" aria-hidden="true"></div>
-  <div class="acceso__planeta acceso__planeta--anillo" aria-hidden="true"></div>
+  <canvas class="acceso__cielo" id="cielo" aria-hidden="true"></canvas>
 
   <main class="acceso__contenido">
     <header class="acceso__cabeza">
       <p class="acceso__logo"><span class="acceso__pulso" aria-hidden="true"></span>campus pulse</p>
-      <p class="acceso__sede">Campus Bucaramanga</p>
       <h1 class="acceso__titulo">Centro de mando del campus</h1>
     </header>
 
@@ -53,10 +51,14 @@
             <span>Usuario</span>
             <input name="usuario" type="text" autocomplete="username" autocapitalize="none" required placeholder="ej. ana.gomez">
           </label>
-          <label class="campo">
-            <span>Contraseña (mínimo 8 caracteres)</span>
-            <input name="clave" type="password" autocomplete="new-password" minlength="8" required>
-          </label>
+          <div class="campo">
+            <label for="clave-registro">Contraseña (mínimo 8 caracteres)</label>
+            <div class="clave">
+              <input id="clave-registro" name="clave" type="password" autocomplete="new-password" minlength="8" required>
+              <button class="clave__ver" type="button" aria-controls="clave-registro" aria-pressed="false">Mostrar</button>
+            </div>
+            <p class="clave__mayus" hidden>Bloq Mayús está activado.</p>
+          </div>
           <button class="btn btn--acceso" type="submit">Crear cuenta y entrar</button>
         </form>
       </section>
@@ -70,10 +72,14 @@
             <span>Usuario</span>
             <input name="usuario" type="text" autocomplete="username" autocapitalize="none" required placeholder="ej. ana.gomez">
           </label>
-          <label class="campo">
-            <span>Contraseña</span>
-            <input name="clave" type="password" autocomplete="current-password" required>
-          </label>
+          <div class="campo">
+            <label for="clave-login">Contraseña</label>
+            <div class="clave">
+              <input id="clave-login" name="clave" type="password" autocomplete="current-password" required>
+              <button class="clave__ver" type="button" aria-controls="clave-login" aria-pressed="false">Mostrar</button>
+            </div>
+            <p class="clave__mayus" hidden>Bloq Mayús está activado.</p>
+          </div>
           <button class="btn btn--acceso" type="submit">Entrar</button>
         </form>
         <p class="tarjeta-acceso__nota">¿Olvidaste tu contraseña? Un administrador te da una temporal.</p>

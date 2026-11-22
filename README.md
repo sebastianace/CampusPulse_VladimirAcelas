@@ -36,7 +36,8 @@ tiene que arreglar el problema.
 
 Más capturas: [mapa](docs/capturas/02-mapa.png) · [reserva rechazada por aforo](docs/capturas/03-reserva-rechazada.png) ·
 ["no lo sé"](docs/capturas/09-no-se.png) · [aviso de n8n](docs/capturas/11-aviso-n8n.png) ·
-[en el celular](docs/capturas/12-movil.png) · [sin IA](docs/capturas/07-sin-ia.png).
+[en el celular](docs/capturas/12-movil.png) · [sin IA](docs/capturas/07-sin-ia.png) ·
+[inicio de sesión](docs/capturas/13-login.png).
 
 ## Arquitectura
 

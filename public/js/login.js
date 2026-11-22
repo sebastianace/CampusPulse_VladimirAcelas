@@ -40,6 +40,35 @@ async function enviar(evento, ruta, textoCargando) {
   }
 }
 
+// Mostrar u ocultar la contraseña: el botón dice lo que va a hacer y aria-pressed dice cómo está
+function verClave(boton, visible) {
+  document.getElementById(boton.getAttribute('aria-controls')).type = visible ? 'text' : 'password';
+  boton.textContent = visible ? 'Ocultar' : 'Mostrar';
+  boton.setAttribute('aria-pressed', String(visible));
+}
+document.querySelectorAll('.clave__ver').forEach((boton) => {
+  boton.addEventListener('click', () => {
+    verClave(boton, boton.getAttribute('aria-pressed') !== 'true');
+    document.getElementById(boton.getAttribute('aria-controls')).focus();
+  });
+});
+
+// Aviso de Bloq Mayús: la causa más común de "contraseña incorrecta" cuando la persona sí la sabe
+document.querySelectorAll('.clave input').forEach((campo) => {
+  const aviso = campo.closest('.campo').querySelector('.clave__mayus');
+  const revisar = (e) => { aviso.hidden = !e.getModifierState?.('CapsLock'); };
+  campo.addEventListener('keydown', revisar);
+  campo.addEventListener('keyup', revisar);
+  campo.addEventListener('blur', () => { aviso.hidden = true; });
+});
+
+// Al enviar, la contraseña vuelve a ocultarse (que no quede a la vista si el login falla)
+function ocultarClaves(form) {
+  form.querySelectorAll('.clave__ver').forEach((boton) => verClave(boton, false));
+}
+formLogin.addEventListener('submit', () => ocultarClaves(formLogin));
+formRegistro.addEventListener('submit', () => ocultarClaves(formRegistro));
+
 formLogin.addEventListener('submit', (e) => enviar(e, '/api/auth/login', 'Entrando…'));
 formRegistro.addEventListener('submit', (e) => enviar(e, '/api/auth/registro', 'Creando cuenta…'));
 
@@ -55,3 +84,8 @@ pedir('/api/auth/estado').then(({ registroAbierto }) => {
 pedir('/api/auth/yo').then(() => { location.href = destino(); }, () => {
   if (formRegistro.hidden && conMouse) formLogin.usuario.focus();
 });
+
+// El cielo animado es decoración: se carga aparte y, si falla, el login funciona igual
+import('./acceso/espacio.js')
+  .then(({ iniciarEspacio }) => iniciarEspacio(document.getElementById('cielo')))
+  .catch(() => {});
