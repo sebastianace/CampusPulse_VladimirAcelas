@@ -432,6 +432,7 @@ error claro y el formulario manual, nunca con una respuesta inventada.
 | `npm run migrar` | Aplica las migraciones de `db/migrations/` a PostgreSQL (necesita `docker compose up -d db`) |
 | `npm run embeddings` | Genera el embedding de las incidencias que no lo tienen (usa la clave de Gemini) |
 | `npm run importar-cuentas` | Copia las cuentas del viejo `data/auth.json` a PostgreSQL (se corre una vez) |
+| `npm run importar-inventario -- <archivo.csv>` | Carga el inventario real desde un CSV de Excel. Ensayo por defecto; `--aplicar` guarda y `--quitar-ficticios` quita los equipos de demostración. Ver [docs/inventario-importar.md](docs/inventario-importar.md) |
 | `npm run n8n:preparar` | Crea las credenciales en n8n, importa y activa los flujos de `n8n/` y reinicia n8n |
 | `npm run conocimiento` | Recarga `knowledge/` en la base vectorial (necesita `pulse-ai` levantado) |
 | `npm run evaluar-rag` | Hace las 15 preguntas de prueba del RAG, con y sin reranking (gasta cuota de Gemini, ~8 min) |
@@ -465,7 +466,8 @@ estado inicial.
   conserva la primera fila válida).
 - Un registro inválido nunca detiene la carga.
 - Los recursos tecnológicos son **ficticios** (`"ficticio": true` en `data/seed/recursos.json`),
-  porque no se entregó un inventario oficial.
+  porque aún no se entregó el inventario oficial. Cuando llegue se carga con `npm run importar-inventario`
+  (guía en [docs/inventario-importar.md](docs/inventario-importar.md)).
 - **Salas con computadores:** Apolo, Sputnik, Artemis y Skylabs tienen computadores; Cosmos, Blanca,
   Azul, la Sala de reuniones y el Auditorio no. El CSV oficial no trae este dato: lo aportó el equipo
   a partir de su conocimiento de las salas del campus. Vive en `ESPACIOS_CON_COMPUTADORES` de
@@ -527,6 +529,7 @@ En la hackatón (v1) cada integrante trabajó en su rama (`feature/backend`, `fe
 | [docs/biblioteca-prompts.md](docs/biblioteca-prompts.md) · [docs/personalidad.md](docs/personalidad.md) | Los prompts, sus versiones y la personalidad Big Five de Pulse |
 | [docs/workflows.md](docs/workflows.md) | Los 7 flujos de n8n, lo verificado y sus límites |
 | [docs/base-de-datos.md](docs/base-de-datos.md) · [docs/contrato-api.md](docs/contrato-api.md) | Esquema y API |
+| [docs/inventario-importar.md](docs/inventario-importar.md) | Cargar el inventario real desde un CSV de Excel: plantilla, reglas y cuidados |
 | [docs/registro-depuracion.md](docs/registro-depuracion.md) | Fallos reales, cómo se encontró la causa y qué los evita |
 | [docs/sustentacion.md](docs/sustentacion.md) | Guion de la demo, plan B y plan de estudio |
 | [docs/hoja-de-ruta.md](docs/hoja-de-ruta.md) | Trabajo futuro: qué haría falta para usarlo en todo el campus |
