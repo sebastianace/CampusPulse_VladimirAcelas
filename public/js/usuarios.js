@@ -1,10 +1,12 @@
 // Pestaña "Usuarios" (solo admin): crear cuentas (profesor, soporte técnico u otro admin;
 // POST /api/usuarios), ver quién creó cada una (GET /api/usuarios), darle una contraseña
 // temporal a quien olvidó la suya (POST /api/usuarios/:usuario/clave) y poner el correo al
-// que le llegan los avisos de sus reservas y solicitudes (PATCH /api/usuarios/:usuario).
+// que le llegan los avisos de sus reservas y solicitudes (PATCH /api/usuarios/:usuario) y definir quién atiende
+// cada categoría de incidencia (PUT /api/responsables/:categoria): el reparto automático.
 
 import { pedir } from './api.js';
 import { el, conCarga } from './dom.js';
+import { CATEGORIAS } from './catalogos.js';
 import { nombreDeRol, puede, sesionActual } from './sesion.js';
 import * as toasts from './toasts.js';
 
@@ -20,6 +22,7 @@ async function cargarUsuarios() {
   const lista = document.getElementById('lista-usuarios');
   try {
     const usuarios = await pedir('/api/usuarios');
+    dibujarResponsables(usuarios);
     const yo = sesionActual()?.usuario;
     lista.replaceChildren(...usuarios.map((u, i) => {
       // creadoPor null: la primera cuenta (se registró sola) o una cuenta anterior a este registro
@@ -111,5 +114,45 @@ async function crear(evento) {
     await cargarUsuarios();
   } catch (error) {
     toasts.error(error);
+  }
+}
+
+// ---------- Reparto de incidencias por categoría ----------
+
+// Una fila por categoría con la lista de quienes pueden atender (soporte técnico y admins). Guarda al cambiar.
+async function dibujarResponsables(usuarios) {
+  const contenedor = document.getElementById('responsables');
+  let actuales;
+  try {
+    actuales = await pedir('/api/responsables');
+  } catch (error) {
+    contenedor.replaceChildren(el('p', { className: 'aviso', role: 'alert' }, `No se pudo cargar el reparto: ${error.message}`));
+    return;
+  }
+  const quienes = usuarios.filter((u) => ['soporte_tecnico', 'admin'].includes(u.rol));
+  contenedor.replaceChildren(...Object.entries(CATEGORIAS).map(([categoria, texto]) => {
+    const actual = actuales.find((r) => r.categoria === categoria)?.usuario ?? '';
+    const selector = el('select', { name: categoria },
+      el('option', { value: '', selected: !actual }, 'Sin responsable'),
+      quienes.map((u) => el('option', { value: u.usuario, selected: u.usuario === actual }, `${u.nombre} (${nombreDeRol(u.rol)})`)));
+    selector.addEventListener('change', () => guardarResponsable(categoria, texto, selector));
+    return el('label', { className: 'campo' }, el('span', {}, texto), selector);
+  }));
+}
+
+async function guardarResponsable(categoria, texto, selector) {
+  selector.disabled = true;
+  try {
+    const { nombre, asignadas } = await pedir(`/api/responsables/${encodeURIComponent(categoria)}`, {
+      metodo: 'PUT', cuerpo: { usuario: selector.value || null },
+    });
+    toasts.exito(nombre
+      ? `${nombre} atiende ${texto.toLowerCase()}.${asignadas ? ` ${asignadas} incidencia${asignadas === 1 ? '' : 's'} abierta${asignadas === 1 ? '' : 's'} sin responsable ${asignadas === 1 ? 'pasó' : 'pasaron'} a su nombre.` : ''}`
+      : `${texto} ya no tiene responsable: las incidencias nuevas quedan sin asignar.`);
+  } catch (error) {
+    toasts.error(error);
+    await cargarUsuarios(); // vuelve a mostrar lo que de verdad quedó guardado
+  } finally {
+    selector.disabled = false;
   }
 }

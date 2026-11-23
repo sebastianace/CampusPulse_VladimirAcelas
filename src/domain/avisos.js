@@ -17,6 +17,8 @@
 //      pidió, que el salón quedó libre.
 //   6. Una sala queda fuera de servicio (incidencia o Inventario): a cada
 //      dueño de una reserva de esa sala que todavía no termina.
+//   7. Una incidencia le toca a una persona de soporte (reparto automático por categoría, o la reasignó un
+//      admin): se le avisa a ella, salvo que se la haya asignado ella misma.
 // =====================================================================
 
 const hora = (f) => f.slice(11, 16);
@@ -133,4 +135,20 @@ export function avisosDeSalaInhabilitada(db, espacioId, motivo, autor, ahora) {
     mensaje: `${sala} quedó fuera de servicio (${motivo}). Tienes una reserva ahí ${franja(r)}, a nombre de ${r.responsable}: `
       + 'mientras la sala no se rehabilite no se podrá usar. Busca otra sala en Campus Pulse o habla con un admin.',
   })), autor);
+}
+
+/**
+ * Regla 7. incidencia: la que acaba de asignarse (asignadaA). autor: quien la creó o reasignó (no se le avisa a él mismo).
+ */
+export function avisoDeIncidenciaAsignada(db, incidencia, autor) {
+  const lugar = [
+    incidencia.espacioId ? nombreSala(db, incidencia.espacioId) : null,
+    incidencia.recursoId ? db.recursos.find((r) => r.id === incidencia.recursoId)?.nombre : null,
+  ].filter(Boolean).join(' · ');
+  return sinAutor([{
+    para: incidencia.asignadaA,
+    asunto: `Incidencia ${incidencia.prioridad} para ti${lugar ? `: ${lugar}` : ''}`,
+    mensaje: `Te tocó esta incidencia (${incidencia.categoria}, prioridad ${incidencia.prioridad}): "${incidencia.descripcion}".`
+      + `${lugar ? ` Lugar: ${lugar}.` : ''} Tómala en Campus Pulse, pestaña Soporte TI, con el botón Atender.`,
+  }], autor);
 }

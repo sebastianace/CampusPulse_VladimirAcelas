@@ -12,7 +12,7 @@ import { pedir } from './api.js';
 import { el, conCarga } from './dom.js';
 import { CATEGORIAS, ETIQUETAS_CATEGORIA, PRIORIDADES, etiqueta } from './catalogos.js';
 import { obtenerEstado } from './estado.js';
-import { puede } from './sesion.js';
+import { puede, sesionActual } from './sesion.js';
 import * as toasts from './toasts.js';
 import { agregarDictado } from './voz.js';
 
@@ -265,6 +265,9 @@ function fueraDeServicio(incidencia) {
 
 // ---------- Lista de incidencias ----------
 
+/** ¿Hay un selector de "Reasignar" abierto? Mientras sí, las listas no se redibujan: cada 5 s se recargan y lo borrarían. */
+export const hayReasignacionAbierta = () => Boolean(document.querySelector('.form-reasignar'));
+
 export function dibujarIncidencias({ incidencias }) {
   const lista = document.getElementById('lista-incidencias');
   const abiertas = incidencias.filter((i) => i.estado !== 'resuelta');
@@ -278,6 +281,7 @@ export function dibujarIncidencias({ incidencias }) {
     return;
   }
 
+  if (hayReasignacionAbierta()) return; // no borrar el selector que alguien está usando
   // Abiertas primero; dentro de cada grupo, las más recientes arriba
   const ordenadas = [...incidencias].sort((a, b) =>
     (a.estado === 'resuelta') - (b.estado === 'resuelta') || String(b.fecha ?? '').localeCompare(String(a.fecha ?? '')));
@@ -303,6 +307,10 @@ export function crearItemIncidencia(incidencia, extra = null) {
           `${incidencia.reportesAdicionales} reporte${incidencia.reportesAdicionales > 1 ? 's' : ''} más`)
         : null,
       ...(incidencia.notificaciones ?? []).map((n) => el('span', { className: 'etiqueta', title: `Aviso enviado por ${n.canal}` }, `Avisada: ${n.area}`)),
+      !resuelta && incidencia.asignadaA
+        ? el('span', { className: 'etiqueta', title: 'Responsable de esta categoría: le tocó al reportarse (o la reasignó un admin)' },
+          incidencia.asignadaA === sesionActual()?.usuario ? 'Te tocó a ti' : `Asignada a: ${incidencia.asignadaANombre ?? incidencia.asignadaA}`)
+        : null,
       !resuelta && incidencia.atendidaPor
         ? el('span', { className: 'etiqueta etiqueta--ia', title: `Desde las ${horaCorta(incidencia.fechaAtencion)}` }, `En atención: ${incidencia.atendidaPorNombre ?? incidencia.atendidaPor}`)
         : null,
@@ -320,8 +328,46 @@ export function crearItemIncidencia(incidencia, extra = null) {
       el('button', {
         type: 'button', className: 'btn btn--secundario btn--chico',
         onClick: (e) => resolver(incidencia, e.currentTarget),
-      }, 'Marcar como resuelta')),
+      }, 'Marcar como resuelta'),
+      puede('gestionarUsuarios') ? el('button', {
+        type: 'button', className: 'btn btn--secundario btn--chico',
+        onClick: (e) => abrirReasignar(incidencia, e.currentTarget),
+      }, 'Reasignar') : null),
   );
+}
+
+// Un admin le pasa la incidencia a otra persona de soporte (por ejemplo, si el responsable no está).
+async function abrirReasignar(incidencia, boton) {
+  const item = boton.closest('.item');
+  if (item.querySelector('.form-reasignar')) return;
+  let cuentas;
+  try {
+    cuentas = (await pedir('/api/usuarios')).filter((u) => ['soporte_tecnico', 'admin'].includes(u.rol));
+  } catch (error) {
+    toasts.error(error);
+    return;
+  }
+  const selector = el('select', { name: 'usuario', 'aria-label': 'Reasignar a' },
+    cuentas.map((u) => el('option', { value: u.usuario, selected: u.usuario === incidencia.asignadaA }, u.nombre)));
+  const form = el('form', { className: 'formulario form-reasignar' },
+    el('label', { className: 'campo' }, el('span', {}, 'Reasignar a'), selector),
+    el('div', { className: 'item__acciones' },
+      el('button', { type: 'submit', className: 'btn btn--primario btn--chico' }, 'Reasignar'),
+      el('button', { type: 'button', className: 'btn btn--secundario btn--chico', onClick: () => form.remove() }, 'Cancelar')));
+  form.addEventListener('submit', async (evento) => {
+    evento.preventDefault();
+    try {
+      const { asignadaANombre } = await conCarga(form.querySelector('button[type="submit"]'), 'Reasignando…', () =>
+        pedir(`/api/incidencias/${encodeURIComponent(incidencia.id)}/asignar`, { metodo: 'POST', cuerpo: { usuario: selector.value } }));
+      toasts.exito(`La incidencia quedó asignada a ${asignadaANombre}.`);
+      form.remove(); // si no, la lista no se redibuja (ver hayReasignacionAbierta)
+      await refrescar();
+    } catch (error) {
+      toasts.error(error);
+    }
+  });
+  item.append(form);
+  selector.focus();
 }
 
 // Soporte toma la incidencia: el resto del equipo ve que ya alguien va en camino.
