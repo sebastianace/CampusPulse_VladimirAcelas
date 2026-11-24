@@ -7,14 +7,13 @@
 // También exporta clasesDelDia() para que la línea de tiempo de reservas muestre las clases de su día.
 
 import { pedir } from './api.js';
-import { soloReservables } from './catalogos.js';
+import { DIAS_CORTOS, ETIQUETAS_CLASE, NOMBRES_DIA, soloReservables } from './catalogos.js';
 import { el } from './dom.js';
 import { hoyISO } from './estado.js';
+import { abrirFormularioHorario, abrirSubidaHorarios, iniciarEdicionHorarios, quitarClase } from './horarios-editar.js';
 import { puede } from './sesion.js';
 
-export const ETIQUETAS_CLASE = { software: 'Software', ingles: 'Inglés', ser: 'SER' };
-const NOMBRES_DIA = ['', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
-const DIAS_CORTOS = ['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+export { ETIQUETAS_CLASE }; // timeline.js la toma de aquí
 
 // Rango de la grilla: las clases arrancan a las 6:00 y la última termina cerca de las 22:00
 const HORA_INICIO_VISTA = 6;
@@ -55,7 +54,7 @@ let seleccionado = null;  // id del bloque cuyo detalle se muestra
 let ultimo = null;        // último estado dibujado, para redibujar al cambiar el día o el filtro
 let huellaHorarios = '';  // para pedir los hallazgos solo cuando cambian los horarios
 
-export function iniciarHorarios() {
+export function iniciarHorarios({ refrescar } = {}) {
   const hoy = diaDeLaSemana(hoyISO());
   dia = hoy <= 6 ? hoy : 1; // el domingo no hay clases: se abre en lunes
 
@@ -70,6 +69,15 @@ export function iniciarHorarios() {
     tipo = evento.target.value;
     if (ultimo) dibujarHorarios(ultimo);
   });
+
+  // Agregar, editar y subir el Excel son solo del admin (el servidor lo vuelve a exigir con 403)
+  if (puede('editarHorarios')) {
+    iniciarEdicionHorarios({ refrescar });
+    const acciones = document.getElementById('horarios-acciones');
+    acciones.hidden = false;
+    document.getElementById('horarios-nueva').addEventListener('click', () => abrirFormularioHorario(null, { tipo: tipo === 'todos' ? '' : tipo }));
+    document.getElementById('horarios-subir').addEventListener('click', abrirSubidaHorarios);
+  }
 }
 
 /** Se redibuja con cada carga de datos (suscrito al estado) y al cambiar el día o el filtro. */
@@ -88,8 +96,8 @@ export function dibujarHorarios(estado) {
     : 'Software, Inglés y SER.';
 
   if (!horarios.length) {
-    grilla.replaceChildren(el('p', { className: 'vacio' }, puede('verHallazgosHorarios')
-      ? 'Todavía no hay horarios cargados. Se cargan con npm run importar-horarios (guía en docs/horarios.md).'
+    grilla.replaceChildren(el('p', { className: 'vacio' }, puede('editarHorarios')
+      ? 'Todavía no hay horarios cargados. Usa "Subir Excel" para cargar el archivo de Coordinación, o "+ Nueva clase" para agregarlos uno por uno.'
       : 'Todavía no hay horarios cargados.'));
     dibujarDetalle(null, espacios);
     pedirHallazgos(horarios);
@@ -178,6 +186,9 @@ function dibujarDetalle(bloque, espacios) {
     el('span', { className: 'item__meta' }, `${sala} · ${textoHorario(bloque)} · ${describirDias(bloque.dias)}`),
     datos.length > 0 && el('span', { className: 'item__meta' }, datos.join(' · ')),
     bloque.observacion && el('span', { className: 'item__meta' }, `Observación: ${bloque.observacion}`),
+    puede('editarHorarios') && el('div', { className: 'item__acciones' },
+      el('button', { type: 'button', className: 'btn btn--secundario btn--chico', onClick: () => abrirFormularioHorario(bloque) }, 'Editar'),
+      el('button', { type: 'button', className: 'btn btn--peligro btn--chico', onClick: () => quitarClase(bloque) }, 'Quitar')),
   ].filter(Boolean));
 }
 

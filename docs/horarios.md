@@ -6,13 +6,14 @@ reales del campus y sus reglas. Pedido del 21 nov 2026. Esto es la **Fase A**; e
 
 ## Qué hace hoy
 
-1. **Carga los horarios desde un CSV** de Excel (`npm run importar-horarios`), con ensayo primero y un informe.
+1. **Carga los horarios desde el Excel** (`.xlsx`) o un CSV: desde el navegador (botón **Subir Excel**, solo admin) o por
+   terminal (`npm run importar-horarios`). Siempre con ensayo primero y un informe.
 2. **Encuentra los problemas de planeación** en el archivo, que es lo que Mafe hoy descubre a mano.
 3. **Bloquea las reservas** sobre una sala con clase (`409 SALA_CON_CLASE`) y la muestra ocupada en el tablero.
 4. **Expone los bloques** en `GET /api/horarios`.
-5. **Los muestra en pantalla** (panel "Horario de clases", solo lectura): ver abajo.
-
-Editar un horario todavía no se puede desde la pantalla: se cargan por terminal.
+5. **Los muestra en pantalla** (panel "Horario de clases"): cualquier sesión los ve.
+6. **Se editan desde la pantalla**: agregar, cambiar y quitar una clase, y subir el Excel. **Solo el admin** (Mafe); el
+   servidor responde `403` a los demás aunque llamen a la API directo.
 
 ## La pantalla "Horario de clases"
 
@@ -29,6 +30,32 @@ Está en el tablero, debajo de "Reservas del día". Cualquier sesión puede verl
   franja no se puede reservar. La vista empieza a las 7:00 y las clases a las 6:00, así que esas se ven recortadas.
 - **Hallazgos (solo admin):** debajo de la grilla, "Para revisar con Coordinación (N)", agrupados por tipo. Salen de
   `GET /api/horarios/hallazgos`, que los calcula al pedirlos con lo que hay guardado.
+
+### Agregar, cambiar y quitar una clase (solo admin)
+
+- **+ Nueva clase** abre un formulario (clase, sala, horas, días, grupo, estudiantes, docente, nivel, módulo, observación).
+  Abre con lunes a viernes marcado, que es como son las del campus. **Editar** y **Quitar** salen en el detalle de una clase.
+- Las reglas son las del importador (clase, sala que exista, `HH:MM`, fin después del inicio): el CSV y la pantalla no pueden
+  guardar cosas distintas. Si algo no sirve, el formulario lista **todos** los problemas juntos, sin cerrarse.
+- **Un cruce o un aforo excedido no impiden guardar**: son hallazgos, y se ven en la lista de abajo. Solo detienen el
+  guardado los errores de formato (la misma regla del importador).
+- **Si la clase queda encima de una reserva futura**, se guarda y sale un aviso con quién la reservó y cuándo. **La reserva
+  no se cancela sola**: quién cede la sala lo decide Coordinación. Una clase sin días marcados no bloquea ni avisa.
+- Un campo opcional que se deja vacío al editar se quita; lo que no se toca se queda como estaba.
+
+### Subir el Excel (solo admin)
+
+**Subir Excel** abre un diálogo en dos pasos, sin escribir nada hasta el final:
+1. Al elegir el archivo (`.xlsx` o `.csv`) se hace un **ensayo** y se muestra el informe: cuántas clases entran, los
+   errores (con su fila), a qué se reemplaza y los hallazgos. Si algo falta, se corrige ahí mismo:
+   - **Una sala con otro nombre** ("Sala Nueva"): aparece un selector para elegir cuál es. Se repite el ensayo con esa
+     elección (es el `--alias` de la terminal).
+   - **Filas sin días**: se marcan los días que valen para ellas (botón "Lunes a viernes"). Es lo que hace falta con el Excel
+     real, que no trae esa columna.
+2. **Guardar N clases** (y "reemplazar las M actuales") aplica el archivo. Es todo o nada: con un error de formato el botón
+   no se habilita. Se reemplazan solo los tipos que trae el archivo (Software, Inglés, SER).
+
+Si una clase nueva queda encima de reservas futuras, el informe lo avisa antes de guardar y otra vez al guardar.
 
 ## Para quien prepara el archivo (Mafe)
 
@@ -52,20 +79,30 @@ puede saber cuándo una sala está ocupada (¿lunes a viernes?, ¿martes y jueve
 revisa, pero NO bloquea reservas**. No se cierra una sala con un dato que no se sabe: si estuviera mal, la sala quedaría
 inservible para todos. Cuando se confirmen, se actualiza el archivo y se vuelve a importar.
 
-Guárdalo como **CSV UTF-8** (o cualquier CSV: el lector detecta `;` o `,` y la codificación) y entrégalo a quien hace la
-carga, **sin subirlo a GitHub**: va en `data/privado/` (ignorada por git).
+Se puede entregar tal cual el **Excel (`.xlsx`)**: el lector toma la hoja que se llama "Horarios" (o la primera que tenga
+las columnas obligatorias) y entiende las horas como las guarda Excel. También sirve un **CSV** (el lector detecta `;` o `,`
+y la codificación). Si lo carga la propia Mafe, lo sube desde el navegador; si no, se entrega a quien hace la carga, **sin
+subirlo a GitHub**: va en `data/privado/` (ignorada por git).
 
-## Para quien hace la carga
+### Cómo se lee el .xlsx (para sustentar)
+
+Un `.xlsx` es un ZIP con XML adentro. `src/data/xlsx.js` lo abre sin librerías (el proyecto solo depende de `express`, `pg` y
+el SDK de Gemini): recorre el directorio del ZIP, descomprime con `node:zlib`, lee los textos compartidos y las celdas. Lo
+delicado son las **horas**: Excel guarda 07:00 como el número `0,2916…` (la fracción del día), y solo el formato de la celda
+dice que es una hora; por eso también se lee `styles.xml`. Nunca ejecuta macros ni fórmulas (usa el último valor guardado) y
+tiene límites contra archivos maliciosos (30 MB descomprimidos por entrada, 20 000 filas, 5 MB de subida).
+
+## Para quien hace la carga por terminal
 
 ```bash
-# 1. Ensayo: lee el archivo, valida y analiza. No guarda nada.
-npm run importar-horarios -- data/privado/horarios.csv
+# 1. Ensayo: lee el archivo (.xlsx o .csv), valida y analiza. No guarda nada.
+npm run importar-horarios -- data/privado/horarios.xlsx
 
-# 2. Si una sala tiene otro nombre en el archivo, dile cuál es (se puede repetir --alias)
-npm run importar-horarios -- data/privado/horarios.csv --alias "Sala Nueva=blanca"
+# 2. Si una sala tiene otro nombre en el archivo (--alias) o las filas no traen días (--dias)
+npm run importar-horarios -- data/privado/horarios.xlsx --alias "Sala Nueva=blanca" --dias L-V
 
 # 3. Cuando el informe esté bien, guarda
-npm run importar-horarios -- data/privado/horarios.csv --alias "Sala Nueva=blanca" --aplicar
+npm run importar-horarios -- data/privado/horarios.xlsx --alias "Sala Nueva=blanca" --dias L-V --aplicar
 ```
 
 El informe tiene tres partes: **errores de formato** (impiden guardar, con la línea del archivo), **hallazgos de planeación**
@@ -118,19 +155,27 @@ líneas) está en el informe del ensayo y no se publica aquí.
 ## Comprobado
 
 - `npm test`: `tests/horarios.test.js` (41 pruebas: horas y días, búsqueda de salas, ocupación, bloqueo de reservas, cada
-  hallazgo, todo o nada, reemplazo por tipo, recorrido contra PostgreSQL con un CSV en Windows-1252 y la API). Los datos son
-  inventados.
+  hallazgo, todo o nada, reemplazo por tipo, recorrido contra PostgreSQL con un CSV en Windows-1252 y la API),
+  `tests/xlsx.test.js` (11: textos compartidos y en línea, horas como fracción del día, filas vacías, hojas ocultas, ZIP
+  dañado y zip bomb) y `tests/horarios-editar.test.js` (21: validar, agregar, cambiar y quitar, reservas que quedan encima,
+  Excel y CSV, y la API: un profesor recibe `403` y sin sesión `401`). Los datos son inventados; el `.xlsx` de las pruebas se
+  arma en memoria (`tests/ayuda-xlsx.js`).
 - El comando se probó en ensayo con el archivo real contra una base desechable. También con días de ejemplo (`L-V`): no hay
   cruces de horario.
 - La pantalla se probó en un navegador contra una base desechable con el archivo real: 38 bloques en 9 salas, cambio de día y
   de filtro, detalle, hallazgos solo para admin (un profesor recibe `403`), ancho de celular sin scroll de página y que el
   auto-refresco de 5 s no borra la selección.
+- Subir el Excel real de Mafe desde el navegador (base desechable): el ensayo pide la sala y los días, no escribe nada,
+  detecta una reserva futura que queda encima y, al guardar, deja las 38 clases de lunes a viernes; editar, agregar y quitar
+  también se recorrieron.
 - **Todavía no comprobado:** guardar el archivo real en la base de desarrollo (hay que reconstruir la app para crear la
-  tabla) y que las reservas se bloqueen con los días reales en el uso diario.
+  tabla), un Excel guardado por Microsoft Excel de verdad (el archivo real de Mafe usa textos "en línea"; los
+  textos compartidos que usa Excel solo se probaron con archivos armados por las pruebas) y que las reservas se
+  bloqueen con los días reales en el uso diario.
 
 ## Pendiente (Fase B y otras)
 
 - Confirmar con Mafe los 12 hallazgos (aforo de inglés, SER que falta en R4, K4 y F4, módulos intercambiados, docentes y
   estudiantes que faltan).
-- Editar un horario desde la pantalla (hoy solo se ve); leer `.xlsx` directo.
+- Cambiar varias clases a la vez (hoy se edita una por una) y una vista de la grilla para arrastrar y soltar.
 - Fase B: un solucionador que arme los grupos de inglés por nivel con las salas y docentes libres.

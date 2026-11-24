@@ -137,7 +137,7 @@ function iniciarTablero() {
   iniciarFormularios({ refrescar, mostrarPestana });
   iniciarIncidencias({ refrescar, mostrarPestana });
   iniciarTimeline();
-  iniciarHorarios();
+  iniciarHorarios({ refrescar });
   iniciarUsuarios();
   iniciarInventario({ refrescar, mostrarPestana });
   iniciarSolicitudes({ refrescar });
