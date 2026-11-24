@@ -15,6 +15,7 @@
     "restablecer-admin": "node --env-file-if-exists=.env src/auth/restablecer-admin.js",
     "importar-cuentas": "node --env-file-if-exists=.env src/data/importar-cuentas.js",
     "importar-inventario": "node --env-file-if-exists=.env src/data/importar-inventario.js",
+    "importar-horarios": "node --env-file-if-exists=.env src/data/importar-horarios.js",
     "embeddings": "node --env-file-if-exists=.env src/ai/rellenar-embeddings.js",
     "conocimiento": "node --env-file-if-exists=.env src/ai/ingestar-conocimiento.js",
     "evaluar-rag": "node --env-file-if-exists=.env src/ai/evaluar-rag.js",

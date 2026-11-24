@@ -2,7 +2,7 @@
 // Todo daño reportado en el campus llega aquí (toda incidencia va a Soporte TI):
 //   - las incidencias abiertas, de la más urgente a la menos, y dentro de cada
 //     prioridad primero las que nadie ha tomado y las más viejas;
-//   - cuánto llevan esperando y quién las está atendiendo;
+//   - cuánto llevan esperando, a quién le tocó (reparto por categoría) y quién las está atendiendo;
 //   - un resumen del inventario fuera de servicio, con acceso a Inventario;
 //   - el tiempo de respuesta de TI de los últimos 7 días (mediana de cuánto tarda
 //     en tomar una incidencia y en resolverla, por prioridad), calculado por el
@@ -14,7 +14,7 @@ import { pedir } from './api.js';
 import { el } from './dom.js';
 import { PRIORIDADES, etiqueta } from './catalogos.js';
 import { ahoraBogota } from './estado.js';
-import { crearItemIncidencia } from './incidencias.js';
+import { crearItemIncidencia, hayReasignacionAbierta } from './incidencias.js';
 import { puede, sesionActual } from './sesion.js';
 import * as toasts from './toasts.js';
 
@@ -106,11 +106,13 @@ export function dibujarSoporte({ incidencias, recursos, espacios }) {
 
   const equiposFuera = recursos.filter((r) => r.estado === 'danado' || r.estado === 'en_reparacion').length;
   const salasFuera = espacios.filter((e) => e.estado === 'inhabilitado').length;
+  const paraMi = sinAtender.filter((i) => i.asignadaA === sesionActual()?.usuario).length;
   const criticas = abiertas.filter((i) => i.prioridad === 'critica').length;
   document.getElementById('resumen-soporte').replaceChildren(
     el('p', { className: 'item__meta' }, [
       `${abiertas.length} abierta${abiertas.length === 1 ? '' : 's'}`,
       `${sinAtender.length} sin atender`,
+      paraMi ? `${paraMi} para ti` : null,
       criticas ? `${criticas} crítica${criticas === 1 ? '' : 's'}` : null,
       `${equiposFuera} equipo${equiposFuera === 1 ? '' : 's'} fuera de servicio`,
       `${salasFuera} sala${salasFuera === 1 ? '' : 's'} inhabilitada${salasFuera === 1 ? '' : 's'}`,
@@ -120,14 +122,17 @@ export function dibujarSoporte({ incidencias, recursos, espacios }) {
       : null);
 
   const lista = document.getElementById('lista-soporte');
+  if (hayReasignacionAbierta()) return; // no borrar el selector de "Reasignar" que alguien está usando
   if (!abiertas.length) {
     lista.replaceChildren(el('li', { className: 'vacio' }, 'No hay incidencias abiertas. Cuando alguien reporte un daño, aparece aquí.'));
     return;
   }
   const ahora = ahoraBogota();
+  const yo = sesionActual()?.usuario;
   const ordenadas = [...abiertas].sort((a, b) =>
     (ORDEN_PRIORIDAD[a.prioridad] ?? 9) - (ORDEN_PRIORIDAD[b.prioridad] ?? 9)
     || Boolean(a.atendidaPor) - Boolean(b.atendidaPor)
+    || (b.asignadaA === yo) - (a.asignadaA === yo) // dentro de lo no atendido, primero lo que me tocó
     || String(a.fecha).localeCompare(String(b.fecha)));
   lista.replaceChildren(...ordenadas.map((i) =>
     crearItemIncidencia(i, el('span', { className: 'item__meta' }, espera(minutosEntre(i.fecha, ahora))))));
@@ -139,6 +144,9 @@ function avisarNuevas(abiertas) {
   vistas = new Set(abiertas.map((i) => i.id));
   if (primeraVez) return;
   for (const i of abiertas) {
-    if (!anteriores.has(i.id)) toasts.aviso(`Nueva incidencia (${etiqueta(PRIORIDADES, i.prioridad).toLowerCase()}): "${i.descripcion}". Está en Soporte TI.`);
+    if (anteriores.has(i.id)) continue;
+    const mia = i.asignadaA && i.asignadaA === sesionActual()?.usuario;
+    // Si le tocó a otra persona se avisa igual (todo el equipo debe saberlo), pero se distingue la que es tuya
+    toasts.aviso(`${mia ? 'Te tocó una incidencia' : 'Nueva incidencia'} (${etiqueta(PRIORIDADES, i.prioridad).toLowerCase()}): "${i.descripcion}". Está en Soporte TI.`);
   }
 }

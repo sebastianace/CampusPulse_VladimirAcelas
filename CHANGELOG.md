@@ -23,6 +23,19 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
   Lee el CSV como lo guarda Excel en español (`;`, Windows-1252, BOM) y reconoce columnas como "Código", "Equipo" o
   "Ubicación". Plantilla en `data/plantillas/inventario.csv`; los datos reales van en `data/privado/` (ignorada por git).
   Guía y riesgos (el catálogo completo entra en cada prompt del triaje) en `docs/inventario-importar.md`.
+- **Horarios de las clases (Software, Inglés y SER), Fase A.** `npm run importar-horarios -- archivo.csv` carga el horario
+  desde un CSV de Excel (ensayo por defecto, `--aplicar` guarda, `--alias` para nombres de sala distintos) y encuentra los
+  problemas de planeación: cruces de sala, docente y cohorte, aforo excedido, cohortes con fechas que no cuadran, módulos
+  intercambiados y datos incompletos. Una sala con clase no se reserva (`409 SALA_CON_CLASE`, regla 12), no se ofrece en la
+  recomendación y aparece ocupada en el tablero, solo con los días confirmados: un bloque sin días se guarda pero no bloquea.
+  Se reemplazan los tipos que trae el archivo. Tabla `bloques_horario` (migración 016) y `GET /api/horarios`. La búsqueda de
+  salas por nombre pasó a `src/domain/salas.js` y ahora perdona singular y plural ("Skylab" = "Skylabs").
+- **Reparto automático de incidencias al técnico de su categoría.** Un admin define en Usuarios quién atiende
+  infraestructura y quién tecnología (tabla `responsables_categoria`, migración 015); cada incidencia nueva nace asignada
+  (`asignadaA`) a esa persona y le llega un correo. Las abiertas sin dueño pasan a él al configurarlo (un solo correo).
+  Asignar no es atender: otro técnico puede tomarla y un admin puede reasignarla (`POST /api/incidencias/:id/asignar`).
+  Sin responsable configurado, queda sin asignar. El panel de Soporte TI muestra "Te tocó a ti" y "N para ti". Las listas
+  ya no se redibujan mientras está abierto el selector de reasignar.
 - **Solo dos categorías de incidencia: Infraestructura y Tecnología.** En el campus hay 2 técnicos de TI y cada uno
   atiende una. Aseo, seguridad, bienestar y "otro" ya no se pueden elegir (`POST /api/incidencias` responde 422), pero
   las incidencias anteriores conservan su categoría (`CATEGORIAS_ANTERIORES`; la base las sigue aceptando).

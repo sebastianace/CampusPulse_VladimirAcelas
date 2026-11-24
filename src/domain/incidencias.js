@@ -10,6 +10,9 @@
 //     impide dar clase en la sala.
 //   - La sala completa solo si se pide (inhabilitarEspacio: true, por
 //     ejemplo agua cerca de los enchufes) o si no hay equipo afectado.
+// Reparto: al crearla, la incidencia queda asignada al responsable de su categoría (asignadaA), si hay uno.
+// Asignar no es atender: asignadaA es quien le toca; atendidaPor, quien de verdad la toma (puede ser otro si
+// el responsable no está). Un admin puede reasignarla.
 // Espacio inhabilitado -> estado "inhabilitado" (no se puede reservar).
 // Recurso inhabilitado -> REGLAS.ESTADO_RECURSO_INHABILITADO.
 // Al resolverla se rehabilita exactamente lo que se apagó, salvo que otra
@@ -110,8 +113,11 @@ function cerradaAMano(db, espacioId) {
     && !db.incidencias.some((i) => i.estado === 'abierta' && apagoEspacio(i) && i.espacioId === espacioId);
 }
 
-/** Crea la incidencia y, si corresponde, deja fuera de servicio el equipo o la sala (ver queInhabilitar). */
-export function crearIncidencia(db, datos) {
+/**
+ * Crea la incidencia y, si corresponde, deja fuera de servicio el equipo o la sala (ver queInhabilitar).
+ * responsables: Map categoría -> usuario (src/data/responsables.js). Con responsable, la incidencia nace asignada.
+ */
+export function crearIncidencia(db, datos, { responsables = new Map() } = {}) {
   const limpia = validarDatosIncidencia(db, datos);
   const pedido = queInhabilitar({ ...limpia, inhabilitar: datos.inhabilitar, inhabilitarEspacio: datos.inhabilitarEspacio });
   // Una sala cerrada a mano ya está fuera de servicio: la incidencia no la "apaga" (y al resolverla no la reabre)
@@ -119,6 +125,7 @@ export function crearIncidencia(db, datos) {
   const incidencia = {
     id: `inc-${randomUUID().slice(0, 8)}`, ...limpia, estado: 'abierta',
     inhabilito: apagar.espacio || apagar.recurso, inhabilitoEspacio: apagar.espacio, fecha: ahoraBogota(),
+    ...(responsables.get(limpia.categoria) && { asignadaA: responsables.get(limpia.categoria) }),
   };
 
   aplicarEstado(db, {
@@ -160,4 +167,27 @@ export function resolverIncidencia(db, incidenciaId, datos) {
     recursoId: apagoRecurso(incidencia) && !sigueInhabilitado(db, incidencia, apagoRecurso, 'recursoId') ? incidencia.recursoId : null,
   }, 'disponible', 'disponible');
   return incidencia;
+}
+
+/**
+ * Un admin le pasa la incidencia a otra persona de soporte (por ejemplo, si el responsable está incapacitado).
+ * usuario: la cuenta destino (el que llama verifica que exista y pueda atender). Solo cambia asignadaA: si ya
+ * alguien la está atendiendo, sigue siendo quien la atiende.
+ */
+export function reasignarIncidencia(db, incidenciaId, usuario) {
+  const incidencia = db.incidencias.find((i) => i.id === incidenciaId);
+  if (!incidencia) throw new NoEncontradoError(`No existe la incidencia "${incidenciaId}"`);
+  if (incidencia.estado === 'resuelta') throw new ReglaNegocioError('INCIDENCIA_YA_RESUELTA', 'Esta incidencia ya estaba resuelta');
+  incidencia.asignadaA = usuario;
+  return incidencia;
+}
+
+/**
+ * Cuando un admin define quién atiende una categoría, las incidencias ABIERTAS de esa categoría que nadie tenía
+ * asignada pasan a esa persona (las que ya tienen responsable no se tocan). Devuelve las incidencias asignadas.
+ */
+export function asignarPendientes(db, categoria, usuario) {
+  const pendientes = db.incidencias.filter((i) => i.estado === 'abierta' && i.categoria === categoria && !i.asignadaA);
+  pendientes.forEach((i) => { i.asignadaA = usuario; });
+  return pendientes;
 }

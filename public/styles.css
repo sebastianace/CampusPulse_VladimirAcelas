@@ -1204,3 +1204,7 @@ option { color: var(--texto); background: var(--placa-alta); }
   .tablero { padding-bottom: 76px; }
   .demo { left: 12px; bottom: 12px; }
 }
+
+/* Reparto de incidencias: configuración por categoría (pestaña Usuarios) y selector de Reasignar */
+#responsables { margin-top: 12px; }
+.form-reasignar { margin-top: 10px; }

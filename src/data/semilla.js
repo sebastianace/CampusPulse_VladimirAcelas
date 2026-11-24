@@ -25,7 +25,7 @@ export async function sembrar(pool) {
     // RESTART IDENTITY reinicia la columna "posicion", que guarda el orden de las filas.
     // Las tablas de embeddings, reportes y notificaciones dependen de incidencias: TRUNCATE exige nombrarlas también.
     await cliente.query(`TRUNCATE solicitudes_salon, reservas, prestamos, incidencias_embeddings, incidencias_reportes, incidencias_notificaciones, incidencias,
-      recursos, espacios, calidad_datos RESTART IDENTITY`);
+      recursos, bloques_horario, espacios, calidad_datos RESTART IDENTITY`);
     for (const e of espacios) {
       await cliente.query('INSERT INTO espacios (id, nombre, tipo, aforo, estado) VALUES ($1, $2, $3, $4, $5)',
         [e.id, e.nombre, e.tipo, e.aforo ?? null, e.estado]);
