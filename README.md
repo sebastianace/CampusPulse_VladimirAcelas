@@ -178,6 +178,16 @@ El detalle de cada cambio está en [CHANGELOG.md](CHANGELOG.md).
 - Si venías de la versión con `data/auth.json`, copia tus cuentas con `npm run importar-cuentas`
   (los hashes se copian tal cual; las sesiones no, así que vuelve a iniciar sesión).
 
+## Reparto de incidencias por categoría
+
+- En el campus hay 2 técnicos de TI y cada uno atiende una categoría (infraestructura o tecnología). Un admin define quién
+  en **Usuarios → Quién atiende cada categoría**; desde ese momento, cada incidencia nueva **nace asignada** al responsable
+  de su categoría (`asignadaA`) y le llega un correo. Las abiertas que nadie tenía pasan a él (un solo correo de resumen).
+- **Asignar no es atender:** `asignadaA` es a quién le toca; `atendidaPor`, quién la toma de verdad (con "Atender"). Si el
+  responsable no está, otro técnico puede tomarla, y un admin puede **reasignarla** (botón "Reasignar").
+- El técnico ve "Te tocó a ti" y cuántas son "para ti"; lo que le tocó sale primero entre lo no atendido. Sin responsable
+  configurado, la incidencia queda sin asignar (no se pierde). Guarda la tabla `responsables_categoria` (migración 015).
+
 ## Rol de la IA y cómo se controla
 
 La IA aparece en seis lugares y en todos **solo sugiere**: nunca escribe en la base de datos ni decide si algo está

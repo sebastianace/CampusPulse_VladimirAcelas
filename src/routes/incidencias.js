@@ -14,17 +14,23 @@
 //                             Solo admin y soporte_tecnico. 409 si ya está resuelta o la atiende otra persona.
 // PATCH /api/incidencias/:id  {estado: "resuelta"} -> 200 (rehabilita el espacio o recurso).
 //                             Solo admin y soporte_tecnico: quien arregla es quien rehabilita.
+// POST  /api/incidencias/:id/asignar {usuario} -> 200 + la incidencia con asignadaA: un admin la reasigna a otra
+//                             persona de soporte (soporte_tecnico o admin). 404 si no existe la incidencia o la cuenta,
+//                             422 si la cuenta no puede atender, 409 si ya está resuelta. Solo admin.
+// Reparto: al crearla, la incidencia queda asignada (asignadaA, asignadaANombre) al responsable de su categoría
+// (GET/PUT /api/responsables). Sin responsable configurado, queda sin asignar. Se le avisa por correo a quien le tocó.
 // Si una incidencia deja la sala fuera de servicio, a los dueños de sus reservas que no han terminado les llega un correo.
 import { Router } from 'express';
 import { exigirRol } from './auth.js';
 import { listarUsuarios } from '../auth/usuarios.js';
+import { cuentaQuePuedeAtender, leerResponsables } from '../data/responsables.js';
 import { guardarEmbeddingEnSegundoPlano } from '../ai/similares.js';
 import { notificacionesPorIncidencia } from '../data/notificaciones.js';
 import { notificarIncidenciaNueva } from '../integraciones/n8n.js';
 import { actualizarDB, leerDB } from '../data/almacen.js';
 import { agregarReporte, contarReportes, listarReportes } from '../data/similares.js';
-import { atenderIncidencia, crearIncidencia, resolverIncidencia } from '../domain/incidencias.js';
-import { avisosDeSalaInhabilitada } from '../domain/avisos.js';
+import { atenderIncidencia, crearIncidencia, reasignarIncidencia, resolverIncidencia } from '../domain/incidencias.js';
+import { avisoDeIncidenciaAsignada, avisosDeSalaInhabilitada } from '../domain/avisos.js';
 import { enviarAvisos } from '../integraciones/avisos.js';
 import { indicadoresTI } from '../domain/indicadores.js';
 
@@ -38,6 +44,7 @@ router.get('/', async (req, res) => {
   res.json(db.incidencias.map((i) => ({
     ...i, reportesAdicionales: reportes.get(i.id) ?? 0, notificaciones: notificaciones.get(i.id) ?? [],
     ...(i.atendidaPor && { atendidaPorNombre: nombres.get(i.atendidaPor) ?? i.atendidaPor }),
+    ...(i.asignadaA && { asignadaANombre: nombres.get(i.asignadaA) ?? i.asignadaA }),
   })));
 });
 
@@ -46,11 +53,15 @@ router.get('/indicadores', exigirRol('admin', 'soporte_tecnico'), async (req, re
 });
 
 router.post('/', async (req, res) => {
+  const responsables = await leerResponsables(); // a quién le toca cada categoría (puede estar vacío)
   const { incidencia, avisos } = await actualizarDB((db) => {
-    const creada = crearIncidencia(db, req.body);
-    const avisos = creada.inhabilitoEspacio
-      ? avisosDeSalaInhabilitada(db, creada.espacioId, `incidencia: "${creada.descripcion}"`, req.usuario.usuario, creada.fecha)
-      : [];
+    const creada = crearIncidencia(db, req.body, { responsables });
+    const avisos = [
+      ...(creada.inhabilitoEspacio
+        ? avisosDeSalaInhabilitada(db, creada.espacioId, `incidencia: "${creada.descripcion}"`, req.usuario.usuario, creada.fecha)
+        : []),
+      ...(creada.asignadaA ? avisoDeIncidenciaAsignada(db, creada, req.usuario.usuario) : []),
+    ];
     return { incidencia: creada, avisos };
   });
   enviarAvisos(avisos); // después de guardar y sin esperar
@@ -71,6 +82,16 @@ router.post('/:id/atender', exigirRol('admin', 'soporte_tecnico'), async (req, r
   // Los nombres, para que el 409 diga "la está atendiendo Ana Gómez" y no "ana.gomez"
   const nombres = new Map((await listarUsuarios()).map((u) => [u.usuario, u.nombre]));
   res.json(await actualizarDB((db) => atenderIncidencia(db, req.params.id, req.usuario, undefined, nombres)));
+});
+
+router.post('/:id/asignar', exigirRol('admin'), async (req, res) => {
+  const cuenta = await cuentaQuePuedeAtender(req.body?.usuario);
+  const { incidencia, avisos } = await actualizarDB((db) => {
+    const reasignada = reasignarIncidencia(db, req.params.id, cuenta.usuario);
+    return { incidencia: reasignada, avisos: avisoDeIncidenciaAsignada(db, reasignada, req.usuario.usuario) };
+  });
+  enviarAvisos(avisos);
+  res.json({ ...incidencia, asignadaANombre: cuenta.nombre });
 });
 
 router.patch('/:id', exigirRol('admin', 'soporte_tecnico'), async (req, res) => {

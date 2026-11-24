@@ -23,6 +23,12 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
   Lee el CSV como lo guarda Excel en español (`;`, Windows-1252, BOM) y reconoce columnas como "Código", "Equipo" o
   "Ubicación". Plantilla en `data/plantillas/inventario.csv`; los datos reales van en `data/privado/` (ignorada por git).
   Guía y riesgos (el catálogo completo entra en cada prompt del triaje) en `docs/inventario-importar.md`.
+- **Reparto automático de incidencias al técnico de su categoría.** Un admin define en Usuarios quién atiende
+  infraestructura y quién tecnología (tabla `responsables_categoria`, migración 015); cada incidencia nueva nace asignada
+  (`asignadaA`) a esa persona y le llega un correo. Las abiertas sin dueño pasan a él al configurarlo (un solo correo).
+  Asignar no es atender: otro técnico puede tomarla y un admin puede reasignarla (`POST /api/incidencias/:id/asignar`).
+  Sin responsable configurado, queda sin asignar. El panel de Soporte TI muestra "Te tocó a ti" y "N para ti". Las listas
+  ya no se redibujan mientras está abierto el selector de reasignar.
 - **Solo dos categorías de incidencia: Infraestructura y Tecnología.** En el campus hay 2 técnicos de TI y cada uno
   atiende una. Aseo, seguridad, bienestar y "otro" ya no se pueden elegir (`POST /api/incidencias` responde 422), pero
   las incidencias anteriores conservan su categoría (`CATEGORIAS_ANTERIORES`; la base las sigue aceptando).

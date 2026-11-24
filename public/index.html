@@ -254,6 +254,11 @@
           <button class="btn btn--primario" type="submit">Crear cuenta</button>
         </form>
 
+        <!-- Reparto automático: a quién le toca cada categoría de incidencia (PUT /api/responsables/:categoria) -->
+        <h3 class="subtitulo">Quién atiende cada categoría</h3>
+        <p class="nota">Las incidencias nuevas le tocan a la persona de su categoría y le llega un aviso. Si no eliges a nadie, quedan sin asignar.</p>
+        <div class="formulario" id="responsables"></div>
+
         <h3 class="subtitulo">Cuentas</h3>
         <ul class="lista" id="lista-usuarios">
           <li class="vacio">Cargando cuentas…</li>
