@@ -60,12 +60,13 @@ El informe tiene tres partes: **errores de formato** (impiden guardar, con la l�
 |---|---|
 | Sala con dos clases a la vez | dos bloques que se cruzan en la misma sala |
 | Docente en dos lugares a la vez | el mismo docente en dos salas a la misma hora |
-| Cohorte con dos clases a la vez | Software y SER de la misma cohorte que se cruzan |
+| Cohorte con dos clases a la vez | Software y SER de la misma cohorte que se cruzan (la cohorte es el código, `D1`) |
 | Aforo excedido | 14 estudiantes en una sala de aforo 10 |
-| Cohorte con fechas que no cuadran | Software dice `D1 Oct-25` y SER dice `D1 Oct-26` (se tolera `Sep`/`Sept`) |
 | Cohorte en una clase y no en la otra | tiene Software pero no SER |
 | Módulo que no cuadra con la sala | el módulo dice "Apolo 1" pero la sala es Artemis |
 | Datos incompletos | Software sin docente o con 0 estudiantes |
+
+El mes y el año del grupo (`Oct-25`) son la fecha de ingreso de la cohorte (confirmado por Coordinación): no se comparan.
 
 Si a un bloque le faltan los días, un cruce se marca como **posible** ("puede que no: a alguno le faltan los días"): no se
 afirma lo que no se sabe.
