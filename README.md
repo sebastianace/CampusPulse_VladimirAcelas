@@ -178,6 +178,16 @@ El detalle de cada cambio está en [CHANGELOG.md](CHANGELOG.md).
 - Si venías de la versión con `data/auth.json`, copia tus cuentas con `npm run importar-cuentas`
   (los hashes se copian tal cual; las sesiones no, así que vuelve a iniciar sesión).
 
+## Horarios de las clases
+
+- Software, Inglés y SER tienen horarios fijos. Se cargan desde un CSV de Excel con `npm run importar-horarios -- archivo.csv`
+  (ensayo por defecto; `--aplicar` guarda): reemplaza la hoja de Coordinación y la app EnglishFlow.
+- El informe encuentra los problemas de planeación que hoy se descubren a mano: cruces de sala, de docente y de cohorte,
+  aforo excedido, cohortes con fechas que no cuadran entre Software y SER, módulos intercambiados y datos incompletos.
+- Una sala con clase **no se puede reservar** a esa hora (`409 SALA_CON_CLASE`) y aparece ocupada en el tablero, pero
+  **solo si el bloque tiene los días confirmados**: no se cierra una sala con un dato que no se sabe.
+- Guía, reglas y lo que mostró el archivo real: [docs/horarios.md](docs/horarios.md).
+
 ## Reparto de incidencias por categoría
 
 - En el campus hay 2 técnicos de TI y cada uno atiende una categoría (infraestructura o tecnología). Un admin define quién
@@ -442,6 +452,7 @@ error claro y el formulario manual, nunca con una respuesta inventada.
 | `npm run migrar` | Aplica las migraciones de `db/migrations/` a PostgreSQL (necesita `docker compose up -d db`) |
 | `npm run embeddings` | Genera el embedding de las incidencias que no lo tienen (usa la clave de Gemini) |
 | `npm run importar-cuentas` | Copia las cuentas del viejo `data/auth.json` a PostgreSQL (se corre una vez) |
+| `npm run importar-horarios -- <archivo.csv>` | Carga los horarios de las clases desde un CSV de Excel y los analiza. Ensayo por defecto; `--aplicar` guarda; `--alias "Sala Nueva=blanca"` para nombres de sala distintos. Ver [docs/horarios.md](docs/horarios.md) |
 | `npm run importar-inventario -- <archivo.csv>` | Carga el inventario real desde un CSV de Excel. Ensayo por defecto; `--aplicar` guarda y `--quitar-ficticios` quita los equipos de demostración. Ver [docs/inventario-importar.md](docs/inventario-importar.md) |
 | `npm run n8n:preparar` | Crea las credenciales en n8n, importa y activa los flujos de `n8n/` y reinicia n8n |
 | `npm run conocimiento` | Recarga `knowledge/` en la base vectorial (necesita `pulse-ai` levantado) |
@@ -540,6 +551,7 @@ En la hackatón (v1) cada integrante trabajó en su rama (`feature/backend`, `fe
 | [docs/workflows.md](docs/workflows.md) | Los 7 flujos de n8n, lo verificado y sus límites |
 | [docs/base-de-datos.md](docs/base-de-datos.md) · [docs/contrato-api.md](docs/contrato-api.md) | Esquema y API |
 | [docs/inventario-importar.md](docs/inventario-importar.md) | Cargar el inventario real desde un CSV de Excel: plantilla, reglas y cuidados |
+| [docs/horarios.md](docs/horarios.md) | Horarios de Software, Inglés y SER: carga desde Excel, hallazgos de planeación y bloqueo de reservas |
 | [docs/registro-depuracion.md](docs/registro-depuracion.md) | Fallos reales, cómo se encontró la causa y qué los evita |
 | [docs/sustentacion.md](docs/sustentacion.md) | Guion de la demo, plan B y plan de estudio |
 | [docs/hoja-de-ruta.md](docs/hoja-de-ruta.md) | Trabajo futuro: qué haría falta para usarlo en todo el campus |
