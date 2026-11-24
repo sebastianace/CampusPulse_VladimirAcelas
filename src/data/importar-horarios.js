@@ -17,7 +17,7 @@ import { readFileSync } from 'node:fs';
 import { actualizarDB, leerDB } from './almacen.js';
 import { leerCSV } from './csv.js';
 import { cerrarPool, explicarErrorDeConexion } from './pg.js';
-import { ETIQUETAS_CLASE } from '../domain/horarios.js';
+import { ETIQUETAS_CLASE, TITULOS_HALLAZGO } from '../domain/horarios.js';
 import { importarHorarios, leerTablaHorarios } from '../domain/horarios-importar.js';
 import { ErrorApi } from '../domain/errors.js';
 
@@ -33,18 +33,6 @@ export async function importarHorariosDesdeCSV(bytes, { aplicar = false, alias =
     : importarHorarios(await leerDB(), tabla, { alias });
   return { ...informe, codificacion, separador, columnas: tabla.columnas, ignoradas: tabla.ignoradas };
 }
-
-const TITULOS = {
-  'cruce-sala': 'Salas con dos clases a la vez',
-  'cruce-docente': 'Docentes en dos lugares a la vez',
-  'cruce-cohorte': 'Cohortes con dos clases a la vez',
-  aforo: 'Aforo excedido',
-  cohorte: 'Cohortes con fechas que no cuadran entre Software y SER',
-  'sin-contraparte': 'Cohortes que están en una clase y no en la otra',
-  modulo: 'Módulos que no cuadran con su sala',
-  incompleto: 'Datos incompletos',
-  'sin-dias': 'Días de la semana',
-};
 
 /** El informe como texto para la terminal. */
 export function formatearInforme(i) {
@@ -67,10 +55,10 @@ export function formatearInforme(i) {
   }
   if (i.hallazgos.length) {
     lineas.push('', `HALLAZGOS PARA COORDINACIÓN (${i.hallazgos.filter((h) => h.tipo !== 'sin-dias').length}): no impiden guardar, pero hay que revisarlos`);
-    for (const tipo of Object.keys(TITULOS)) {
+    for (const tipo of Object.keys(TITULOS_HALLAZGO)) {
       const grupo = i.hallazgos.filter((h) => h.tipo === tipo);
       if (!grupo.length) continue;
-      lineas.push('', `  ${TITULOS[tipo]}`, ...grupo.map((h) => `    - ${h.mensaje}${h.lineas.length ? ` (línea${h.lineas.length > 1 ? 's' : ''} ${[...new Set(h.lineas)].join(', ')})` : ''}`));
+      lineas.push('', `  ${TITULOS_HALLAZGO[tipo]}`, ...grupo.map((h) => `    - ${h.mensaje}${h.lineas.length ? ` (línea${h.lineas.length > 1 ? 's' : ''} ${[...new Set(h.lineas)].join(', ')})` : ''}`));
     }
   }
   if (!i.aplicado && !i.errores.length) lineas.push('', 'Si el informe está bien, guarda con --aplicar.');

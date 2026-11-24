@@ -183,9 +183,13 @@ El detalle de cada cambio está en [CHANGELOG.md](CHANGELOG.md).
 - Software, Inglés y SER tienen horarios fijos. Se cargan desde un CSV de Excel con `npm run importar-horarios -- archivo.csv`
   (ensayo por defecto; `--aplicar` guarda): reemplaza la hoja de Coordinación y la app EnglishFlow.
 - El informe encuentra los problemas de planeación que hoy se descubren a mano: cruces de sala, de docente y de cohorte,
-  aforo excedido, cohortes con fechas que no cuadran entre Software y SER, módulos intercambiados y datos incompletos.
+  aforo excedido, cohortes que están en una clase y no en la otra, módulos intercambiados y datos incompletos.
 - Una sala con clase **no se puede reservar** a esa hora (`409 SALA_CON_CLASE`) y aparece ocupada en el tablero, pero
   **solo si el bloque tiene los días confirmados**: no se cierra una sala con un dato que no se sabe.
+- **Pantalla "Horario de clases"** (en el tablero, solo lectura): las salas en filas y las horas en columnas, un día de la
+  semana a la vez y con filtro por clase. Clic en una clase para ver docente, estudiantes y módulo. El admin ve debajo los
+  hallazgos de planeación. La línea de tiempo de "Reservas del día" muestra también las clases (rayadas) para que se vea por
+  qué una franja no se puede reservar.
 - Guía, reglas y lo que mostró el archivo real: [docs/horarios.md](docs/horarios.md).
 
 ## Reparto de incidencias por categoría

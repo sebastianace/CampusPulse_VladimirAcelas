@@ -21,6 +21,17 @@ import { buscarSala, plano } from './salas.js';
 
 export const TIPOS_CLASE = ['software', 'ingles', 'ser'];
 export const ETIQUETAS_CLASE = { software: 'Software', ingles: 'Inglés', ser: 'SER' };
+// Título de cada tipo de hallazgo, en el orden en que se muestran (informe de terminal y pantalla de horarios)
+export const TITULOS_HALLAZGO = {
+  'cruce-sala': 'Salas con dos clases a la vez',
+  'cruce-docente': 'Docentes en dos lugares a la vez',
+  'cruce-cohorte': 'Cohortes con dos clases a la vez',
+  aforo: 'Aforo excedido',
+  'sin-contraparte': 'Cohortes que están en una clase y no en la otra',
+  modulo: 'Módulos que no cuadran con su sala',
+  incompleto: 'Datos incompletos',
+  'sin-dias': 'Días de la semana',
+};
 export const NOMBRES_DIA = ['', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 
 // ---------- horas y días ----------

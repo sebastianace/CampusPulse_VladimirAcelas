@@ -364,6 +364,17 @@ describe('recorrido completo contra PostgreSQL', () => {
       const lista = await pedir('/api/horarios', 'GET', undefined, cookie);
       assert.equal(lista.status, 200);
       assert.equal(lista.cuerpo.length, 3);
+      // Los hallazgos son de Coordinación: solo el admin. Salen con su título y sin la nota de "sin días"
+      await pedir('/api/usuarios', 'POST', { usuario: 'profe', nombre: 'Profe', clave: 'clave-de-prueba-1', rol: 'profesor' }, cookie);
+      const profe = (await pedir('/api/auth/login', 'POST', { usuario: 'profe', clave: 'clave-de-prueba-1' })).cookie;
+      assert.equal((await pedir('/api/horarios/hallazgos')).status, 401);
+      assert.equal((await pedir('/api/horarios/hallazgos', 'GET', undefined, profe)).status, 403);
+      assert.equal((await pedir('/api/horarios', 'GET', undefined, profe)).status, 200, 'la grilla sí la ve cualquier sesión');
+      const hallazgos = await pedir('/api/horarios/hallazgos', 'GET', undefined, cookie);
+      assert.equal(hallazgos.status, 200);
+      assert.ok(hallazgos.cuerpo.length > 0);
+      assert.ok(hallazgos.cuerpo.every((h) => h.titulo && h.mensaje && h.tipo !== 'sin-dias'));
+      assert.ok(hallazgos.cuerpo.some((h) => h.tipo === 'aforo' && h.titulo === 'Aforo excedido'));
       const choque = await pedir('/api/reservas', 'POST', { espacioId: 'apolo', responsable: 'Jefa', asistentes: 5, inicio: `${LUNES}T07:00`, fin: `${LUNES}T08:00` }, cookie);
       assert.deepEqual([choque.status, choque.cuerpo.error.codigo], [409, 'SALA_CON_CLASE']);
       assert.match(choque.cuerpo.error.mensaje, /clase de Software \(J1 Dic-25\) de 06:00 a 09:30/);

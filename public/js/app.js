@@ -5,6 +5,7 @@ import { iniciarMapa, dibujarMapa } from './mapa.js';
 import { iniciarFormularios, actualizarFormularios } from './formularios.js';
 import { iniciarIncidencias, dibujarIncidencias } from './incidencias.js';
 import { iniciarTimeline, dibujarTimeline } from './timeline.js';
+import { iniciarHorarios, dibujarHorarios } from './horarios.js';
 import { iniciarComando } from './comando.js';
 import { dibujarPresion } from './presion.js';
 import { iniciarDemo } from './demo.js';
@@ -136,6 +137,7 @@ function iniciarTablero() {
   iniciarFormularios({ refrescar, mostrarPestana });
   iniciarIncidencias({ refrescar, mostrarPestana });
   iniciarTimeline();
+  iniciarHorarios();
   iniciarUsuarios();
   iniciarInventario({ refrescar, mostrarPestana });
   iniciarSolicitudes({ refrescar });
@@ -144,6 +146,7 @@ function iniciarTablero() {
   iniciarDemo({ mostrarPestana });
   suscribir(dibujarMapa);
   suscribir(dibujarTimeline);
+  suscribir(dibujarHorarios);
   suscribir(actualizarFormularios);
   suscribir(dibujarIncidencias);
   suscribir(dibujarPresion);

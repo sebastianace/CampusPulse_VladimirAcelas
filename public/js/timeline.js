@@ -6,6 +6,7 @@
 import { el } from './dom.js';
 import { ahoraBogota, cambiarFecha, hoyISO } from './estado.js';
 import { soloReservables } from './catalogos.js';
+import { ETIQUETAS_CLASE, clasesDelDia, etiquetaDelBloque, textoHorario } from './horarios.js';
 import * as toasts from './toasts.js';
 
 // Rango visible del día. Coincide con el horario del campus que valida
@@ -28,7 +29,7 @@ export function iniciarTimeline() {
   });
 }
 
-export function dibujarTimeline({ espacios: todos, reservas, fecha }) {
+export function dibujarTimeline({ espacios: todos, reservas, horarios, fecha }) {
   const espacios = soloReservables(todos); // las zonas comunes (Hunters) no se reservan
   document.getElementById('fecha-timeline').value = fecha;
   const contenedor = document.getElementById('timeline');
@@ -40,9 +41,10 @@ export function dibujarTimeline({ espacios: todos, reservas, fecha }) {
   }
 
   const delDia = reservas.filter((r) => r.inicio?.startsWith(fecha));
+  const clases = clasesDelDia(horarios, fecha);
   const salas = [...espacios].sort((a, b) => (b.aforo ?? 0) - (a.aforo ?? 0));
 
-  const filas = salas.map((espacio) => crearFila(espacio, delDia.filter((r) => r.espacioId === espacio.id), fecha));
+  const filas = salas.map((espacio) => crearFila(espacio, delDia.filter((r) => r.espacioId === espacio.id), clases.filter((b) => b.espacioId === espacio.id), fecha));
   const nota = delDia.length
     ? []
     : [el('p', { className: 'nota timeline__nota' }, 'No hay reservas este día. Haz clic en una franja libre para reservar.')];
@@ -61,7 +63,7 @@ function crearEscalaHoras() {
     el('div', { className: 'timeline__horas' }, horas));
 }
 
-function crearFila(espacio, reservasSala, fecha) {
+function crearFila(espacio, reservasSala, clasesSala, fecha) {
   const inhabilitada = espacio.estado === 'inhabilitado';
   const noAsignable = espacio.estado !== 'disponible';
 
@@ -73,6 +75,7 @@ function crearFila(espacio, reservasSala, fecha) {
       seleccionarFranja(espacio, fecha, evento, pista);
     },
   },
+  clasesSala.map(crearClase),
   reservasSala.map((reserva) => crearBloque(reserva, espacio, inhabilitada)),
   lineaAhora(fecha));
 
@@ -84,6 +87,19 @@ function crearFila(espacio, reservasSala, fecha) {
       espacio.nombre,
       el('small', { className: 'dato' }, Number.isFinite(espacio.aforo) ? ` ${espacio.aforo}` : '')),
     pista);
+}
+
+// Una clase fija ocupa la sala igual que una reserva, pero no se edita ni se cancela aquí: solo se ve.
+// (La vista arranca a las 7:00 y las clases a las 6:00: el bloque se recorta; el texto de ayuda dice la hora real.)
+function crearClase(bloque) {
+  const izquierda = porcentaje(minutosDeHora(bloque.horaInicio));
+  const ancho = Math.max(porcentaje(minutosDeHora(bloque.horaFin)) - izquierda, 0.5);
+  return el('div', {
+    className: 'bloque bloque--clase bloque--fija',
+    dataset: { tipo: bloque.tipo },
+    style: { left: `${izquierda}%`, width: `${ancho}%` },
+    title: `Clase de ${ETIQUETAS_CLASE[bloque.tipo]} · ${bloque.grupo}\n${textoHorario(bloque)}\nLa sala no se puede reservar en esta franja`,
+  }, etiquetaDelBloque(bloque));
 }
 
 function crearBloque(reserva, espacio, enRiesgo) {
@@ -124,6 +140,9 @@ function seleccionarFranja(espacio, fecha, evento, pista) {
 }
 
 const dosDigitos = (hora) => `${String(hora).padStart(2, '0')}:00`;
+
+// "06:00" -> 360
+const minutosDeHora = (hora) => Number(hora.slice(0, 2)) * 60 + Number(hora.slice(3, 5));
 
 // "2026-10-16T14:30" -> 870
 function minutosDelDia(fechaHora) {
