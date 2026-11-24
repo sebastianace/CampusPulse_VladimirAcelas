@@ -11,7 +11,7 @@
 //      dejaría la sala inservible para todos.
 //   3. Una sala con clase en curso se muestra como ocupada ahora.
 //   4. analizarHorarios() encuentra los problemas de planeación: cruces de sala, de docente y de cohorte,
-//      aforo excedido, cohortes con año o mes distinto entre Software y SER, y datos incompletos.
+//      aforo excedido, cohortes sin contraparte, módulos intercambiados y datos incompletos.
 // Funciones puras: reciben `db` (db.horarios puede faltar: se trata como vacío) y no tocan la base.
 // =====================================================================
 
@@ -122,11 +122,12 @@ const etiqueta = (b) => `${ETIQUETAS_CLASE[b.tipo]} ${b.grupo} (${b.horaInicio}-
 const lineasDe = (...bloques) => bloques.map((b) => b.linea).filter(Boolean);
 const nota = (certeza) => (certeza === 'quiza' ? ' Puede que no: a alguno le faltan los días.' : '');
 
-// "D1 Oct-25" -> {codigo: "D1", fecha: "oct-25"}; null si el grupo no tiene ese formato (un "Grupo 4" de inglés).
+// "D1 Oct-25" -> {codigo: "D1", texto}; null si el grupo no tiene ese formato (un "Grupo 4" de inglés).
+// La fecha (Oct-25) es cuándo ENTRÓ la cohorte: no la identifica ni se compara. La identifica el código (D1).
 function cohorte(grupo) {
   const m = String(grupo).trim().match(/^([A-Za-z]\d)\s+([A-Za-zñÑ]+)\.?[\s-]*(\d{2,4})$/);
   if (!m) return null;
-  return { codigo: m[1].toUpperCase(), fecha: `${plano(m[2]).slice(0, 3)}-${m[3].slice(-2)}`, texto: grupo.trim() };
+  return { codigo: m[1].toUpperCase(), texto: grupo.trim() };
 }
 
 /**
@@ -152,7 +153,7 @@ export function analizarHorarios(bloques, espacios) {
         agregar('cruce-docente', `${a.docente} está en dos lugares a la vez: ${etiqueta(a)} en ${sala(a)} y ${etiqueta(b)} en ${sala(b)}.${nota(dias)}`, a, b);
       }
       const [ca, cb] = [cohorte(a.grupo), cohorte(b.grupo)];
-      if (ca && cb && ca.codigo === cb.codigo && ca.fecha === cb.fecha && a.tipo !== b.tipo) {
+      if (ca && cb && ca.codigo === cb.codigo && a.tipo !== b.tipo) {
         agregar('cruce-cohorte', `La cohorte ${ca.texto} tiene ${ETIQUETAS_CLASE[a.tipo]} y ${ETIQUETAS_CLASE[b.tipo]} al mismo tiempo: ${etiqueta(a)} y ${etiqueta(b)}.${nota(dias)}`, a, b);
       }
     }
@@ -173,7 +174,8 @@ export function analizarHorarios(bloques, espacios) {
     }
   }
 
-  // Software y SER son de la misma cohorte (los mismos campers): el código (D1, J2...) debe llevar el mismo mes y año
+  // Software y SER son de la misma cohorte (los mismos campers): si una tiene una y la otra no, se avisa.
+  // El mes y el año que acompañan al código son la fecha de ingreso y pueden diferir: no se marcan.
   const porCodigo = new Map();
   for (const b of bloques.filter((x) => x.tipo === 'software' || x.tipo === 'ser')) {
     const c = cohorte(b.grupo);
@@ -181,13 +183,9 @@ export function analizarHorarios(bloques, espacios) {
     if (!porCodigo.has(c.codigo)) porCodigo.set(c.codigo, []);
     porCodigo.get(c.codigo).push({ b, c });
   }
-  for (const [codigo, lista] of porCodigo) {
-    const fechas = new Set(lista.map(({ c }) => c.fecha));
+  for (const lista of porCodigo.values()) {
     const tipos = new Set(lista.map(({ b }) => b.tipo));
-    if (fechas.size > 1) {
-      const por = (tipo) => [...new Set(lista.filter(({ b }) => b.tipo === tipo).map(({ c }) => c.texto))].join(' / ');
-      agregar('cohorte', `La cohorte ${codigo} aparece con fechas distintas: Software dice "${por('software')}" y SER dice "${por('ser')}". ¿Cuál es la correcta?`, ...lista.map(({ b }) => b));
-    } else if (tipos.size === 1) {
+    if (tipos.size === 1) {
       const [falta, tiene] = tipos.has('software') ? ['SER', 'Software'] : ['Software', 'SER'];
       agregar('sin-contraparte', `La cohorte ${lista[0].c.texto} tiene ${tiene} pero no aparece en ${falta}.`, ...lista.map(({ b }) => b));
     }

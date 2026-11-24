@@ -205,16 +205,13 @@ describe('analizarHorarios', () => {
     assert.deepEqual(tipos([bloque({ espacioId: 'azul', estudiantes: 10 })]), [], 'justo el aforo es válido');
   });
 
-  test('una cohorte con distinto mes o año entre Software y SER se marca, aunque se escriba "Sep" o "Sept"', () => {
+  test('el mes y el año de la cohorte son su fecha de ingreso: no se marcan, y el cruce se detecta por el código', () => {
     const h = hallazgos([
       bloque({ id: 'a', grupo: 'D1 Oct-25', linea: 4 }),
-      bloque({ id: 'b', tipo: 'ser', espacioId: 'artemis', grupo: 'D1 Oct-26', horaInicio: '10:00', horaFin: '11:00', docente: undefined, linea: 9 }),
-      bloque({ id: 'c', grupo: 'C4 Sept-25', espacioId: 'artemis', horaInicio: '18:15', horaFin: '21:45', docente: 'Luis' }),
-      bloque({ id: 'd', tipo: 'ser', grupo: 'C4 Sep-25', horaInicio: '16:00', horaFin: '17:00', docente: undefined }),
+      bloque({ id: 'b', tipo: 'ser', espacioId: 'artemis', grupo: 'D1 Oct-26', horaInicio: '07:30', horaFin: '08:30', docente: undefined, linea: 9 }),
     ]);
-    const c = h.filter((x) => x.tipo === 'cohorte');
-    assert.equal(c.length, 1, 'C4 Sept-25 y C4 Sep-25 son la misma fecha');
-    assert.match(c[0].mensaje, /D1 aparece con fechas distintas: Software dice "D1 Oct-25" y SER dice "D1 Oct-26"/);
+    assert.ok(!h.some((x) => x.tipo === 'cohorte'), 'ya no hay hallazgo de fechas distintas');
+    assert.ok(h.some((x) => x.tipo === 'cruce-cohorte'), 'D1 Oct-25 y D1 Oct-26 son los mismos campers: se cruzan');
   });
 
   test('una cohorte de Software sin SER (o al revés) se avisa', () => {
