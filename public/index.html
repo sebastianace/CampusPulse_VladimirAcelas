@@ -102,6 +102,38 @@
           <p class="vacio">Cargando reservas…</p>
         </div>
       </section>
+
+      <!-- Clases fijas (Software, Inglés, SER): solo lectura, se cargan con npm run importar-horarios -->
+      <section class="panel" aria-labelledby="titulo-horarios">
+        <div class="panel__cabeza">
+          <div>
+            <h2 class="panel__titulo" id="titulo-horarios">Horario de clases</h2>
+            <p class="panel__nota" id="horarios-nota">Software, Inglés y SER.</p>
+          </div>
+          <div class="timeline__controles">
+            <div class="dias" id="horarios-dias" role="group" aria-label="Día de la semana"></div>
+            <label class="campo campo--linea">
+              <span>Clase</span>
+              <select id="horarios-tipo">
+                <option value="todos">Todas</option>
+                <option value="software">Software</option>
+                <option value="ingles">Inglés</option>
+                <option value="ser">SER</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <ul class="leyenda leyenda--clases" aria-label="Tipos de clase">
+          <li><span class="muestra muestra--software"></span>Software</li>
+          <li><span class="muestra muestra--ingles"></span>Inglés</li>
+          <li><span class="muestra muestra--ser"></span>SER</li>
+        </ul>
+        <div class="timeline horarios" id="horarios-grilla">
+          <p class="vacio">Cargando horarios…</p>
+        </div>
+        <div class="item horarios__detalle" id="horarios-detalle" aria-live="polite" hidden></div>
+        <details class="hallazgos" id="horarios-hallazgos" hidden></details>
+      </section>
     </div>
 
     <!-- Columna derecha: acciones -->

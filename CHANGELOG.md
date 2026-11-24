@@ -23,9 +23,15 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
   Lee el CSV como lo guarda Excel en español (`;`, Windows-1252, BOM) y reconoce columnas como "Código", "Equipo" o
   "Ubicación". Plantilla en `data/plantillas/inventario.csv`; los datos reales van en `data/privado/` (ignorada por git).
   Guía y riesgos (el catálogo completo entra en cada prompt del triaje) en `docs/inventario-importar.md`.
+- **Pantalla "Horario de clases" (solo lectura).** Panel nuevo en el tablero: una grilla de salas por horas (6:00 a 22:00),
+  un día de la semana a la vez (abre en el día de hoy) y filtro por clase; clic en una clase para ver el detalle. Solo se
+  dibujan los bloques con días confirmados, los mismos que bloquean reservas en el servidor. La línea de tiempo de "Reservas
+  del día" muestra también las clases de ese día (rayadas, sin editar). Nueva ruta `GET /api/horarios/hallazgos` (solo
+  admin) con los problemas de planeación, que el admin ve en el panel. La fecha de la cohorte (`Oct-25`) es su ingreso:
+  ya no se compara entre Software y SER, y el cruce de cohorte se detecta por el código.
 - **Horarios de las clases (Software, Inglés y SER), Fase A.** `npm run importar-horarios -- archivo.csv` carga el horario
   desde un CSV de Excel (ensayo por defecto, `--aplicar` guarda, `--alias` para nombres de sala distintos) y encuentra los
-  problemas de planeación: cruces de sala, docente y cohorte, aforo excedido, cohortes con fechas que no cuadran, módulos
+  problemas de planeación: cruces de sala, docente y cohorte, aforo excedido, cohortes que están en una clase y no en la otra, módulos
   intercambiados y datos incompletos. Una sala con clase no se reserva (`409 SALA_CON_CLASE`, regla 12), no se ofrece en la
   recomendación y aparece ocupada en el tablero, solo con los días confirmados: un bloque sin días se guarda pero no bloquea.
   Se reemplazan los tipos que trae el archivo. Tabla `bloques_horario` (migración 016) y `GET /api/horarios`. La búsqueda de

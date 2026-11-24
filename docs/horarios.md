@@ -10,8 +10,25 @@ reales del campus y sus reglas. Pedido del 21 nov 2026. Esto es la **Fase A**; e
 2. **Encuentra los problemas de planeación** en el archivo, que es lo que Mafe hoy descubre a mano.
 3. **Bloquea las reservas** sobre una sala con clase (`409 SALA_CON_CLASE`) y la muestra ocupada en el tablero.
 4. **Expone los bloques** en `GET /api/horarios`.
+5. **Los muestra en pantalla** (panel "Horario de clases", solo lectura): ver abajo.
 
-Aún no hay pantalla para editar ni ver la grilla: los horarios se cargan por terminal.
+Editar un horario todavía no se puede desde la pantalla: se cargan por terminal.
+
+## La pantalla "Horario de clases"
+
+Está en el tablero, debajo de "Reservas del día". Cualquier sesión puede verla.
+
+- **Grilla:** una fila por sala (de mayor a menor aforo) y una columna por hora, de 6:00 a 22:00. Cada clase es un bloque
+  del color de su tipo (azul Software, rosa Inglés, oliva SER). Las pestañas **Lun a Sáb** cambian el día (abre en hoy; el
+  domingo, en lunes) y el selector **Clase** filtra por tipo.
+- **Detalle:** clic en un bloque para ver sala, horario, días, docente, estudiantes, nivel, módulo y observación. Los
+  bloques de una hora se rotulan corto (`G4`, `J2`); el nombre completo está en el detalle y al pasar el mouse.
+- **Solo los bloques con días confirmados** se dibujan: son los mismos que bloquean reservas (`SALA_CON_CLASE`). La nota del
+  panel dice cuántos bloques están sin días.
+- **En "Reservas del día"** las clases de ese día salen rayadas en la fila de su sala (sin clic): así se ve por qué una
+  franja no se puede reservar. La vista empieza a las 7:00 y las clases a las 6:00, así que esas se ven recortadas.
+- **Hallazgos (solo admin):** debajo de la grilla, "Para revisar con Coordinación (N)", agrupados por tipo. Salen de
+  `GET /api/horarios/hallazgos`, que los calcula al pedirlos con lo que hay guardado.
 
 ## Para quien prepara el archivo (Mafe)
 
@@ -60,12 +77,13 @@ El informe tiene tres partes: **errores de formato** (impiden guardar, con la l�
 |---|---|
 | Sala con dos clases a la vez | dos bloques que se cruzan en la misma sala |
 | Docente en dos lugares a la vez | el mismo docente en dos salas a la misma hora |
-| Cohorte con dos clases a la vez | Software y SER de la misma cohorte que se cruzan |
+| Cohorte con dos clases a la vez | Software y SER de la misma cohorte que se cruzan (la cohorte es el código, `D1`) |
 | Aforo excedido | 14 estudiantes en una sala de aforo 10 |
-| Cohorte con fechas que no cuadran | Software dice `D1 Oct-25` y SER dice `D1 Oct-26` (se tolera `Sep`/`Sept`) |
 | Cohorte en una clase y no en la otra | tiene Software pero no SER |
 | Módulo que no cuadra con la sala | el módulo dice "Apolo 1" pero la sala es Artemis |
 | Datos incompletos | Software sin docente o con 0 estudiantes |
+
+El mes y el año del grupo (`Oct-25`) son la fecha de ingreso de la cohorte (confirmado por Coordinación): no se comparan.
 
 Si a un bloque le faltan los días, un cruce se marca como **posible** ("puede que no: a alguno le faltan los días"): no se
 afirma lo que no se sabe.
@@ -88,15 +106,14 @@ Una sala con clase en curso aparece como `ocupadoAhora: true`.
 
 ## Lo que mostró el archivo real de Coordinación
 
-El análisis de las 38 filas del archivo de Mafe encontró **15 hallazgos**, entre ellos casi todo lo que ella tenía anotado a
+El análisis de las 38 filas del archivo de Mafe, ya con los días (lunes a viernes) y Sala Nueva = Sala Blanca confirmados por ella, encontró **12 hallazgos**, entre ellos casi todo lo que ella tenía anotado a
 mano y algo que no estaba en sus notas: **grupos de inglés con más estudiantes que el aforo de la sala** (14 en una sala de
 aforo 10). Ningún horario se cruza: los problemas están en los datos, no en la planeación. El detalle (cohortes, salas,
 líneas) está en el informe del ensayo y no se publica aquí.
 
-- **"Sala Nueva" no existe en el CSV oficial de capacidad** (7 grupos de inglés están ahí). Hay que confirmar con Mafe cuál
-  es. Por descarte parece ser la Sala Blanca (es la única sala oficial que no aparece en su grilla), pero **es una
-  hipótesis, no un dato**.
-- **Las capturas no traen los días**: sin ellos nada bloquea reservas todavía.
+- **"Sala Nueva" es la Sala Blanca** (confirmado por Mafe): se importa con `--alias "Sala Nueva=blanca"`.
+- **Los días son de lunes a viernes**: el archivo no traía la columna; se le agregó `L-V` a todos los bloques.
+- **El mes y el año de la cohorte** (`D1 Oct-25`) son la fecha de ingreso: no importa que Software y SER difieran.
 
 ## Comprobado
 
@@ -105,11 +122,15 @@ líneas) está en el informe del ensayo y no se publica aquí.
   inventados.
 - El comando se probó en ensayo con el archivo real contra una base desechable. También con días de ejemplo (`L-V`): no hay
   cruces de horario.
-- **Todavía no comprobado:** guardar el archivo real (faltan los días y confirmar "Sala Nueva"), y que las reservas se
-  bloqueen con los días reales.
+- La pantalla se probó en un navegador contra una base desechable con el archivo real: 38 bloques en 9 salas, cambio de día y
+  de filtro, detalle, hallazgos solo para admin (un profesor recibe `403`), ancho de celular sin scroll de página y que el
+  auto-refresco de 5 s no borra la selección.
+- **Todavía no comprobado:** guardar el archivo real en la base de desarrollo (hay que reconstruir la app para crear la
+  tabla) y que las reservas se bloqueen con los días reales en el uso diario.
 
 ## Pendiente (Fase B y otras)
 
-- Confirmar con Mafe: los días de cada bloque, qué es "Sala Nueva", y qué año/mes es el correcto en las cohortes marcadas.
-- Una pantalla para ver la grilla y editar sin terminal; leer `.xlsx` directo.
+- Confirmar con Mafe los 12 hallazgos (aforo de inglés, SER que falta en R4, K4 y F4, módulos intercambiados, docentes y
+  estudiantes que faltan).
+- Editar un horario desde la pantalla (hoy solo se ve); leer `.xlsx` directo.
 - Fase B: un solucionador que arme los grupos de inglés por nivel con las salas y docentes libres.
