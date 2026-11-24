@@ -17,7 +17,7 @@ import {
   AREAS, CATEGORIAS, CATEGORIAS_ANTERIORES, ESTADOS_ESPACIO, ESTADOS_INCIDENCIA, ESTADOS_PRESTAMO, ESTADOS_RECURSO, ORIGENES_INCIDENCIA, PRIORIDADES,
 } from '../src/config/reglas.js';
 
-const TABLAS = ['calidad_datos', 'espacios', 'incidencias', 'incidencias_embeddings', 'incidencias_notificaciones', 'incidencias_reportes', 'prestamos', 'recursos', 'reservas', 'schema_migrations', 'sesiones', 'solicitudes_salon', 'usuarios'];
+const TABLAS = ['bloques_horario', 'calidad_datos', 'espacios', 'incidencias', 'incidencias_embeddings', 'incidencias_notificaciones', 'incidencias_reportes', 'prestamos', 'recursos', 'reservas', 'schema_migrations', 'sesiones', 'solicitudes_salon', 'usuarios'];
 
 let bd;
 let pool;
@@ -53,7 +53,7 @@ describe('Migraciones', () => {
   test('volver a migrar no repite nada', async () => {
     assert.deepEqual(await migrar(pool), []);
     const { rows } = await pool.query('SELECT version FROM schema_migrations ORDER BY version');
-    assert.deepEqual(rows.map((f) => f.version), ['001_extensiones.sql', '002_esquema.sql', '003_orden.sql', '004_embeddings.sql', '005_notificaciones.sql', '006_inhabilito_espacio.sql', '007_solicitudes_salon.sql', '008_atencion_incidencias.sql', '009_cuentas.sql', '010_sin_prestamos.sql', '011_solicitud_franja.sql', '012_correo.sql', '013_nombres_en_campus.sql', '014_zona_hunters.sql']);
+    assert.deepEqual(rows.map((f) => f.version), ['001_extensiones.sql', '002_esquema.sql', '003_orden.sql', '004_embeddings.sql', '005_notificaciones.sql', '006_inhabilito_espacio.sql', '007_solicitudes_salon.sql', '008_atencion_incidencias.sql', '009_cuentas.sql', '010_sin_prestamos.sql', '011_solicitud_franja.sql', '012_correo.sql', '013_nombres_en_campus.sql', '014_zona_hunters.sql', '016_horarios.sql']);
   });
 });
 

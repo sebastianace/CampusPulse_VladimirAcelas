@@ -21,6 +21,9 @@
 // =====================================================================
 
 import { DatosInvalidosError } from './errors.js';
+import { buscarSala, plano } from './salas.js';
+
+export { plano }; // (el test del inventario lo importa de aquí)
 
 export const MAX_FILAS = 2000;
 
@@ -53,29 +56,9 @@ const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
 
 // ---------- normalizar texto ----------
 
-/** Minúsculas, sin tildes y con todo lo que no es letra o número reducido a un espacio. */
-export function plano(texto) {
-  return String(texto ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-}
-
 /** "Video Beam" -> "video_beam": como se guardan los tipos de equipo. */
 export function tipoNormalizado(texto) {
   return plano(texto).replace(/ /g, '_').slice(0, LARGO_MAXIMO_TIPO);
-}
-
-function distancia(a, b) {
-  // Distancia de Levenshtein: cuántas letras hay que cambiar, quitar o agregar para pasar de a a b
-  const previa = Array.from({ length: b.length + 1 }, (_, j) => j);
-  for (let i = 1; i <= a.length; i++) {
-    let anterior = previa[0];
-    previa[0] = i;
-    for (let j = 1; j <= b.length; j++) {
-      const guardado = previa[j];
-      previa[j] = Math.min(previa[j] + 1, previa[j - 1] + 1, anterior + (a[i - 1] === b[j - 1] ? 0 : 1));
-      anterior = guardado;
-    }
-  }
-  return previa[b.length];
 }
 
 // ---------- 1. de registros CSV a una tabla con columnas conocidas ----------
@@ -112,18 +95,6 @@ export function leerTabla(registros) {
 }
 
 // ---------- 2. validar cada fila ----------
-
-function buscarSala(texto, espacios) {
-  const buscado = plano(texto).replace(/^(sala|salon|aula) /, '');
-  const claves = (e) => [plano(e.id), plano(e.nombre), plano(e.nombre).replace(/^(sala|salon|aula) /, '')];
-  const exacta = espacios.find((e) => claves(e).includes(buscado));
-  if (exacta) return { espacio: exacta };
-  // No se adivina: se sugiere la más parecida (hasta 2 letras de diferencia, o una contenida en la otra)
-  const cercana = espacios
-    .map((e) => ({ e, d: Math.min(...claves(e).map((k) => (k && (k.includes(buscado) || buscado.includes(k)) ? 1 : distancia(k, buscado)))) }))
-    .filter(({ d }) => d <= 2).sort((a, b) => a.d - b.d)[0];
-  return { sugerencia: cercana?.e };
-}
 
 /** Valida una fila. Devuelve {recurso} (con la forma de db.recursos) o {errores: [texto]}. */
 function validarFila(fila, espacios) {
