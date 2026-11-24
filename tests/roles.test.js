@@ -72,9 +72,9 @@ test('el admin crea profesores y soporte técnico, y ellos pueden entrar', async
   }
 });
 
-test('el admin no puede crear otro admin ni un rol que no existe (422)', async () => {
+test('el admin no puede crear un rol que no existe (422); crear otros admins se prueba en cuentas.test.js', async () => {
   const admin = await entrar('jefa');
-  for (const rol of ['admin', 'camper', undefined]) {
+  for (const rol of ['camper', 'coordinador', undefined]) {
     const { status } = await pedir('/api/usuarios', 'POST', { usuario: 'nuevo', nombre: 'Nuevo', clave: CLAVE, rol }, admin.cookie);
     assert.equal(status, 422, `rol ${rol}`);
   }
@@ -90,12 +90,8 @@ test('profesor y soporte técnico no pueden crear cuentas (403) y sin sesión es
   assert.equal((await pedir('/api/usuarios', 'POST', {})).status, 401);
 });
 
-test('POST /api/restaurar: solo admin (profesor y soporte -> 403, sin sesión -> 401)', async () => {
-  for (const usuario of ['profe', 'tecnico']) {
-    assert.equal((await pedir('/api/restaurar', 'POST', null, (await entrar(usuario)).cookie)).status, 403, usuario);
-  }
-  assert.equal((await pedir('/api/restaurar', 'POST', null, (await entrar('jefa')).cookie)).status, 200);
-  assert.equal((await pedir('/api/restaurar', 'POST')).status, 401);
+test('restaurar ya no es una ruta de la API (404 aun para el admin): se hace con npm run restaurar', async () => {
+  assert.equal((await pedir('/api/restaurar', 'POST', null, (await entrar('jefa')).cookie)).status, 404);
 });
 
 test('resolver una incidencia: admin y soporte técnico sí; profesor -> 403', async () => {
@@ -130,7 +126,8 @@ test('GET /api/usuarios: el admin ve las cuentas sin claves; los demás reciben 
   const { status, cuerpo } = await pedir('/api/usuarios', 'GET', null, admin.cookie);
   assert.equal(status, 200);
   assert.deepEqual(cuerpo.map((u) => u.usuario).sort(), ['jefa', 'profe', 'tecnico']);
-  assert.ok(cuerpo.every((u) => Object.keys(u).sort().join() === 'nombre,rol,usuario'), 'sin hash de clave');
+  assert.ok(cuerpo.every((u) => !Object.keys(u).some((k) => /clave_hash|^clave$|hash/i.test(k))), 'sin hash de clave');
+  assert.ok(cuerpo.every((u) => 'creadoPor' in u && 'creado' in u), 'con quién la creó y cuándo');
 
   for (const usuario of ['profe', 'tecnico']) {
     assert.equal((await pedir('/api/usuarios', 'GET', null, (await entrar(usuario)).cookie)).status, 403, usuario);

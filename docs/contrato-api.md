@@ -7,30 +7,40 @@ sin esperar a que P1 termine.
 
 | Método y ruta | Cuerpo que recibe | Respuesta OK | Dueño |
 |---|---|---|---|
-| `GET /api/espacios` | — | `[{id, nombre, tipo, aforo, estado, ocupadoAhora, computadores}]` | P1 |
-| `GET /api/recursos` | — | `[{id, nombre, tipo, espacioId, estado}]` | P1 |
-| `GET /api/reservas?fecha=YYYY-MM-DD` | — | `[{id, espacioId, responsable, asistentes, inicio, fin}]` | P1 |
-| `POST /api/reservas` | `{espacioId, responsable, asistentes, inicio, fin}` | `201` + la reserva | P1 |
-| `PATCH /api/reservas/:id` | Los campos a cambiar de `{espacioId, responsable, asistentes, inicio, fin}` | `200` + la reserva editada (vuelve a pasar por todas las reglas) | P1 |
-| `DELETE /api/reservas/:id` | — | `200` + la reserva cancelada | P1 |
-| `GET /api/prestamos` | — | `[{id, recursoId, persona, estado, fecha}]` | P1 |
-| `POST /api/prestamos` | `{recursoId, persona}` | `201` + el préstamo | P1 |
-| `POST /api/prestamos/:id/devolver` | `{estadoFinal: "disponible" \| "danado"}` | `200` + el préstamo | P1 |
-| `GET /api/incidencias` | — | `[{id, descripcion, categoria, prioridad, area, espacioId, recursoId, estado, origen, ia, reportesAdicionales, notificaciones: [{canal, area, enviado}]}]` (`reportesAdicionales`: personas que confirmaron que era la misma) | P1 |
+| `GET /api/espacios` | — | `[{id, nombre, nombreOficial, tipo, aforo, estado, ocupadoAhora, computadores, reservable}]`. `reservable` es `false` en las zonas comunes (Hunters). `nombre` es el del campus (Sputnik, Skylabs, Sala de reuniones); `nombreOficial`, el del CSV (`src/config/nombres.js`) | P1 |
+| `GET /api/recursos` | — | `[{id, nombre, tipo, espacioId, estado, cambiosPermitidos}]` (`cambiosPermitidos`: estados a los que Inventario lo puede pasar, según `TRANSICIONES_RECURSO`) | P1 |
+| `PATCH /api/recursos/:id` | `{estado}` | `200` + el recurso. Inventario: respeta `TRANSICIONES_RECURSO` (`422` si el estado no existe; `prestado` ya no existe); `409 INCIDENCIA_ABIERTA` si una incidencia abierta lo tiene fuera de servicio. Solo `admin` y `soporte_tecnico`; otro rol → `403` | P1 |
+| `PATCH /api/espacios/:id` | `{estado: "disponible" \| "inhabilitado"}` | `200` + el espacio. La interfaz ya no lo ofrece (Inventario solo lista equipos; una sala se inhabilita con su incidencia). `409 INCIDENCIA_ABIERTA` si una incidencia abierta la inhabilitó; `409 ESPACIO_INCONSISTENTE` si su dato del CSV es inconsistente. Solo `admin` y `soporte_tecnico`; otro rol → `403` | P1 |
+| `GET /api/reservas?fecha=YYYY-MM-DD` | — | `[{id, espacioId, responsable, asistentes, inicio, fin, creadaPor}]` (`creadaPor`: usuario que la creó; `null` en las anteriores a la migración 007) | P1 |
+| `POST /api/reservas` | `{espacioId, responsable, asistentes, inicio, fin}` | `201` + la reserva (`creadaPor` = el usuario con sesión) | P1 |
+| `PATCH /api/reservas/:id` | Los campos a cambiar de `{espacioId, responsable, asistentes, inicio, fin}` | `200` + la reserva editada (vuelve a pasar por todas las reglas). Solo quien la creó o un `admin`; otra persona → `403` | P1 |
+| `DELETE /api/reservas/:id` | — | `200` + la reserva cancelada. Solo quien la creó o un `admin`; otra persona → `403`. Sus solicitudes pendientes quedan rechazadas ("el salón quedó libre") y a quien las pidió le llega un correo | P1 |
+| `GET /api/solicitudes` | — | `[{id, reservaId, espacioId, solicitante, afectado, responsable, asistentes, inicio, fin, motivo, estado, fecha, decididaPor?, fechaDecision?, notaDecision?, reservaNuevaId?, reservaOriginal}]`. El `admin` ve todas; los demás, las que pidieron y las que tocan su reserva (`afectado`) | P1 |
+| `POST /api/solicitudes` | `{reservaId, responsable, asistentes, inicio?, fin, motivo}` (`inicio` solo si la reserva es futura; en curso, la nueva empieza al aprobar y `inicio` queda `null`) | `201` + la solicitud `pendiente`. `409 RESERVA_TERMINADA`, `ES_TU_RESERVA`, `FRANJA_LIBRE` (la franja no toca esa reserva: se reserva normal), `CHOCA_CON_OTRA_RESERVA`, `SOLICITUD_REPETIDA`, o el error de la regla de reservas que violaría al aprobarla | P1 |
+| `PATCH /api/solicitudes/:id` | `{decision: "aprobar" \| "rechazar", nota?}` | `200` + la solicitud. Aprobar le quita a la reserva original la franja pedida y crea la nueva en la misma transacción (en curso: la original termina en ese momento; futura: conserva lo que le sobre antes o después, o se cancela si la franja la cubre entera). `409 SOLICITUD_VENCIDA` si la franja ya pasó; las otras pendientes de esa reserva quedan rechazadas. `409 SOLICITUD_YA_DECIDIDA`. Solo `admin`; otro rol → `403` | P1 |
+| `GET /api/incidencias` | — | `[{id, descripcion, categoria, prioridad, area, espacioId, recursoId, estado, origen, ia, reportesAdicionales, notificaciones: [{canal, area, enviado}]}]` (`reportesAdicionales`: personas que confirmaron que era la misma). Si está en atención trae también `atendidaPor`, `fechaAtencion` y `atendidaPorNombre`. Si tiene responsable (reparto por categoría) trae `asignadaA` y `asignadaANombre` | P1 |
+| `GET /api/incidencias/indicadores` | — | Tiempo de respuesta de TI: `{ventanaDias, desde, ventana: {reportadas, resueltas, atencion, resolucion}, porPrioridad: [{prioridad, reportadas, atencion, resolucion}], historico, abiertas, sinAtender, masAntiguaSinAtender}`; `atencion` y `resolucion` son `{casos, medianaMin, promedioMin}`. Atención = del reporte a "en atención" (o a la resolución, si la resolvieron sin tomarla). Ventana: lo reportado en los últimos 7 días. Solo `admin` y `soporte_tecnico`; otro rol → `403` | P1 |
 | `POST /api/incidencias/:id/reportes` | `{descripcion}` | `201 {reporte: {id, incidenciaId, descripcion, reportadoPor, fecha}, totalReportes}`. Suma el reporte a una incidencia abierta; `404` si no existe, `409 INCIDENCIA_YA_RESUELTA` si ya se resolvió | P1 |
 | `GET /api/incidencias/:id/reportes` | — | `[{id, incidenciaId, descripcion, reportadoPor, fecha}]` | P1 |
-| `POST /api/incidencias` | `{descripcion, categoria, prioridad, area, espacioId, recursoId, inhabilitar, origen, ia}` | `201` + la incidencia (y cambia el estado del espacio o recurso) | P1 |
-| `PATCH /api/incidencias/:id` | `{estado: "resuelta"}` | `200` (rehabilita el espacio o recurso). Solo `admin` y `soporte_tecnico`; otro rol → `403` | P1 |
+| `POST /api/incidencias` | `{descripcion, categoria, prioridad, espacioId, recursoId, inhabilitar, inhabilitarEspacio, origen, ia}` | `201` + la incidencia con `area`, `inhabilito` e `inhabilitoEspacio`. Si su categoría tiene responsable (`/api/responsables`), nace con `asignadaA` y se le avisa por correo; si no, queda sin asignar. El área siempre es `REGLAS.AREA_RESPONSABLE` (`Soporte TI`): no se envía y, si llega otra, se ignora. Se inhabilita lo más específico: el equipo si lo hay; la sala solo con `inhabilitarEspacio: true` (opcional) o si no hay equipo | P1 |
+| `POST /api/incidencias/:id/atender` | — | `200` + la incidencia con `atendidaPor` y `fechaAtencion` ("en atención"; sigue `abierta`). `409 INCIDENCIA_EN_ATENCION` si ya la atiende otra persona; `409 INCIDENCIA_YA_RESUELTA`. Solo `admin` y `soporte_tecnico`; otro rol → `403` | P1 |
+| `POST /api/incidencias/:id/asignar` | `{usuario}` | `200` + la incidencia con `asignadaA` y `asignadaANombre`. Un admin la reasigna a otra persona de soporte (`soporte_tecnico` o `admin`) y se le avisa por correo. `404` si no existe la incidencia o la cuenta, `422 ROL_NO_PUEDE_ATENDER`, `409 INCIDENCIA_YA_RESUELTA`. Solo `admin`; otro rol → `403` | P1 |
+| `GET /api/responsables` | — | `[{categoria, usuario, nombre}]`, una fila por categoría vigente (`usuario` y `nombre` en `null` si no hay responsable). Cualquier sesión | P1 |
+| `PUT /api/responsables/:categoria` | `{usuario: string \| null}` | `200 {categoria, usuario, nombre, asignadas}`. Define quién atiende la categoría (`null` la deja sin responsable). Las incidencias abiertas de esa categoría que nadie tenía asignada pasan a esa persona (`asignadas`: cuántas; un solo correo de resumen). `422` si la categoría no existe o la cuenta no puede atender; `404` si la cuenta no existe. Solo `admin`; otro rol → `403` | P1 |
+| `PATCH /api/incidencias/:id` | `{estado: "resuelta"}` | `200` (rehabilita exactamente lo que la incidencia dejó fuera de servicio). Solo `admin` y `soporte_tecnico`; otro rol → `403` | P1 |
 | `GET /api/calidad-datos` | — | `{cargados, validos, inconsistentes: [{fila, motivo}]}` | P1 |
-| `POST /api/restaurar` | — | `200` (recrea `db.json` desde `raw` y `seed`). Solo `admin`; otro rol → `403` | P1 |
 | `POST /api/auth/registro` | `{usuario, nombre, clave}` | `201 {usuario, nombre, rol}` y abre sesión (cookie). Solo crea la primera cuenta (`admin`); después `403 REGISTRO_CERRADO` | P2 |
-| `GET /api/auth/estado` | — | `200 {registroAbierto}`; es público. El login lo usa para ocultar "Crear una cuenta" | P2 |
-| `GET /api/usuarios` | — | `200 [{usuario, nombre, rol}]` (nunca trae las claves). Solo `admin` | P2 |
-| `POST /api/usuarios` | `{usuario, nombre, clave, rol: "profesor" \| "soporte_tecnico"}` | `201 {usuario, nombre, rol}`. Solo `admin`; no abre sesión | P2 |
+| `GET /api/auth/estado` | — | `200 {registroAbierto}`; es público. El login lo usa para mostrar "Crea la primera cuenta" solo mientras no exista ninguna | P2 |
+| `GET /api/usuarios` | — | `200 [{usuario, nombre, rol, creado, creadoPor, creadoPorNombre, debeCambiarClave}]` (nunca trae las claves). `creadoPor: null` = la primera cuenta o una anterior a la migración 009. Solo `admin` | P2 |
+| `POST /api/usuarios` | `{usuario, nombre, clave, correo?, rol: "admin" \| "profesor" \| "soporte_tecnico"}` | `201 {usuario, nombre, rol}`. Solo `admin`; no abre sesión. Guarda qué admin la creó | P2 |
+| `GET /api/usuarios/nombres` | — | `200 [{usuario, nombre}]`. Cualquier sesión: sugerencias para el responsable de una reserva | P2 |
+| `PATCH /api/usuarios/:usuario` | `{correo}` (`""` lo quita) | `200 {usuario, correo}`: el correo al que le llegan los avisos de sus reservas y solicitudes (n8n). `422` si no tiene formato de correo; `404` si la cuenta no existe. Solo `admin` | P1 |
+| `POST /api/usuarios/:usuario/clave` | — | `200 {usuario, claveTemporal}`: contraseña temporal para quien olvidó la suya; cierra sus sesiones y la obliga a cambiarla. `409 USA_CAMBIAR_CLAVE` para la propia. Solo `admin` | P2 |
+| `POST /api/auth/clave` | `{claveActual, claveNueva}` | `200`: "Cambiar mi contraseña". Cierra las demás sesiones. `401` si la actual no es correcta; `422` si la nueva tiene menos de 8 caracteres | P2 |
 | `POST /api/auth/login` | `{usuario, clave}` | `200 {usuario, nombre, rol}` y abre sesión (cookie) | P2 |
 | `POST /api/auth/logout` | — | `200` y cierra la sesión | P2 |
-| `GET /api/auth/yo` | — | `200 {usuario, nombre, rol}` o `401` | P2 |
-| `POST /api/ia/triaje` | `{descripcion}` | `{categoria, prioridad, area, espacioId, recursoId, inhabilitar, razon, modelo}` | P2 |
+| `GET /api/auth/yo` | — | `200 {usuario, nombre, rol, debeCambiarClave?}` o `401` (`debeCambiarClave: true` si la contraseña es temporal) | P2 |
+| `POST /api/ia/triaje` | `{descripcion}` | `{paraTI, categoria, prioridad, espacioId, recursoId, inhabilitar, razon, aviso, modelo}` (el área no la decide la IA; si `paraTI` es `false`, `categoria` es `null` y `aviso` dice a quién acudir) | P2 |
 | `POST /api/ia/similares` | `{descripcion, espacioId?, recursoId?}` | `{candidatas: [{id, descripcion, categoria, prioridad, area, espacioId, recursoId, fecha, similitud, reportesAdicionales}], umbral, modelo}`. Incidencias **abiertas** parecidas, de la más a la menos parecida. `503` si el servicio de embeddings falla | P2 |
 | `POST /api/ia/recomendar` | `{texto}` | `{solicitud: {asistentes, inicio, fin, necesitaComputadores}, opciones: [{espacioId, motivo}], explicacion, modelo}` | P2 |
 | `POST /api/ia/preguntar` | `{pregunta, historial?: [{rol: "usuario" \| "pulse", texto}]}` | `{respondido, respuesta, areaSugerida, fragmentos: [{documento, seccion, archivo, texto, similitud, puntaje, usado, ejemplo}], consulta, reranking, modelo}`. Responde con los documentos de `knowledge/` (RAG en `pulse-ai`) y marca en `fragmentos` cuáles usó. Si no están en los documentos, `respondido: false` y no inventa. `503` si `pulse-ai` o Gemini fallan; `422` si el historial es inválido | P2 |
@@ -39,9 +49,10 @@ sin esperar a que P1 termine.
 | `GET /api/integraciones/incidencias?fecha=hoy\|YYYY-MM-DD&estado=abierta\|resuelta\|todas` | — | `[{id, descripcion, categoria, prioridad, area, espacioId, recursoId, estado, fecha, reportesAdicionales}]`, sin datos personales. **No usa sesión**: se autentica con el secreto `N8N_SECRETO` en la cabecera `x-pulse-token` (si no coincide, `401 SECRETO_INVALIDO`; sin `N8N_SECRETO` configurado, `503 INTEGRACION_NO_CONFIGURADA`). Lo llama n8n | P2 |
 | `POST /api/integraciones/incidencias/:id/notificada` | `{canal: "correo" \| "telegram", destinatario, area}` | `201 {registrada: true}`, o `200 {registrada: false}` si ese aviso ya estaba registrado (n8n reintenta). Mismo secreto en `x-pulse-token`. `404` si la incidencia no existe | P2 |
 
-Además de los 9 espacios del CSV oficial, `GET /api/espacios` incluye las mesas de ping-pong de
-Hunters (`ping-pong-1`, `ping-pong-2`, tipo `mesa_juego`, aforo 4) desde `data/seed/espacios-extra.json`.
-Se reservan con `POST /api/reservas` como cualquier sala, pero la IA no las recomienda.
+Además de los 9 espacios del CSV oficial, `GET /api/espacios` incluye la **Zona Hunters** (`hunters`, tipo
+`zona_comun`, sin aforo) desde `data/seed/espacios-extra.json`. Sirve para reportar daños en esa zona común (donde
+están las mesas de ping-pong), pero no se reserva: `POST /api/reservas` responde `409 ESPACIO_NO_RESERVABLE` y nunca
+aparece en las recomendaciones (`REGLAS.TIPOS_NO_RESERVABLES`).
 
 ## Errores
 
@@ -54,7 +65,7 @@ listo para mostrar en un toast.
 | 409 | Regla de negocio violada (`ReglaNegocioError`) |
 | 404 | ID que no existe |
 | 401 | Sin sesión (`SESION_REQUERIDA`) o usuario/contraseña incorrectos (`CREDENCIALES_INVALIDAS`). Todas las rutas salvo `/api/auth/*` exigen sesión |
-| 403 | Hay sesión, pero el rol no tiene permiso (`PERMISO_DENEGADO`) |
+| 403 | Hay sesión, pero el rol no tiene permiso (`PERMISO_DENEGADO`), o la contraseña es temporal y hay que cambiarla primero (`CAMBIO_DE_CLAVE_REQUERIDO`) |
 | 429 | Demasiados intentos de login fallidos (`DEMASIADOS_INTENTOS`): 5 del mismo usuario e IP en 15 minutos. Trae la cabecera `Retry-After` en segundos |
 | 429 | Demasiadas consultas a la IA (`LIMITE_IA`): 5 por usuario por minuto entre `/api/ia/triaje` y `/api/ia/recomendar`. Trae `Retry-After` y el mensaje sugiere el formulario manual |
 | 503 | La IA no responde (`codigo: "IA_NO_DISPONIBLE"`) |
@@ -88,16 +99,20 @@ listo para mostrar en un toast.
 ## Roles
 
 `rol` es `admin`, `profesor` o `soporte_tecnico`. La primera cuenta registrada es `admin`; las
-demás las crea un `admin` con `POST /api/usuarios` (solo `profesor` o `soporte_tecnico`). Una
+demás las crea un `admin` con `POST /api/usuarios` (también otros `admin`). Una
 cuenta antigua sin rol, o con un rol que ya no existe (`camper`, `coordinador`), se trata como
 `profesor`.
 
 | Acción | admin | profesor | soporte_tecnico |
 |---|---|---|---|
-| Reservar, prestar y reportar incidencias | sí | sí | sí |
-| Resolver incidencias (rehabilita espacios y equipos) | sí | no | sí |
-| Crear cuentas | sí | no | no |
-| Restaurar datos | sí | no | no |
+| Reservar, pedir un salón ocupado y reportar incidencias | sí | sí | sí |
+| Editar o cancelar una reserva | todas | las suyas | las suyas |
+| Solicitar un salón ocupado | sí | sí | sí |
+| Aprobar o rechazar solicitudes de salón | sí | no | no |
+| Panel Soporte TI: atender y resolver incidencias (rehabilita espacios y equipos) | sí | no | sí |
+| Crear cuentas (también admins) y dar contraseñas temporales | sí | no | no |
+| Cambiar mi contraseña | sí | sí | sí |
+| Actualizar el inventario (estado de equipos y salas) | sí | no | sí |
 
 ## Fechas
 
@@ -109,7 +124,9 @@ Son los únicos válidos y viven en `src/config/reglas.js`:
 
 - Estados de espacio: `disponible`, `inhabilitado`, `inconsistente`.
 - Estados de recurso: `disponible`, `prestado`, `danado`, `en_reparacion`.
-- Categorías: `infraestructura`, `tecnologia`, `aseo`, `seguridad`, `bienestar`, `otro`.
+- Categorías de una incidencia nueva: `infraestructura`, `tecnologia` (las de los 2 técnicos de TI).
+  Las anteriores (`aseo`, `seguridad`, `bienestar`, `otro`) solo aparecen en incidencias registradas antes del
+  21 nov 2026: la base las acepta, pero `POST /api/incidencias` responde 422 si llegan (`CATEGORIAS_ANTERIORES`).
 - Prioridades: `baja`, `media`, `alta`, `critica`.
 - Áreas: `Infraestructura`, `Soporte TI`, `Servicios generales`, `Seguridad`, `Bienestar`.
 
@@ -119,7 +136,7 @@ Lo que P2 (IA) importa de P1. Si P1 cambia un nombre, avisa antes.
 
 | Archivo (dueño P1) | Export | Qué devuelve |
 |---|---|---|
-| `src/config/reglas.js` | `CATEGORIAS`, `PRIORIDADES`, `AREAS` | Arrays con los valores cerrados de arriba |
+| `src/config/reglas.js` | `CATEGORIAS`, `CATEGORIAS_ANTERIORES`, `PRIORIDADES`, `AREAS` | Arrays con los valores cerrados de arriba |
 | `src/config/reglas.js` | `REGLAS` | Objeto con las constantes (usa `PRIORIDADES_QUE_INHABILITAN`) |
 | `src/data/almacen.js` | `leerDB()` | `Promise<{espacios, recursos, reservas, prestamos, incidencias, ...}>`: la foto de PostgreSQL (siempre `async`) |
 | `src/domain/reservas.js` | `buscarEspaciosDisponibles({asistentes, inicio, fin})` | Espacios que cumplen todas las reglas, ordenados por mejor ajuste de aforo |

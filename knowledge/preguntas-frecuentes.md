@@ -9,9 +9,15 @@ cuenta del sistema es la del administrador y, después de ella, nadie más puede
 
 ## ¿Qué puede hacer cada rol?
 
-El administrador crea cuentas, restaura los datos iniciales y resuelve incidencias. El soporte técnico resuelve
-incidencias. El profesor reserva salas, pide préstamos y reporta incidencias, pero no puede resolverlas ni crear
-cuentas ni restaurar datos.
+El administrador crea cuentas, resuelve incidencias y actualiza el inventario. El soporte técnico resuelve
+incidencias y actualiza el inventario (los equipos dañados o en reparación). El profesor reserva salas, pide un salón
+ocupado y reporta incidencias, pero no puede resolverlas, ni cambiar el inventario, ni crear cuentas.
+
+## ¿Qué hago si olvidé mi contraseña?
+
+Pídele a un administrador una contraseña temporal. Te la entrega en persona y, al entrar con ella, Campus Pulse te
+pide cambiarla antes de seguir. Para cambiar tu contraseña cuando quieras, usa el botón Contraseña de la barra
+superior.
 
 ## ¿Qué pasa si me equivoco muchas veces en la clave?
 
@@ -29,7 +35,7 @@ se puede seguir usando el formulario manual, que no depende de la IA.
 
 ## ¿Qué pasa si la IA no funciona?
 
-La aplicación sigue funcionando sin IA: se puede reservar, pedir préstamos y reportar incidencias con los
+La aplicación sigue funcionando sin IA: se puede reservar, pedir un salón ocupado y reportar incidencias con los
 formularios manuales. La IA solo sugiere y la persona decide.
 
 ## ¿La IA decide qué sala está libre?
@@ -39,6 +45,6 @@ escrito en lenguaje natural y explica las opciones que las reglas ya aprobaron.
 
 ## ¿A quién le pregunto algo que no encuentro aquí?
 
-Para dudas de equipos y conexión, a Soporte TI; para daños en las instalaciones, a Infraestructura; para limpieza,
-a Servicios generales; para temas de seguridad, a Seguridad; y para temas de bienestar, a Bienestar. Lo más
-práctico es reportar una incidencia y dejar que llegue al área responsable.
+Para cualquier daño o problema técnico o de las instalaciones, lo más práctico es reportar una incidencia: todas
+llegan a Soporte TI, que es el equipo que las resuelve. Para temas de aseo, seguridad, bienestar o convivencia, a
+Coordinación: no son incidencias de Soporte TI.

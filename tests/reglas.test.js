@@ -12,7 +12,6 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { REGLAS } from '../src/config/reglas.js';
 import { buscarEspaciosDisponibles, cancelarReserva, capacidadMaxima, crearReserva, editarReserva } from '../src/domain/reservas.js';
-import { crearPrestamo, devolverPrestamo } from '../src/domain/prestamos.js';
 import { crearIncidencia, resolverIncidencia } from '../src/domain/incidencias.js';
 import { ahoraBogota } from '../src/domain/fechas.js';
 
@@ -235,43 +234,6 @@ describe('buscarEspaciosDisponibles', () => {
   });
 });
 
-// ---------- PRÉSTAMOS ----------
-
-describe('Préstamos', () => {
-  test('transición: un recurso disponible se presta y queda "prestado"', () => {
-    const db = crearDB();
-    const prestamo = crearPrestamo(db, { recursoId: 'pc1', persona: 'Ana' });
-    assert.equal(prestamo.estado, 'activo');
-    assert.equal(db.recursos.find((r) => r.id === 'pc1').estado, 'prestado');
-  });
-
-  test('transición: un recurso dañado no se puede prestar', () => {
-    assert.throws(() => crearPrestamo(crearDB(), { recursoId: 'roto', persona: 'Ana' }), { codigo: 'TRANSICION_INVALIDA', status: 409 });
-  });
-
-  test('límite: hasta MAX_PRESTAMOS_POR_PERSONA se acepta y el siguiente se rechaza', () => {
-    const db = crearDB();
-    const libres = ['pc1', 'pc2', 'pc3', 'vb'];
-    for (let i = 0; i < REGLAS.MAX_PRESTAMOS_POR_PERSONA; i++) crearPrestamo(db, { recursoId: libres[i], persona: 'Ana' });
-    assert.throws(() => crearPrestamo(db, { recursoId: libres[REGLAS.MAX_PRESTAMOS_POR_PERSONA], persona: 'ana' }), { codigo: 'LIMITE_PRESTAMOS_PERSONA' });
-  });
-
-  test('devolución: devolver como "danado" cambia el estado del recurso', () => {
-    const db = crearDB();
-    const { id } = crearPrestamo(db, { recursoId: 'pc1', persona: 'Ana' });
-    assert.equal(devolverPrestamo(db, id, { estadoFinal: 'danado' }).estado, 'devuelto');
-    assert.equal(db.recursos.find((r) => r.id === 'pc1').estado, 'danado');
-  });
-
-  test('devolución: no se puede devolver dos veces ni con un estado inválido', () => {
-    const db = crearDB();
-    const { id } = crearPrestamo(db, { recursoId: 'pc1', persona: 'Ana' });
-    assert.throws(() => devolverPrestamo(db, id, { estadoFinal: 'roto' }), { status: 422 });
-    devolverPrestamo(db, id, { estadoFinal: 'disponible' });
-    assert.throws(() => devolverPrestamo(db, id, { estadoFinal: 'disponible' }), { codigo: 'PRESTAMO_YA_DEVUELTO' });
-  });
-});
-
 // ---------- INCIDENCIAS ----------
 
 describe('Incidencias', () => {
@@ -290,11 +252,63 @@ describe('Incidencias', () => {
     assert.equal(estadoEspacio(db, 'grande'), 'disponible');
   });
 
-  test('inhabilitar: true inhabilita el espacio y el recurso con cualquier prioridad', () => {
+  const estadoRecurso = (db, id) => db.recursos.find((r) => r.id === id).estado;
+
+  // Bug encontrado en las pruebas del 15 nov: reportar el video beam de Apolo dejaba fuera de servicio todo el salón.
+  test('inhabilitar con equipo y sala: solo el equipo queda fuera de servicio y la sala se sigue reservando', () => {
     const db = crearDB();
-    crearIncidencia(db, incidencia({ recursoId: 'vb', inhabilitar: true }));
+    const creada = crearIncidencia(db, incidencia({ recursoId: 'vb', inhabilitar: true }));
+    assert.equal(estadoRecurso(db, 'vb'), REGLAS.ESTADO_RECURSO_INHABILITADO);
+    assert.equal(estadoEspacio(db, 'grande'), 'disponible');
+    assert.equal(creada.inhabilito, true);
+    assert.equal(creada.inhabilitoEspacio, false);
+    assert.doesNotThrow(() => crearReserva(db, reserva({ espacioId: 'grande' })));
+  });
+
+  test('una prioridad que inhabilita, con equipo, también apaga solo el equipo', () => {
+    const db = crearDB();
+    crearIncidencia(db, incidencia({ recursoId: 'vb', prioridad: REGLAS.PRIORIDADES_QUE_INHABILITAN[0] }));
+    assert.equal(estadoRecurso(db, 'vb'), REGLAS.ESTADO_RECURSO_INHABILITADO);
+    assert.equal(estadoEspacio(db, 'grande'), 'disponible');
+  });
+
+  test('inhabilitarEspacio: true deja fuera de servicio la sala y el equipo', () => {
+    const db = crearDB();
+    const creada = crearIncidencia(db, incidencia({ recursoId: 'vb', inhabilitarEspacio: true }));
     assert.equal(estadoEspacio(db, 'grande'), 'inhabilitado');
-    assert.equal(db.recursos.find((r) => r.id === 'vb').estado, REGLAS.ESTADO_RECURSO_INHABILITADO);
+    assert.equal(estadoRecurso(db, 'vb'), REGLAS.ESTADO_RECURSO_INHABILITADO);
+    assert.equal(creada.inhabilitoEspacio, true);
+  });
+
+  test('inhabilitar sin equipo deja fuera de servicio la sala', () => {
+    const db = crearDB();
+    crearIncidencia(db, incidencia({ inhabilitar: true }));
+    assert.equal(estadoEspacio(db, 'grande'), 'inhabilitado');
+  });
+
+  test('sin sala ni equipo no hay nada que inhabilitar', () => {
+    const db = crearDB();
+    const creada = crearIncidencia(db, incidencia({ espacioId: null, inhabilitar: true }));
+    assert.equal(creada.inhabilito, false);
+  });
+
+  test('resolver la incidencia del equipo no rehabilita una sala que apagó otra incidencia', () => {
+    const db = crearDB();
+    const sala = crearIncidencia(db, incidencia({ inhabilitar: true }));
+    const equipo = crearIncidencia(db, incidencia({ recursoId: 'vb', inhabilitar: true }));
+    resolverIncidencia(db, equipo.id, { estado: 'resuelta' });
+    assert.equal(estadoRecurso(db, 'vb'), 'disponible');
+    assert.equal(estadoEspacio(db, 'grande'), 'inhabilitado');
+    resolverIncidencia(db, sala.id, { estado: 'resuelta' });
+    assert.equal(estadoEspacio(db, 'grande'), 'disponible');
+  });
+
+  test('resolver una incidencia de sala y equipo rehabilita los dos', () => {
+    const db = crearDB();
+    const creada = crearIncidencia(db, incidencia({ recursoId: 'vb', inhabilitarEspacio: true }));
+    resolverIncidencia(db, creada.id, { estado: 'resuelta' });
+    assert.equal(estadoEspacio(db, 'grande'), 'disponible');
+    assert.equal(estadoRecurso(db, 'vb'), 'disponible');
   });
 
   test('resolver rehabilita, salvo que otra incidencia abierta lo mantenga inhabilitado', () => {
@@ -307,10 +321,26 @@ describe('Incidencias', () => {
     assert.equal(estadoEspacio(db, 'grande'), 'disponible');
   });
 
+  test('toda incidencia va a TI: el área no se elige y si llega otra se ignora', () => {
+    const db = crearDB();
+    for (const area of [undefined, 'Seguridad', 'Cafetería']) {
+      assert.equal(crearIncidencia(db, incidencia({ area, categoria: 'infraestructura' })).area, REGLAS.AREA_RESPONSABLE);
+    }
+    assert.equal(REGLAS.AREA_RESPONSABLE, 'Soporte TI');
+  });
+
+  test('solo se registran incidencias de infraestructura o tecnología: las categorías anteriores ya no', () => {
+    const db = crearDB();
+    for (const categoria of ['infraestructura', 'tecnologia']) assert.equal(crearIncidencia(db, incidencia({ categoria })).categoria, categoria);
+    for (const categoria of ['aseo', 'seguridad', 'bienestar', 'otro']) {
+      assert.throws(() => crearIncidencia(db, incidencia({ categoria })), { status: 422 }, categoria);
+    }
+    assert.equal(db.incidencias.length, 2);
+  });
+
   test('valores fuera de los enums o IDs inexistentes se rechazan', () => {
     const db = crearDB();
     assert.throws(() => crearIncidencia(db, incidencia({ categoria: 'electrica' })), { status: 422 });
-    assert.throws(() => crearIncidencia(db, incidencia({ area: 'TI' })), { status: 422 });
     assert.throws(() => crearIncidencia(db, incidencia({ espacioId: 'pluton' })), { status: 404 });
     assert.equal(db.incidencias.length, 0);
   });

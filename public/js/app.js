@@ -5,13 +5,16 @@ import { iniciarMapa, dibujarMapa } from './mapa.js';
 import { iniciarFormularios, actualizarFormularios } from './formularios.js';
 import { iniciarIncidencias, dibujarIncidencias } from './incidencias.js';
 import { iniciarTimeline, dibujarTimeline } from './timeline.js';
-import { iniciarCalidad, cargarCalidad } from './calidad.js';
 import { iniciarComando } from './comando.js';
 import { dibujarPresion } from './presion.js';
 import { iniciarDemo } from './demo.js';
 import { cerrarSesion, pedir } from './api.js';
 import { guardarSesion, nombreDeRol } from './sesion.js';
 import { iniciarUsuarios } from './usuarios.js';
+import { iniciarInventario, dibujarInventario } from './inventario.js';
+import { iniciarSolicitudes, dibujarSolicitudes } from './solicitudes.js';
+import { iniciarSoporte, dibujarSoporte } from './soporte.js';
+import { iniciarClave } from './clave.js';
 import * as toasts from './toasts.js';
 
 // Pestañas del panel de acciones
@@ -121,6 +124,9 @@ async function mostrarSesion() {
   document.getElementById('sesion-nombre').title = `Usuario: ${datos.usuario} · Rol: ${nombreDeRol(datos.rol)}`;
   document.getElementById('sesion').hidden = false;
   document.getElementById('cerrar-sesion').addEventListener('click', cerrarSesion);
+  // Con una contraseña temporal el diálogo se abre solo y el servidor bloquea lo demás hasta cambiarla
+  iniciarClave({ obligatorio: datos.debeCambiarClave === true });
+  return datos;
 }
 
 function iniciarTablero() {
@@ -130,8 +136,10 @@ function iniciarTablero() {
   iniciarFormularios({ refrescar, mostrarPestana });
   iniciarIncidencias({ refrescar, mostrarPestana });
   iniciarTimeline();
-  iniciarCalidad({ refrescar });
   iniciarUsuarios();
+  iniciarInventario({ refrescar, mostrarPestana });
+  iniciarSolicitudes({ refrescar });
+  iniciarSoporte({ mostrarPestana });
   iniciarComando({ mostrarPestana });
   iniciarDemo({ mostrarPestana });
   suscribir(dibujarMapa);
@@ -139,14 +147,16 @@ function iniciarTablero() {
   suscribir(actualizarFormularios);
   suscribir(dibujarIncidencias);
   suscribir(dibujarPresion);
-  // El reporte de calidad se carga después de los espacios (los usa para nombrar los grises)
-  refrescar().then(cargarCalidad);
+  suscribir(dibujarInventario);
+  suscribir(dibujarSolicitudes);
+  suscribir(dibujarSoporte);
+  refrescar();
   activarRefrescoAutomatico();
 }
 
 // Primero se comprueba la sesión y luego arranca el tablero.
 // Sin sesión, pedir() ya lleva al login; si el servidor no responde,
 // el tablero arranca igual y muestra "Sin conexión · reintentando".
-mostrarSesion().then(iniciarTablero, (error) => {
+mostrarSesion().then((datos) => { if (!datos.debeCambiarClave) iniciarTablero(); }, (error) => {
   if (error.codigo !== 'SESION_REQUERIDA') iniciarTablero();
 });

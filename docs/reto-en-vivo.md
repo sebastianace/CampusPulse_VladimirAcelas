@@ -32,12 +32,11 @@ Con `npm run dev`, al guardar `reglas.js` el servidor se reinicia solo en 1 o 2 
 
 | Pedido del jurado | Qué cambiar en `reglas.js` | Cómo comprobarlo en pantalla |
 |---|---|---|
-| "Permitan 10 % más del aforo" | `MARGEN_AFORO: 1.1` | Reservar Skilab (aforo 20) para 22 personas: ahora se acepta. Con 23 se rechaza. |
+| "Permitan 10 % más del aforo" | `MARGEN_AFORO: 1.1` | Reservar Skylabs (aforo 20) para 22 personas: ahora se acepta. Con 23 se rechaza. |
 | "Las incidencias altas también inhabilitan" | `PRIORIDADES_QUE_INHABILITAN: ['alta', 'critica']` | Reportar una incidencia de prioridad **Alta** sobre una sala: se pone roja. |
 | "No se reserva los sábados" | `DIAS_HABILES: [1, 2, 3, 4, 5]` (quitar el `6`) | Reservar un sábado: "No se puede reservar los sábados". |
 | "Máximo 2 horas por reserva" | `MAX_HORAS_RESERVA: 2` | Reservar de 9:00 a 12:00: "Una reserva puede durar como máximo 2 horas". |
-| "Máximo 1 préstamo por persona" | `MAX_PRESTAMOS_POR_PERSONA: 1` | Prestar 2 equipos a la misma persona: el segundo se rechaza. |
-| "Un equipo dañado puede volver directo a disponible" | En `TRANSICIONES_RECURSO`: `danado: ['en_reparacion', 'disponible']` | La regla cambia de inmediato; los tests lo confirman. |
+| "Un equipo dañado tiene que pasar por reparación" | En `TRANSICIONES_RECURSO`: `danado: ['en_reparacion']` | En **Inventario**, el portátil dañado ya no muestra "Marcar disponible" (los botones salen de la regla). |
 | "El campus cierra a las 6 pm" | `HORA_CIERRE: 18` | Reservar de 17:00 a 19:00: "Las reservas deben estar entre las 7:00 y las 18:00". |
 | "El campus abre a las 8 am" | `HORA_APERTURA: 8` | Reservar de 7:00 a 8:00: se rechaza por horario. |
 | "Máximo 2 reservas por persona al día" | `MAX_RESERVAS_POR_PERSONA_DIA: 2` | La tercera reserva del mismo responsable en el mismo día se rechaza. |
@@ -50,7 +49,7 @@ Con `npm run dev`, al guardar `reglas.js` el servidor se reinicia solo en 1 o 2 
 - **Error de sintaxis al guardar** (falta una coma o un corchete): la terminal de `npm run dev`
   muestra la línea exacta. Corregir y guardar de nuevo.
 - **La pantalla no cambia**: recargar el navegador (`F5`).
-- **Datos de pruebas anteriores estorban**: pestaña **Datos → Restaurar datos iniciales**.
+- **Datos de pruebas anteriores estorban**: `npm run restaurar` en otra terminal (no borra las cuentas).
 - **Volver al valor original**: deshacer con `Ctrl+Z` en el editor y guardar.
 
 ## Dónde se aplica cada regla (por si el jurado pregunta)
@@ -58,7 +57,7 @@ Con `npm run dev`, al guardar `reglas.js` el servidor se reinicia solo en 1 o 2 
 | Regla | Archivo | Función |
 |---|---|---|
 | Aforo, horario, días hábiles, duración, anticipación, solapamiento, límite diario | `src/domain/reservas.js` | `crearReserva`, `buscarEspaciosDisponibles` |
-| Límite de préstamos y transiciones de estado | `src/domain/prestamos.js` | `crearPrestamo`, `devolverPrestamo` |
+| Transiciones de estado de un equipo (Inventario) | `src/domain/inventario.js` | `actualizarEstadoRecurso`, `cambiosManuales` |
 | Inhabilitar y rehabilitar por incidencias | `src/domain/incidencias.js` | `crearIncidencia`, `resolverIncidencia` |
 
 Cada validación lee su valor desde `REGLAS`; ningún número de negocio está escrito a mano en el

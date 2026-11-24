@@ -14,6 +14,10 @@
 //   9. Si el pedido necesita computadores, solo sirven los espacios de
 //      ESPACIOS_CON_COMPUTADORES (lo usa la recomendación con IA).
 //  10. Una reserva que ya empezó no se puede editar ni cancelar.
+//  11. Solo quien creó la reserva (o un admin) la edita o la cancela.
+//      Las reservas sin dueño conocido (anteriores a la migración 007) solo
+//      las toca un admin. Para quedarse con un salón ocupado se usa una
+//      solicitud de salón (src/domain/solicitudes.js).
 // Editar una reserva vuelve a pasar por las reglas 1 a 8.
 // Datos mal formados -> 422, espacio inexistente -> 404,
 // regla violada -> ReglaNegocioError (409).
@@ -21,7 +25,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { REGLAS } from '../config/reglas.js';
-import { DatosInvalidosError, NoEncontradoError, ReglaNegocioError } from './errors.js';
+import { DatosInvalidosError, NoEncontradoError, ProhibidoError, ReglaNegocioError } from './errors.js';
 import { ahoraBogota, diaDeLaSemana, esFechaHoraValida, minutosDelDia, minutosEntre, seSolapan } from './fechas.js';
 
 // Nombres de los días en plural para los mensajes de error (0 = domingo).
@@ -108,6 +112,11 @@ export function capacidadMaxima(espacio) {
   return Math.floor(espacio.aforo * REGLAS.MARGEN_AFORO);
 }
 
+/** true si el espacio se puede reservar por su tipo (una zona común como Hunters no). */
+export function esReservable(espacio) {
+  return !REGLAS.TIPOS_NO_RESERVABLES.includes(espacio.tipo);
+}
+
 // Regla 1: espacio asignable.
 function esAsignable(espacio) {
   return !REGLAS.ESTADOS_NO_ASIGNABLES.includes(espacio.estado);
@@ -131,6 +140,9 @@ function estaReservado(db, espacioId, inicio, fin, ignorarId = null) {
 
 /** Aplica las reglas 1, 2 y 6 a un espacio concreto y explica cuál falla. */
 function validarEspacio(db, espacio, { asistentes, inicio, fin }, ignorarId = null) {
+  if (!esReservable(espacio)) {
+    throw new ReglaNegocioError('ESPACIO_NO_RESERVABLE', `${espacio.nombre} es una zona común: se pueden reportar daños ahí, pero no se reserva`);
+  }
   if (!esAsignable(espacio)) {
     throw new ReglaNegocioError('ESPACIO_NO_ASIGNABLE', `${espacio.nombre} está ${espacio.estado} y no se puede reservar`);
   }
@@ -160,18 +172,24 @@ function validarLimitePersona(db, responsable, inicio, ignorarId = null) {
 
 /**
  * Valida y agrega una reserva a la base (db se modifica).
- * Devuelve la reserva creada: {id, espacioId, responsable, asistentes, inicio, fin}.
+ * creadaPor: el usuario con sesión que la crea (null si no se sabe).
+ * desdeAhora: true solo al aprobar una solicitud de salón, que empieza en el momento de aprobarla:
+ * no se le exige la anticipación mínima (regla 8) porque la decidió un admin.
+ * Devuelve la reserva creada: {id, espacioId, responsable, asistentes, inicio, fin, creadaPor}.
  */
-export function crearReserva(db, datos) {
+export function crearReserva(db, datos, { creadaPor = null, desdeAhora = false } = {}) {
   const reserva = validarDatosReserva(datos);
   const espacio = db.espacios.find((e) => e.id === reserva.espacioId);
   if (!espacio) throw new NoEncontradoError(`No existe el espacio "${reserva.espacioId}"`);
 
   validarEspacio(db, espacio, reserva);
-  validarFranja(reserva.inicio, reserva.fin);
+  if (!desdeAhora) validarAnticipacion(reserva.inicio);
+  validarDiaHabil(reserva.inicio);
+  validarHorario(reserva.inicio, reserva.fin);
+  validarDuracion(reserva.inicio, reserva.fin);
   validarLimitePersona(db, reserva.responsable, reserva.inicio);
 
-  const nueva = { id: `res-${randomUUID().slice(0, 8)}`, ...reserva };
+  const nueva = { id: `res-${randomUUID().slice(0, 8)}`, ...reserva, creadaPor };
   db.reservas.push(nueva);
   return nueva;
 }
@@ -183,6 +201,12 @@ function buscarReserva(db, id) {
   const reserva = db.reservas.find((r) => r.id === id);
   if (!reserva) throw new NoEncontradoError(`No existe la reserva "${id}"`);
   return reserva;
+}
+
+// Regla 11: solo quien la creó o un admin. usuario = {usuario, rol}; sin usuario (tests de reglas) no se revisa.
+function validarDueno(reserva, usuario, accion) {
+  if (!usuario || usuario.rol === 'admin' || (reserva.creadaPor && reserva.creadaPor === usuario.usuario)) return;
+  throw new ProhibidoError(`Solo quien creó la reserva o un administrador puede ${accion}la. Si necesitas el salón, solicítalo.`);
 }
 
 // Regla 10: una reserva que ya empezó (o terminó) no se puede editar ni cancelar.
@@ -198,8 +222,9 @@ function validarNoIniciada(reserva, accion) {
  * reserva choque consigo misma en el solapamiento ni cuente en el límite por persona.
  * Devuelve la reserva actualizada.
  */
-export function editarReserva(db, id, cambios) {
+export function editarReserva(db, id, cambios, usuario) {
   const actual = buscarReserva(db, id);
+  validarDueno(actual, usuario, 'editar');
   validarNoIniciada(actual, 'editar');
   const reserva = validarDatosReserva({ ...actual, ...cambios });
   const espacio = db.espacios.find((e) => e.id === reserva.espacioId);
@@ -214,8 +239,9 @@ export function editarReserva(db, id, cambios) {
 }
 
 /** Cancela (elimina) una reserva que todavía no empieza. Devuelve la reserva cancelada. */
-export function cancelarReserva(db, id) {
+export function cancelarReserva(db, id, usuario) {
   const reserva = buscarReserva(db, id);
+  validarDueno(reserva, usuario, 'cancelar');
   validarNoIniciada(reserva, 'cancelar');
   db.reservas.splice(db.reservas.indexOf(reserva), 1);
   return reserva;
@@ -234,7 +260,7 @@ export function buscarEspaciosDisponibles(datos, db) {
   validarFranja(inicio, fin);
   const conComputadores = datos.necesitaComputadores === true;
   return db.espacios
-    .filter((e) => esAsignable(e) && cabenAsistentes(e, asistentes) && !estaReservado(db, e.id, inicio, fin))
+    .filter((e) => esReservable(e) && esAsignable(e) && cabenAsistentes(e, asistentes) && !estaReservado(db, e.id, inicio, fin))
     .filter((e) => !conComputadores || tieneComputadores(e))
     .sort((a, b) => capacidadMaxima(a) - capacidadMaxima(b));
 }

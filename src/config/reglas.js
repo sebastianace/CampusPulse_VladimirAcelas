@@ -32,19 +32,25 @@ export const REGLAS = {
   // Cuántas reservas puede tener un mismo responsable en un mismo día.
   MAX_RESERVAS_POR_PERSONA_DIA: 3,
 
-  // Cuántos préstamos activos (sin devolver) puede tener una persona a la vez.
-  MAX_PRESTAMOS_POR_PERSONA: 2,
-
   // Espacios (por id) que tienen computadores. Si un pedido los necesita,
   // solo se recomiendan estos. Para agregar una sala basta con sumar su id.
   ESPACIOS_CON_COMPUTADORES: ['apolo', 'spooki', 'artemis', 'skilab'],
 
-  // Tipos de espacio que se reservan directo pero la IA nunca recomienda
-  // (las mesas de ping-pong de Hunters no sirven para una reunión o una clase).
-  TIPOS_FUERA_DE_RECOMENDACION: ['mesa_juego'],
+  // Tipos de espacio que NO se reservan: zonas comunes como Hunters (donde están las mesas de ping-pong).
+  // Existen para poder reportar un daño ahí, pero no aparecen en el mapa de reservas, la línea de tiempo
+  // ni las recomendaciones, y reservarlos se rechaza.
+  TIPOS_NO_RESERVABLES: ['zona_comun'],
 
   // Estados de espacio que impiden reservarlo o recomendarlo.
   ESTADOS_NO_ASIGNABLES: ['inhabilitado', 'inconsistente'],
+
+  // Área que atiende TODAS las incidencias. En el campus, TI es el único equipo que resuelve
+  // problemas técnicos y de infraestructura: el área no la elige la persona ni la IA, la pone el código.
+  AREA_RESPONSABLE: 'Soporte TI',
+
+  // A quién se le avisa lo que NO es para TI (aseo, seguridad, bienestar, convivencia...). La IA lo detecta
+  // y la pantalla de reportes lo dice en vez de mandarle a TI algo que no puede resolver.
+  CONTACTO_FUERA_DE_TI: 'Coordinación',
 
   // Prioridades de incidencia que inhabilitan automáticamente el espacio o
   // recurso afectado, aunque no se marque "inhabilitar".
@@ -57,12 +63,13 @@ export const REGLAS = {
 
   // Cambios de estado permitidos para un recurso tecnológico.
   // Clave = estado actual; valor = estados a los que puede pasar.
-  // Ejemplo: para que un equipo dañado vuelva directo a disponible,
-  // poner  danado: ['en_reparacion', 'disponible'].
+  // Un equipo dañado puede volver directo a disponible: TI a veces lo
+  // arregla en el momento (un cable suelto) sin pasar por reparación.
+  // Un equipo disponible se puede marcar dañado desde Inventario.
+  // En el campus no se prestan equipos: no hay estado "prestado" (migración 010).
   TRANSICIONES_RECURSO: {
-    disponible: ['prestado', 'en_reparacion'],
-    prestado: ['disponible', 'danado'],
-    danado: ['en_reparacion'],
+    disponible: ['en_reparacion', 'danado'],
+    danado: ['en_reparacion', 'disponible'],
     en_reparacion: ['disponible'],
   },
 
@@ -114,15 +121,21 @@ export const REGLAS = {
 export const ESTADOS_ESPACIO = ['disponible', 'inhabilitado', 'inconsistente'];
 
 // Estados posibles de un recurso tecnológico (portátil, video beam, etc.).
-export const ESTADOS_RECURSO = ['disponible', 'prestado', 'danado', 'en_reparacion'];
+export const ESTADOS_RECURSO = ['disponible', 'danado', 'en_reparacion'];
 
-// Categorías de una incidencia.
-export const CATEGORIAS = ['infraestructura', 'tecnologia', 'aseo', 'seguridad', 'bienestar', 'otro'];
+// Categorías con las que se registra una incidencia nueva. En el campus hay 2 técnicos de TI y cada uno
+// atiende una de estas dos: lo que no es técnico ni de infraestructura no lo resuelve TI.
+export const CATEGORIAS = ['infraestructura', 'tecnologia'];
+
+// Categorías que se usaban antes del 21 nov 2026. Ya no se pueden elegir, pero las incidencias que las tienen
+// siguen en el historial con su categoría (no se reescribe el pasado) y la base las acepta (CHECK de 002_esquema.sql).
+export const CATEGORIAS_ANTERIORES = ['aseo', 'seguridad', 'bienestar', 'otro'];
 
 // Prioridades de una incidencia, de menor a mayor.
 export const PRIORIDADES = ['baja', 'media', 'alta', 'critica'];
 
-// Áreas responsables a las que se enruta una incidencia.
+// Áreas que puede tener una incidencia guardada. Las nuevas siempre van a REGLAS.AREA_RESPONSABLE;
+// las demás quedan para las incidencias y los avisos anteriores (y para el CHECK de la base).
 export const AREAS = ['Infraestructura', 'Soporte TI', 'Servicios generales', 'Seguridad', 'Bienestar'];
 
 // Estados de una incidencia. El contrato solo nombra "resuelta" (PATCH);
@@ -135,5 +148,6 @@ export const ORIGENES_INCIDENCIA = ['ia', 'manual'];
 // Canales por los que n8n avisa de una incidencia al área responsable.
 export const CANALES_NOTIFICACION = ['correo', 'telegram'];
 
-// Estados de un préstamo: activo mientras el recurso no se ha devuelto.
+// Estados de un préstamo. El campus ya no presta equipos (migración 010): la tabla "prestamos"
+// queda solo como historial y todos sus préstamos están devueltos.
 export const ESTADOS_PRESTAMO = ['activo', 'devuelto'];

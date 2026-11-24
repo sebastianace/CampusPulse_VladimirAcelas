@@ -1,16 +1,16 @@
 # Guion de la demo
 
 Demostración de Campus Pulse en 3 minutos. Cada paso muestra una regla de negocio o el papel de
-la IA. Antes de empezar: iniciar sesión (o **Crear una cuenta** la primera vez) y pestaña
-**Datos → Restaurar datos iniciales**.
+la IA. Antes de empezar: `npm run restaurar` en la terminal (deja los datos iniciales sin borrar
+las cuentas) e iniciar sesión (o **Crea la primera cuenta** la primera vez).
 
 ## 1. Datos oficiales y su calidad
 
-Pestaña **Datos**. Se ven los 9 espacios oficiales cargados desde `data/raw/espacios.csv` y el
-reporte de calidad. Cualquier registro inválido (duplicado, vacío, aforo no numérico o ≤ 0)
-aparece aquí con su fila y motivo, sin romper la aplicación.
-
-![Panel de calidad de datos](capturas/01-calidad-datos.png)
+Los 9 espacios oficiales se cargan desde `data/raw/espacios.csv`. Cualquier registro inválido
+(duplicado, vacío, aforo no numérico o ≤ 0) se valida al cargar, sin romper la aplicación: la sala
+queda en gris en el plano, con "Dato inconsistente" en la leyenda.
+El reporte completo, con fila y motivo, está en `GET /api/calidad-datos`. (La pestaña "Datos" se
+quitó: al campus le sirve ver qué sala no se puede usar, no un reporte técnico del archivo.)
 
 ## 2. Mapa de ocupación
 
@@ -25,17 +25,21 @@ ocupada, rojo inhabilitada y gris dato inconsistente.
 |---|---|
 | Reservar **Cosmos** para 20 personas | Se acepta |
 | Reservar **Cosmos** en la misma franja | Se rechaza por solapamiento |
-| Reservar **Skilab** para 40 personas | Se rechaza por aforo (máximo 20) |
+| Reservar **Skylabs** para 40 personas | Se rechaza por aforo (máximo 20) |
 
 ![Reserva rechazada por aforo](capturas/03-reserva-rechazada.png)
 
 ## 4. Incidencia con IA
 
-Reportar: _"El video beam de Apolo no prende y huele a quemado"_.
+Reportar: _"Hay una gotera en el techo de Apolo y el agua cae cerca de los enchufes"_.
 
-1. La IA sugiere categoría, prioridad, área, espacio y equipo, con su razón (**"Sugerido por IA"**).
-2. La persona revisa, puede editar y confirma.
-3. Por ser crítica, **Apolo se pone rojo** y su video beam queda en reparación.
+1. La IA sugiere categoría, prioridad y espacio, con su razón (**"Sugerido por IA"**). El área no se elige: toda incidencia la atiende Soporte TI.
+2. La persona revisa, puede editar y elige **qué queda fuera de servicio**: nada, solo el equipo o toda la sala.
+   Como el riesgo es de la sala, viene marcado "Toda la sala".
+3. Al confirmar, **Apolo se pone rojo**.
+
+Se inhabilita **lo más específico**: si el reporte fuera _"El video beam de Apolo no prende"_, solo el video beam
+quedaría en reparación y Apolo se seguiría reservando.
 
 ![Sugerencia de la IA](capturas/04-triaje-ia.png)
 ![Apolo inhabilitado](capturas/05-apolo-inhabilitado.png)
@@ -45,7 +49,6 @@ Reportar: _"El video beam de Apolo no prende y huele a quemado"_.
 | Acción | Resultado esperado |
 |---|---|
 | Reservar **Apolo** | Se rechaza: está inhabilitado |
-| Prestar un equipo **dañado** | Se rechaza: no puede pasar de dañado a prestado |
 
 ## 6. Asistente de reservas (Ctrl+K)
 

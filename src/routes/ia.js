@@ -91,7 +91,7 @@ function gastarLlamadas(res, llamadas) {
 }
 
 // POST /api/ia/triaje  {descripcion}
-// -> {categoria, prioridad, area, espacioId, recursoId, inhabilitar, razon, modelo}
+// -> {categoria, prioridad, espacioId, recursoId, inhabilitar, razon, modelo}
 // Un texto idéntico se responde desde la caché (cabecera X-Cache: HIT).
 // Solo el triaje se cachea: depende del texto y del catálogo, que casi no cambia.
 router.post('/triaje', async (req, res) => {

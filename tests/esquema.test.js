@@ -8,15 +8,16 @@
 
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { crearBaseDePrueba } from './ayuda-bd.js';
 import { migrar } from '../src/data/migrar.js';
 import { sembrar } from '../src/data/semilla.js';
 import { crearEstadoInicial } from '../src/data/estado-inicial.js';
 import {
-  AREAS, CATEGORIAS, ESTADOS_ESPACIO, ESTADOS_INCIDENCIA, ESTADOS_PRESTAMO, ESTADOS_RECURSO, ORIGENES_INCIDENCIA, PRIORIDADES,
+  AREAS, CATEGORIAS, CATEGORIAS_ANTERIORES, ESTADOS_ESPACIO, ESTADOS_INCIDENCIA, ESTADOS_PRESTAMO, ESTADOS_RECURSO, ORIGENES_INCIDENCIA, PRIORIDADES,
 } from '../src/config/reglas.js';
 
-const TABLAS = ['calidad_datos', 'espacios', 'incidencias', 'incidencias_embeddings', 'incidencias_notificaciones', 'incidencias_reportes', 'prestamos', 'recursos', 'reservas', 'schema_migrations', 'sesiones', 'usuarios'];
+const TABLAS = ['calidad_datos', 'espacios', 'incidencias', 'incidencias_embeddings', 'incidencias_notificaciones', 'incidencias_reportes', 'prestamos', 'recursos', 'reservas', 'responsables_categoria', 'schema_migrations', 'sesiones', 'solicitudes_salon', 'usuarios'];
 
 let bd;
 let pool;
@@ -52,7 +53,27 @@ describe('Migraciones', () => {
   test('volver a migrar no repite nada', async () => {
     assert.deepEqual(await migrar(pool), []);
     const { rows } = await pool.query('SELECT version FROM schema_migrations ORDER BY version');
-    assert.deepEqual(rows.map((f) => f.version), ['001_extensiones.sql', '002_esquema.sql', '003_orden.sql', '004_embeddings.sql', '005_notificaciones.sql']);
+    assert.deepEqual(rows.map((f) => f.version), ['001_extensiones.sql', '002_esquema.sql', '003_orden.sql', '004_embeddings.sql', '005_notificaciones.sql', '006_inhabilito_espacio.sql', '007_solicitudes_salon.sql', '008_atencion_incidencias.sql', '009_cuentas.sql', '010_sin_prestamos.sql', '011_solicitud_franja.sql', '012_correo.sql', '013_nombres_en_campus.sql', '014_zona_hunters.sql', '015_reparto_por_categoria.sql']);
+  });
+});
+
+describe('Migración 014: Zona Hunters reemplaza a las mesas de ping-pong', () => {
+  // Simula una base que ya tenía las mesas, con una reserva y una incidencia, y vuelve a correr el SQL de 014
+  test('mueve las incidencias a Hunters, borra las reservas de las mesas y las mesas', async () => {
+    const sql = readFileSync(new URL('../db/migrations/014_zona_hunters.sql', import.meta.url), 'utf8');
+    await pool.query("INSERT INTO espacios (id, nombre, tipo, aforo, estado) VALUES ('ping-pong-1', 'Ping-pong 1', 'mesa_juego', 4, 'disponible')");
+    await reservar('res-pp', 'ping-pong-1', '2026-11-20T10:00', '2026-11-20T11:00');
+    await pool.query(`INSERT INTO incidencias (id, descripcion, categoria, prioridad, area, origen, estado, fecha, espacio_id)
+      VALUES ('inc-pp', 'Red rota', 'infraestructura', 'baja', 'Soporte TI', 'manual', 'abierta', '2026-11-20T10:00', 'ping-pong-1')`);
+
+    await pool.query(sql);
+
+    const { rows: [hunters] } = await pool.query("SELECT nombre, tipo, aforo FROM espacios WHERE id = 'hunters'");
+    assert.deepEqual(hunters, { nombre: 'Zona Hunters', tipo: 'zona_comun', aforo: null });
+    assert.equal((await pool.query("SELECT espacio_id FROM incidencias WHERE id = 'inc-pp'")).rows[0].espacio_id, 'hunters');
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM reservas WHERE id = 'res-pp'")).rows[0].n, 0);
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM espacios WHERE id LIKE 'ping-pong-%'")).rows[0].n, 0);
+    await pool.query("DELETE FROM incidencias WHERE id = 'inc-pp'");
   });
 });
 
@@ -109,13 +130,16 @@ describe('Valores cerrados: la base y src/config/reglas.js coinciden', () => {
     for (const [i, estado] of ESTADOS_RECURSO.entries()) {
       await pool.query('INSERT INTO recursos (id, nombre, tipo, estado) VALUES ($1, $1, $2, $3)', [`rec-estado-${i}`, 'video_beam', estado]);
     }
+    // El campus no presta equipos (010_sin_prestamos.sql): "prestado" ya no es un estado válido
+    await assert.rejects(pool.query("INSERT INTO recursos (id, nombre, tipo, estado) VALUES ('rec-prestado', 'x', 'video_beam', 'prestado')"), { code: '23514' });
   });
 
   test('categorías, prioridades, áreas, orígenes y estados de incidencia', async () => {
     const insertar = (id, c, p, a, o, e) => pool.query(
       `INSERT INTO incidencias (id, descripcion, categoria, prioridad, area, origen, estado, fecha)
        VALUES ($1, 'x', $2, $3, $4, $5, $6, '2026-11-09T10:00')`, [id, c, p, a, o, e]);
-    for (const [i, c] of CATEGORIAS.entries()) await insertar(`inc-c-${i}`, c, 'media', 'Soporte TI', 'manual', 'abierta');
+    // Las categorías anteriores siguen siendo válidas en la base: hay incidencias viejas con ellas
+    for (const [i, c] of [...CATEGORIAS, ...CATEGORIAS_ANTERIORES].entries()) await insertar(`inc-c-${i}`, c, 'media', 'Soporte TI', 'manual', 'abierta');
     for (const [i, p] of PRIORIDADES.entries()) await insertar(`inc-p-${i}`, 'otro', p, 'Soporte TI', 'manual', 'abierta');
     for (const [i, a] of AREAS.entries()) await insertar(`inc-a-${i}`, 'otro', 'media', a, 'manual', 'abierta');
     for (const [i, o] of ORIGENES_INCIDENCIA.entries()) await insertar(`inc-o-${i}`, 'otro', 'media', 'Soporte TI', o, 'abierta');
@@ -156,7 +180,7 @@ describe('Semilla', () => {
     const resultado = await sembrar(pool);
     const esperado = crearEstadoInicial();
     assert.deepEqual(resultado, { espacios: esperado.espacios.length, recursos: esperado.recursos.length });
-    assert.equal((await pool.query('SELECT count(*)::int AS n FROM espacios')).rows[0].n, 11);
+    assert.equal((await pool.query('SELECT count(*)::int AS n FROM espacios')).rows[0].n, 10);
     assert.equal((await pool.query('SELECT count(*)::int AS n FROM recursos')).rows[0].n, 12);
     const { rows } = await pool.query('SELECT cargados, validos, inconsistentes FROM calidad_datos');
     assert.deepEqual(rows, [{ cargados: esperado.calidadDatos.cargados, validos: esperado.calidadDatos.validos, inconsistentes: esperado.calidadDatos.inconsistentes }]);
@@ -171,7 +195,7 @@ describe('Semilla', () => {
     await pool.query("INSERT INTO usuarios (usuario, nombre, rol, clave_hash) VALUES ('conservada', 'x', 'profesor', 'hash')");
     await pool.query("INSERT INTO reservas VALUES ('res-semilla', 'apolo', 'Ana', 5, '2026-11-12T10:00', '2026-11-12T11:00')");
     await sembrar(pool);
-    assert.equal((await pool.query('SELECT count(*)::int AS n FROM espacios')).rows[0].n, 11);
+    assert.equal((await pool.query('SELECT count(*)::int AS n FROM espacios')).rows[0].n, 10);
     assert.equal((await pool.query('SELECT count(*)::int AS n FROM reservas')).rows[0].n, 0);
     assert.equal((await pool.query('SELECT count(*)::int AS n FROM incidencias')).rows[0].n, 0);
     assert.equal((await pool.query("SELECT count(*)::int AS n FROM usuarios WHERE usuario = 'conservada'")).rows[0].n, 1);

@@ -3,57 +3,90 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <title>Iniciar sesión · Campus Pulse</title>
-  <meta name="description" content="Inicia sesión en el centro de mando operativo de Campuslands.">
+  <meta name="description" content="Inicia sesión en Campus Pulse, el centro de mando del campus de Campuslands en Bucaramanga.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
+<!-- Inspirada en la pantalla de acceso de Campuslands (cielo oscuro, brillo morado, dos tarjetas),
+     sin usar su logo ni sus imágenes. El cielo es un <canvas>: estrellas que se mueven y objetos 3D
+     dibujados sin librerías (js/acceso/espacio.js). Si el script no carga, quedan las estrellas fijas de CSS. -->
 <body class="acceso">
-  <main class="acceso__caja panel">
-    <div class="marca">
-      <span class="marca__pulso" aria-hidden="true"></span>
-      <div>
-        <h1 class="marca__nombre">Campus Pulse</h1>
-        <p class="marca__sub">Operación en vivo · Campuslands</p>
-      </div>
+  <canvas class="acceso__cielo" id="cielo" aria-hidden="true"></canvas>
+
+  <main class="acceso__contenido">
+    <header class="acceso__cabeza">
+      <p class="acceso__logo"><span class="acceso__pulso" aria-hidden="true"></span>campus pulse</p>
+      <h1 class="acceso__titulo">Centro de mando del campus</h1>
+    </header>
+
+    <div class="acceso__tarjetas">
+      <!-- Qué es Campus Pulse. Si todavía no hay cuentas, aquí se crea la primera (admin). -->
+      <section class="tarjeta-acceso tarjeta-acceso--info" aria-labelledby="titulo-info">
+        <div id="bloque-info">
+          <h2 class="tarjeta-acceso__titulo" id="titulo-info">¿Primera vez aquí?</h2>
+          <p class="tarjeta-acceso__texto">
+            Campus Pulse reúne en un solo tablero las salas, los equipos y los reportes de daños del campus,
+            con una IA que ayuda pero no decide.
+          </p>
+          <ul class="acceso__lista">
+            <li>Reserva salas sin cruces, o pide a un admin una que ya está ocupada.</li>
+            <li>Reporta un daño y le llega directo a Soporte TI.</li>
+            <li>Pregúntale a Pulse por el reglamento, con la fuente citada.</li>
+          </ul>
+          <p class="tarjeta-acceso__aviso">Las cuentas las crea un administrador del campus: pídele la tuya a Coordinación.</p>
+        </div>
+
+        <form class="formulario" id="form-registro" novalidate hidden>
+          <h2 class="tarjeta-acceso__titulo">Crea la primera cuenta</h2>
+          <p class="tarjeta-acceso__texto">Todavía no hay cuentas. La primera es la del administrador: después, las demás las crea él desde la pestaña Usuarios.</p>
+          <label class="campo">
+            <span>Nombre</span>
+            <input name="nombre" type="text" autocomplete="name" required>
+          </label>
+          <label class="campo">
+            <span>Usuario</span>
+            <input name="usuario" type="text" autocomplete="username" autocapitalize="none" required placeholder="ej. ana.gomez">
+          </label>
+          <div class="campo">
+            <label for="clave-registro">Contraseña (mínimo 8 caracteres)</label>
+            <div class="clave">
+              <input id="clave-registro" name="clave" type="password" autocomplete="new-password" minlength="8" required>
+              <button class="clave__ver" type="button" aria-controls="clave-registro" aria-pressed="false">Mostrar</button>
+            </div>
+            <p class="clave__mayus" hidden>Bloq Mayús está activado.</p>
+          </div>
+          <button class="btn btn--acceso" type="submit">Crear cuenta y entrar</button>
+        </form>
+      </section>
+
+      <!-- Iniciar sesión -->
+      <section class="tarjeta-acceso tarjeta-acceso--entrar" aria-labelledby="titulo-entrar">
+        <h2 class="tarjeta-acceso__titulo" id="titulo-entrar">Si ya tienes cuenta</h2>
+        <p class="tarjeta-acceso__sub">Inicia sesión</p>
+        <form class="formulario" id="form-login" novalidate>
+          <label class="campo">
+            <span>Usuario</span>
+            <input name="usuario" type="text" autocomplete="username" autocapitalize="none" required placeholder="ej. ana.gomez">
+          </label>
+          <div class="campo">
+            <label for="clave-login">Contraseña</label>
+            <div class="clave">
+              <input id="clave-login" name="clave" type="password" autocomplete="current-password" required>
+              <button class="clave__ver" type="button" aria-controls="clave-login" aria-pressed="false">Mostrar</button>
+            </div>
+            <p class="clave__mayus" hidden>Bloq Mayús está activado.</p>
+          </div>
+          <button class="btn btn--acceso" type="submit">Entrar</button>
+        </form>
+        <p class="tarjeta-acceso__nota">¿Olvidaste tu contraseña? Un administrador te da una temporal.</p>
+      </section>
     </div>
 
-    <!-- Iniciar sesión -->
-    <form class="formulario" id="form-login" novalidate>
-      <h2 class="subtitulo">Iniciar sesión</h2>
-      <label class="campo">
-        <span>Usuario</span>
-        <input name="usuario" type="text" autocomplete="username" autocapitalize="none" required>
-      </label>
-      <label class="campo">
-        <span>Contraseña</span>
-        <input name="clave" type="password" autocomplete="current-password" required>
-      </label>
-      <button class="btn btn--primario" type="submit">Entrar</button>
-      <p class="nota">¿No tienes cuenta? <button class="enlace" type="button" data-ir="registro">Crear una cuenta</button></p>
-    </form>
-
-    <!-- Crear cuenta -->
-    <form class="formulario" id="form-registro" novalidate hidden>
-      <h2 class="subtitulo">Crear cuenta</h2>
-      <label class="campo">
-        <span>Nombre</span>
-        <input name="nombre" type="text" autocomplete="name" required>
-      </label>
-      <label class="campo">
-        <span>Usuario</span>
-        <input name="usuario" type="text" autocomplete="username" autocapitalize="none" required
-          placeholder="ej. ana.gomez">
-      </label>
-      <label class="campo">
-        <span>Contraseña (mínimo 8 caracteres)</span>
-        <input name="clave" type="password" autocomplete="new-password" minlength="8" required>
-      </label>
-      <button class="btn btn--primario" type="submit">Crear cuenta y entrar</button>
-      <p class="nota">¿Ya tienes cuenta? <button class="enlace" type="button" data-ir="login">Iniciar sesión</button></p>
-    </form>
+    <p class="acceso__pie">La IA sugiere, las reglas deciden y la persona confirma.</p>
   </main>
 
   <div class="toasts" id="toasts" aria-live="polite"></div>

@@ -5,9 +5,10 @@
 // src/data/estado-inicial.js: data/raw/espacios.csv (oficial, nunca se modifica),
 // data/seed/espacios-extra.json y data/seed/recursos.json.
 // - Borra y vuelve a cargar espacios, recursos, reservas, préstamos e
-//   incidencias, todo en una transacción. NO toca usuarios ni sesiones
-//   (igual que "Restaurar datos", que no borra las cuentas).
-// Uso:  npm run semilla
+//   incidencias, todo en una transacción. NO toca usuarios ni sesiones.
+// Uso:  npm run restaurar   (o npm run semilla: es el mismo script)
+// Antes había un botón "Restaurar datos" en la app; se quitó porque borrar todo
+// con un clic es un riesgo sin beneficio para el campus: ahora es una tarea de terminal.
 // =====================================================================
 
 import { crearEstadoInicial } from './estado-inicial.js';
@@ -23,7 +24,7 @@ export async function sembrar(pool) {
     // Una sola sentencia: TRUNCATE exige listar también las tablas que apuntan a espacios y recursos.
     // RESTART IDENTITY reinicia la columna "posicion", que guarda el orden de las filas.
     // Las tablas de embeddings, reportes y notificaciones dependen de incidencias: TRUNCATE exige nombrarlas también.
-    await cliente.query(`TRUNCATE reservas, prestamos, incidencias_embeddings, incidencias_reportes, incidencias_notificaciones, incidencias,
+    await cliente.query(`TRUNCATE solicitudes_salon, reservas, prestamos, incidencias_embeddings, incidencias_reportes, incidencias_notificaciones, incidencias,
       recursos, espacios, calidad_datos RESTART IDENTITY`);
     for (const e of espacios) {
       await cliente.query('INSERT INTO espacios (id, nombre, tipo, aforo, estado) VALUES ($1, $2, $3, $4, $5)',

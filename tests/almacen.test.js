@@ -16,7 +16,10 @@ const { crearEstadoInicial } = await import('../src/data/estado-inicial.js');
 const { REGLAS } = await import('../src/config/reglas.js');
 const { cancelarReserva, crearReserva, editarReserva } = await import('../src/domain/reservas.js');
 const { crearIncidencia, resolverIncidencia } = await import('../src/domain/incidencias.js');
-const { crearPrestamo, devolverPrestamo } = await import('../src/domain/prestamos.js');
+const { nombreEnCampus } = await import('../src/config/nombres.js');
+
+// Los espacios del estado inicial como los entrega el almacén: con el nombre del campus y el del CSV oficial aparte.
+const comoEnCampus = (espacios) => espacios.map((e) => ({ ...e, nombre: nombreEnCampus(e.id, e.nombre), nombreOficial: e.nombre }));
 
 after(async () => { await bd.cerrar(); });
 
@@ -35,10 +38,23 @@ describe('Lectura', () => {
   test('devuelve los mismos espacios, recursos y calidad de datos del estado inicial, en el mismo orden', async () => {
     const db = await leerDB();
     const esperado = crearEstadoInicial();
-    assert.deepEqual(db.espacios, esperado.espacios);
+    assert.deepEqual(db.espacios, comoEnCampus(esperado.espacios));
     assert.deepEqual(db.recursos, esperado.recursos);
     assert.deepEqual(db.calidadDatos, esperado.calidadDatos);
     assert.deepEqual([db.reservas, db.prestamos, db.incidencias], [[], [], []]);
+  });
+});
+
+describe('Nombres de las salas en el campus', () => {
+  test('las salas renombradas se leen con el nombre del campus y la base conserva el del CSV oficial', async () => {
+    const leidos = (await leerDB()).espacios;
+    assert.deepEqual(['spooki', 'skilab', 'amarillas-verdes'].map((id) => leidos.find((e) => e.id === id).nombre),
+      ['Sputnik', 'Skylabs', 'Sala de reuniones']);
+    // Cambiar el estado de una sala renombrada no reescribe su nombre oficial
+    await actualizarDB((db) => { db.espacios.find((e) => e.id === 'skilab').estado = 'inhabilitado'; });
+    const { rows } = await bd.pool.query("SELECT nombre FROM espacios WHERE id = 'skilab'");
+    assert.equal(rows[0].nombre, 'Skilab');
+    await actualizarDB((db) => { db.espacios.find((e) => e.id === 'skilab').estado = 'disponible'; });
   });
 });
 
@@ -46,7 +62,7 @@ describe('Reservas: crear, editar y cancelar', () => {
   test('lo que crea una regla queda guardado, con la misma forma', async () => {
     const creada = await actualizarDB((db) => crearReserva(db, reserva()));
     assert.deepEqual((await leerDB()).reservas, [creada]);
-    assert.deepEqual(Object.keys(creada), ['id', 'espacioId', 'responsable', 'asistentes', 'inicio', 'fin']);
+    assert.deepEqual(Object.keys(creada), ['id', 'espacioId', 'responsable', 'asistentes', 'inicio', 'fin', 'creadaPor']);
   });
 
   test('editar actualiza solo esa fila y conserva el id', async () => {
@@ -97,13 +113,15 @@ describe('Transacciones', () => {
 });
 
 describe('Incidencias y préstamos: cambios en varias tablas a la vez', () => {
-  const critica = { descripcion: 'El video beam de Apolo huele a quemado', categoria: 'tecnologia', prioridad: 'critica', area: 'Soporte TI', espacioId: 'apolo', recursoId: 'rec-01', origen: 'ia', ia: { razon: 'Riesgo', modelo: 'prueba', sugerencia: { prioridad: 'critica' } } };
+  // "Toda la sala" (inhabilitarEspacio): así una sola escritura cambia incidencias, espacios y recursos a la vez.
+  const critica = { descripcion: 'El video beam de Apolo huele a quemado', categoria: 'tecnologia', prioridad: 'critica', area: 'Soporte TI', espacioId: 'apolo', recursoId: 'rec-01', inhabilitarEspacio: true, origen: 'ia', ia: { razon: 'Riesgo', modelo: 'prueba', sugerencia: { prioridad: 'critica' } } };
 
-  test('una incidencia crítica se guarda junto con el estado nuevo del espacio y del equipo', async () => {
+  test('una incidencia crítica de toda la sala se guarda junto con el estado nuevo del espacio y del equipo', async () => {
     const creada = await actualizarDB((db) => crearIncidencia(db, critica));
     const db = await leerDB();
     assert.equal(db.espacios.find((e) => e.id === 'apolo').estado, 'inhabilitado');
     assert.equal(db.recursos.find((r) => r.id === 'rec-01').estado, REGLAS.ESTADO_RECURSO_INHABILITADO);
+    assert.equal(db.incidencias[0].inhabilitoEspacio, true, 'inhabilito_espacio se guarda en la base');
     assert.deepEqual(db.incidencias, [creada]);
     assert.deepEqual(db.incidencias[0].ia, critica.ia, 'el jsonb vuelve igual');
     assert.ok(!('fechaResolucion' in db.incidencias[0]), 'abierta: sin fechaResolucion');
@@ -118,17 +136,6 @@ describe('Incidencias y préstamos: cambios en varias tablas a la vez', () => {
     assert.equal(db.incidencias[0].estado, 'resuelta');
     assert.match(db.incidencias[0].fechaResolucion, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
   });
-
-  test('un préstamo cambia el estado del equipo y devolverlo agrega fechaDevolucion', async () => {
-    const prestamo = await actualizarDB((db) => crearPrestamo(db, { recursoId: 'rec-08', persona: 'Ana' }));
-    assert.equal((await leerDB()).recursos.find((r) => r.id === 'rec-08').estado, 'prestado');
-    assert.ok(!('fechaDevolucion' in prestamo));
-    await actualizarDB((db) => devolverPrestamo(db, prestamo.id, { estadoFinal: 'disponible' }));
-    const db = await leerDB();
-    assert.equal(db.recursos.find((r) => r.id === 'rec-08').estado, 'disponible');
-    assert.equal(db.prestamos[0].estado, 'devuelto');
-    assert.ok(db.prestamos[0].fechaDevolucion);
-  });
 });
 
 describe('Restaurar', () => {
@@ -136,6 +143,6 @@ describe('Restaurar', () => {
     await actualizarDB((db) => crearReserva(db, reserva()));
     const db = await restaurarDB();
     assert.deepEqual([db.reservas, db.prestamos, db.incidencias], [[], [], []]);
-    assert.deepEqual(db.espacios, crearEstadoInicial().espacios);
+    assert.deepEqual(db.espacios, comoEnCampus(crearEstadoInicial().espacios));
   });
 });

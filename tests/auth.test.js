@@ -140,8 +140,9 @@ test('una sesión vencida deja de servir (401) y se limpia al abrir otra', async
   assert.equal((await bd.pool.query('SELECT count(*)::int AS n FROM sesiones')).rows[0].n, 1, 'solo queda la nueva');
 });
 
-test('"Restaurar datos" no borra las cuentas ni las sesiones', async () => {
+test('restaurar los datos (npm run restaurar) no borra las cuentas ni las sesiones', async () => {
   const { cookie } = await pedir('/api/auth/login', 'POST', { usuario: ANA.usuario, clave: ANA.clave });
-  assert.equal((await pedir('/api/restaurar', 'POST', null, cookie)).status, 200);
+  const { sembrar } = await import('../src/data/semilla.js');
+  await sembrar(bd.pool);
   assert.equal((await pedir('/api/auth/yo', 'GET', null, cookie)).cuerpo.usuario, ANA.usuario);
 });

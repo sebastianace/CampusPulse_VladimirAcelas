@@ -42,7 +42,12 @@ export function iniciarComando(opciones) {
 function nuevaConversacion() {
   turnos = [];
   resultado().replaceChildren();
+  document.getElementById('form-comando')?.reset();
 }
+
+// El enlace para empezar de cero aparece en toda respuesta de Pulse: pregunta, recomendación de sala o error.
+const botonNuevaConversacion = () =>
+  el('button', { type: 'button', className: 'enlace', onClick: nuevaConversacion }, 'Empezar una conversación nueva');
 
 // Los turnos como mensajes para el servidor: lo que la persona preguntó y lo que Pulse respondió.
 function historialParaEnviar() {
@@ -85,13 +90,15 @@ async function enviar(evento) {
 
 // ---------- 2a. Mostrar la conversación de preguntas ----------
 
-function dibujarConversacion() {
+// extra: lo que va después del último turno (por ejemplo, un error), antes del enlace para empezar de nuevo.
+function dibujarConversacion(extra = []) {
   resultado().replaceChildren(
     ...turnos.map((turno, i) => crearTurno(turno, i === turnos.length - 1)),
-    el('button', { type: 'button', className: 'enlace', onClick: nuevaConversacion }, 'Empezar una conversación nueva'),
+    ...extra,
+    botonNuevaConversacion(),
   );
-  const filas = resultado().querySelectorAll('.turno');
-  filas[filas.length - 1]?.scrollIntoView({ block: 'nearest' });
+  const ultimo = extra.length ? extra[0] : [...resultado().querySelectorAll('.turno')].at(-1);
+  ultimo?.scrollIntoView({ block: 'nearest' });
 }
 
 function crearTurno({ pregunta, respuesta }, esElUltimo) {
@@ -162,6 +169,8 @@ function dibujarRecomendacion({ solicitud, opciones = [], explicacion, modelo, m
       ? el('ol', { className: 'lista opciones' },
         opciones.map((opcion, i) => crearOpcion(opcion, i, solicitud, responsable)))
       : el('p', { className: 'vacio' }, 'Prueba con otro horario o menos personas.'),
+
+    botonNuevaConversacion(),
   );
 
   responsable.focus();
@@ -228,9 +237,10 @@ function ajustarEnFormulario(solicitud) {
 
 // ---------- Errores ----------
 
+// Si había una conversación, el error se muestra debajo de ella: no se borra lo que ya se habló.
 function dibujarError(error) {
   const iaCaida = esFallaDeIA(error);
-  resultado().replaceChildren(
+  const partes = [
     el('p', { className: 'aviso', role: 'alert' }, error.message),
     iaCaida
       ? el('button', {
@@ -240,7 +250,9 @@ function dibujarError(error) {
       : el('p', { className: 'nota' }, error.codigo === 'SOLICITUD_INCOMPLETA'
         ? 'Reescribe el pedido con cuántas personas, qué día y de qué hora a qué hora.'
         : 'Revisa el mensaje e inténtalo de nuevo.'),
-  );
+  ];
+  if (turnos.length) dibujarConversacion(partes);
+  else resultado().replaceChildren(...partes, botonNuevaConversacion());
 }
 
 // ---------- Formato ----------

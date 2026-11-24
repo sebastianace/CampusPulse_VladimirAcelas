@@ -34,23 +34,38 @@ Para desarrollar con `npm run dev` se levanta solo la base, como se explica a co
 
 ## Esquema
 
-Diez tablas, más `schema_migrations` (qué migraciones ya se aplicaron):
+Doce tablas, más `schema_migrations` (qué migraciones ya se aplicaron):
 
 | Tabla | Qué guarda |
 |---|---|
 | `espacios` | Salas del campus (id, nombre, tipo, aforo, estado) |
 | `recursos` | Equipos; `espacio_id` puede ser `NULL` si no tienen sala |
-| `reservas` | Reservas de espacios, con la restricción de no solapamiento |
-| `prestamos` | Préstamos de equipos |
+| `reservas` | Reservas de espacios, con la restricción de no solapamiento y quién la creó (`creada_por`) |
+| `solicitudes_salon` | Pedidos de un salón ya reservado (en curso o a futuro), y la decisión del admin |
+| `prestamos` | Historial de préstamos de equipos. El campus ya no presta equipos: desde `010_sin_prestamos.sql` no hay préstamos activos ni equipos "prestado" |
 | `incidencias` | Incidencias; `ia` (jsonb) guarda lo que sugirió la IA |
-| `usuarios` | Cuentas, con rol `admin`, `profesor` o `soporte_tecnico` |
+| `usuarios` | Cuentas, con rol `admin`, `profesor` o `soporte_tecnico`, quién la creó (`creado_por`) y si tiene contraseña temporal |
 | `sesiones` | Sesiones activas (se guarda el hash del token, no el token) |
 | `calidad_datos` | Reporte de calidad del CSV oficial (una sola fila) |
 | `incidencias_embeddings` | El embedding (`vector(768)`, índice HNSW coseno) de cada incidencia, para buscar parecidas |
 | `incidencias_reportes` | Reportes que se suman a una incidencia existente (quién, cuándo y qué escribió) |
+| `incidencias_notificaciones` | A quién avisó n8n de cada incidencia, por qué canal y cuándo |
 
 Las migraciones están en [`db/migrations/`](../db/migrations/): `001_extensiones.sql`,
-`002_esquema.sql`, `003_orden.sql` y `004_embeddings.sql`. Cada archivo corre en una transacción; lo aplicado queda en `schema_migrations`.
+`002_esquema.sql`, `003_orden.sql`, `004_embeddings.sql`, `005_notificaciones.sql`, `006_inhabilito_espacio.sql`,
+`007_solicitudes_salon.sql`, `008_atencion_incidencias.sql` (quién atiende cada incidencia), `009_cuentas.sql` (quién creó
+cada cuenta y contraseñas temporales), `010_sin_prestamos.sql` (cierra los préstamos activos, devuelve a disponible lo
+prestado y quita el estado "prestado") `011_solicitud_franja.sql` (franja de una solicitud de salón a futuro) , `012_correo.sql` (correo opcional de cada
+cuenta para los avisos) y `013_nombres_en_campus.sql` (el televisor de Skylabs; los espacios conservan el nombre del CSV
+oficial y el nombre del campus se pone al leerlos, `src/config/nombres.js`). Cada archivo corre en una transacción; lo aplicado queda en `schema_migrations`.
+
+### `solicitudes_salon` y `reservas.creada_por` (migración 007)
+
+Una solicitud pide un salón ya reservado: guarda la reserva pedida (`reserva_id`; queda en null si al aprobar se cancela
+entera), quién la pide (`solicitante`), de quién era la reserva (`afectado`), los datos de la reserva nueva (`responsable`,
+`asistentes`, `inicio`, `fin`; `inicio` es null si la reserva estaba en curso: la nueva empieza al aprobar, migración 011),
+el `motivo` y la decisión (`estado`: pendiente, aprobada o rechazada; `decidida_por`, `fecha_decision`, `nota_decision`,
+`reserva_nueva_id`). `reservas.creada_por` guarda qué usuario creó cada reserva (null en las anteriores).
 
 ### `incidencias_notificaciones` (migración 005)
 
@@ -116,7 +131,7 @@ ejecutor propio de unas 40 líneas (`src/data/migrar.js`).
 
 `npm run semilla` carga desde los mismos orígenes que `db.json` (`data/raw/espacios.csv`,
 `data/seed/`). Borra y recarga espacios, recursos, reservas, préstamos e incidencias, pero **no
-toca usuarios ni sesiones**, como "Restaurar datos".
+toca usuarios ni sesiones**. `npm run restaurar` es el mismo script con un nombre más claro.
 
 ### Orden de las filas
 
@@ -134,7 +149,10 @@ transacción**:
 1. `BEGIN` y un bloqueo de escritura (`pg_advisory_xact_lock`): una escritura a la vez.
 2. **Foto:** lee las tablas y arma el objeto `db`.
 3. Llama a `cambio(db)`: las reglas lo modifican. Si lanzan un error, `ROLLBACK` y no se guarda nada.
-4. **Diferencias:** compara `db` con la foto y ejecuta solo los `INSERT`, `UPDATE` y `DELETE` necesarios.
+4. **Diferencias:** compara `db` con la foto y ejecuta solo los `DELETE`, `UPDATE` e `INSERT` necesarios. Primero todos
+   los `DELETE`, de hijos a padres; luego, tabla por tabla y de padres a hijos, los `UPDATE` y después los `INSERT`. Así,
+   al aprobar una solicitud de salón, la reserva original se cancela o se corta antes de insertar la nueva. Si una regla
+   borra una fila padre, antes quita las referencias de los hijos que también cambian (`quitarReserva`).
 5. `COMMIT`.
 
 Cada tabla tiene un repositorio en [`src/data/repos/`](../src/data/repos/) que traduce entre sus filas

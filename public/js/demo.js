@@ -6,6 +6,7 @@
 import { el } from './dom.js';
 import { hoyISO, obtenerEstado } from './estado.js';
 import * as toasts from './toasts.js';
+import { terminarEdicion } from './formularios.js';
 
 let mostrarPestana = () => {};
 
@@ -28,22 +29,18 @@ const CASOS = [
   {
     titulo: 'Más personas que el aforo',
     esperado: 'Se rechaza por aforo',
-    llenar: () => llenarReserva('Skilab', { responsable: 'Alexandra Villamizar', asistentes: 40, desde: '14:00', hasta: '16:00' }),
+    llenar: () => llenarReserva('Skylabs', { responsable: 'Alexandra Villamizar', asistentes: 40, desde: '14:00', hasta: '16:00' }),
   },
   {
     titulo: 'Incidencia con IA',
-    esperado: 'La IA la clasifica y la sala se pone roja',
-    llenar: () => llenarIncidencia('El video beam de Apolo no prende y huele a quemado'),
+    // Un riesgo de la sala completa: un equipo dañado (un video beam) solo apagaría el equipo, no la sala.
+    esperado: 'La IA la clasifica, propone "Toda la sala" y la sala se pone roja',
+    llenar: () => llenarIncidencia('Hay una gotera en el techo de Apolo y el agua cae cerca de los enchufes'),
   },
   {
     titulo: 'Reservar la sala inhabilitada',
     esperado: 'Se rechaza: la sala está fuera de servicio',
     llenar: () => llenarReserva('Apolo', { responsable: 'Dani Mendoza', asistentes: 20, desde: '16:00', hasta: '18:00' }),
-  },
-  {
-    titulo: 'Prestar un equipo dañado',
-    esperado: 'Se rechaza: el equipo no está disponible',
-    llenar: llenarPrestamoDanado,
   },
   {
     titulo: 'Pedir sala con IA (Ctrl+K)',
@@ -101,6 +98,7 @@ function usarCaso(caso) {
 function llenarReserva(nombreSala, { responsable, asistentes, desde, hasta }) {
   const espacio = buscarEspacio(nombreSala);
   const form = document.getElementById('form-reserva');
+  terminarEdicion(); // el caso crea una reserva nueva, aunque se estuviera editando otra
   mostrarPestana('p-reservar');
   form.espacioId.value = espacio.id;
   form.responsable.value = responsable;
@@ -119,20 +117,6 @@ function llenarIncidencia(texto) {
   enfocarEnvio(form);
 }
 
-// Toma un equipo que la API reporte como dañado (no un ID escrito a mano)
-function llenarPrestamoDanado() {
-  // Se prefiere un equipo para llevar (sin sala): es el caso típico de préstamo
-  const fuera = obtenerEstado().recursos.filter((r) => r.estado === 'danado' || r.estado === 'en_reparacion');
-  const equipo = fuera.find((r) => !r.espacioId) ?? fuera[0];
-  if (!equipo) throw new Error('No hay equipos dañados en este momento. Devuelve uno "con daño" para probar este caso.');
-  const form = document.getElementById('form-prestamo');
-  mostrarPestana('p-prestar');
-  form.recursoId.value = equipo.id;
-  form.persona.value = 'Valentina Ortiz';
-  form.dispatchEvent(new Event('input'));
-  enfocarEnvio(form);
-}
-
 function llenarComando(texto) {
   document.getElementById('abrir-comando').click();
   const form = document.getElementById('form-comando');
@@ -148,7 +132,7 @@ function enfocarEnvio(form) {
 
 function buscarEspacio(nombre) {
   const buscado = nombre.toLowerCase();
-  const espacio = obtenerEstado().espacios.find((e) => [e.nombre, e.nombreApi].some((n) => n?.toLowerCase() === buscado));
+  const espacio = obtenerEstado().espacios.find((e) => [e.nombre, e.nombreApi, e.nombreOficial].some((n) => n?.toLowerCase() === buscado));
   if (!espacio) throw new Error(`No se encontró el espacio ${nombre} en los datos cargados.`);
   return espacio;
 }

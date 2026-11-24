@@ -7,7 +7,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { AREAS, CATEGORIAS, PRIORIDADES } from '../src/config/reglas.js';
+import { CATEGORIAS, CATEGORIAS_ANTERIORES, PRIORIDADES } from '../src/config/reglas.js';
 import { construirPrompt } from '../src/ai/prompts/estructura.js';
 import { promptTriaje } from '../src/ai/prompts/triaje.js';
 import { promptSolicitud } from '../src/ai/prompts/solicitud.js';
@@ -50,7 +50,19 @@ describe('promptTriaje', () => {
   });
 
   test('lleva todos los valores cerrados', () => {
-    for (const valor of [...CATEGORIAS, ...PRIORIDADES, ...AREAS]) assert.ok(prompt.includes(valor), valor);
+    for (const valor of [...CATEGORIAS, ...PRIORIDADES]) assert.ok(prompt.includes(valor), valor);
+  });
+
+  test('solo ofrece infraestructura y tecnología, y pide paraTI para lo que no es de TI (prompt 1.5)', () => {
+    assert.match(prompt, /paraTI: true si lo resuelve Soporte TI/);
+    // La línea de la categoría solo ofrece las dos de TI (aseo y las demás aparecen solo como ejemplos de paraTI false)
+    const lineaCategoria = prompt.split('\n').find((l) => l.includes('categoria: si paraTI es true'));
+    assert.ok(lineaCategoria.includes('infraestructura, tecnologia'));
+    for (const anterior of CATEGORIAS_ANTERIORES) assert.ok(!lineaCategoria.includes(anterior), anterior);
+  });
+
+  test('no le pide el área a la IA: toda incidencia va a TI (prompt 1.4)', () => {
+    assert.doesNotMatch(prompt, /\barea\b|Área responsable/);
   });
 
   test('delimita el texto del usuario y avisa que es un dato, no instrucciones', () => {

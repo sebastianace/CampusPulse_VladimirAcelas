@@ -1,4 +1,3 @@
 [
-  { "id": "ping-pong-1", "nombre": "Ping-pong 1", "tipo": "mesa_juego", "aforo": 4, "estado": "disponible" },
-  { "id": "ping-pong-2", "nombre": "Ping-pong 2", "tipo": "mesa_juego", "aforo": 4, "estado": "disponible" }
+  { "id": "hunters", "nombre": "Zona Hunters", "tipo": "zona_comun", "aforo": null, "estado": "disponible" }
 ]

@@ -16,7 +16,7 @@ reservas separadas y la segunda debe aprobarse por las mismas reglas, sin garant
 ## Aforo
 
 No se puede reservar una sala para más personas que su aforo. El aforo es el número de puestos de la sala y no
-se permite superarlo (el margen es del 100 %). Por ejemplo, Skilab tiene 20 puestos, así que no admite una
+se permite superarlo (el margen es del 100 %). Por ejemplo, Skylabs tiene 20 puestos, así que no admite una
 reserva para 40 personas.
 
 ## Una sala no se puede reservar dos veces a la vez
@@ -33,10 +33,26 @@ Cada responsable puede tener como máximo 3 reservas en un mismo día. La cuarta
 
 Una reserva se puede editar o cancelar solo antes de que empiece. Cuando ya empezó, no se puede cambiar ni
 cancelar. Al editarla se aplican de nuevo todas las reglas: horario, duración, aforo, cruces y límite por persona.
+Solo quien creó la reserva o un administrador puede editarla o cancelarla.
+
+## Pedir un salón que ya está reservado
+
+Si el salón que necesitas ya está reservado por otra persona, se puede solicitar a un administrador con el botón
+"Solicitar este salón" en la lista de reservas, o con "Pedirle el salón a un admin" cuando al reservar sale que ya
+está reservado. Sirve para una reserva en curso (la persona no llegó) y para una reserva futura. El administrador
+aprueba o rechaza la solicitud:
+
+- Si la reserva estaba en curso, al aprobar termina en ese momento y la sala queda a nombre de quien la pidió hasta
+  la hora que pidió.
+- Si la reserva era futura, la franja pedida pasa a nombre de quien la pidió. La persona que la tenía conserva lo
+  que le sobre antes o después de esa franja; si la franja pedida cubría toda su reserva, su reserva se cancela.
+
+Los avisos llegan dentro de la aplicación, a quien pidió el salón y a quien lo tenía reservado; ya no hay que
+escribirle a TI por correo.
 
 ## Salas con computadores
 
-Las salas con computadores son Apolo, Spooki, Artemis y Skilab. Si una actividad necesita que cada persona
+Las salas con computadores son Apolo, Sputnik, Artemis y Skylabs. Si una actividad necesita que cada persona
 tenga computador (programar, un taller práctico, un examen en computador), solo se recomiendan esas salas.
 
 ## Salas que no están disponibles
@@ -45,7 +61,8 @@ Una sala marcada como inhabilitada o inconsistente no se puede reservar. Una sal
 automáticamente cuando se reporta una incidencia crítica sobre ella, y vuelve a estar disponible cuando se
 resuelve la incidencia.
 
-## Mesas de ping-pong
+## Zona Hunters y mesas de ping-pong
 
-Las dos mesas de ping-pong de Hunters (de 4 puestos cada una) se pueden reservar directamente, pero el asistente
-de reservas nunca las recomienda para reuniones o clases.
+Hunters es una zona común: ahí están las mesas de ping-pong, la sala de estar y la cocineta. No se reserva, ni
+Hunters ni las mesas de ping-pong. Si algo se daña en Hunters (por ejemplo, una mesa de ping-pong rota o una luz
+que no prende), se reporta como incidencia eligiendo "Zona Hunters" como espacio afectado.

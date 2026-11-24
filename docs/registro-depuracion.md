@@ -124,6 +124,79 @@ sigue el mismo método: **síntoma → hipótesis → experimento → causa raí
   Como el few-shot ya no mejoraba y cuesta 420 tokens más por llamada, quedó desactivado por defecto.
 - **Lección.** Medir antes de afirmar que una técnica funciona. Y una instrucción ambigua no la arreglan los ejemplos.
 
+### 14. Reportar el video beam dejaba fuera de servicio todo el salón
+- **Síntoma.** En las pruebas del 15 de noviembre reporté "el video beam de Apolo no sirve" y marqué "Dejar fuera de servicio
+  el espacio o equipo afectado". Quería apagar solo el equipo, pero Apolo quedó inhabilitado y ya no se podía reservar.
+- **Hipótesis.** (a) La prioridad crítica inhabilita todo; (b) la regla apaga todo lo que trae la incidencia.
+- **Experimento.** En la base, la incidencia era manual y de prioridad media (descartada a): la casilla la marqué yo. En el
+  código, `aplicarEstado` cambiaba el espacio **y** el recurso; y la IA siempre llena el espacio donde está el equipo.
+- **Causa raíz.** La casilla decía "espacio **o** equipo" pero el código hacía "espacio **y** equipo". Venía de la v1.1.1 y
+  ninguna regla de `reglas.js` lo pedía.
+- **Corrección.** Se inhabilita lo más específico (el equipo si lo hay) y la sala solo si se elige "Toda la sala". La
+  columna `inhabilito_espacio` recuerda qué se apagó para rehabilitar exactamente eso. Los tests nuevos de
+  `tests/reglas.test.js` reproducen el fallo: con el código anterior fallan 3 y con la corrección pasan todos.
+- **Lección.** Si el texto de la interfaz y el código dicen cosas distintas, uno de los dos está mal. Probar el sistema
+  como lo usaría alguien del campus encuentra errores que los tests no buscaban.
+
+### 15. Aprobar una solicitud de salón chocaba con la restricción EXCLUDE
+- **Síntoma.** Al construir las solicitudes de salón, la prueba contra PostgreSQL de "aprobar" fallaba con
+  `RESERVA_SOLAPADA`, aunque el dominio ya había cortado la reserva original (fin = ahora) antes de crear la nueva.
+- **Hipótesis.** (a) El corte no se guardaba; (b) se guardaba, pero tarde.
+- **Experimento.** En memoria las dos reservas no se cruzaban (los tests del dominio pasaban). En `almacen.js`,
+  `guardarDiferencias` hacía todos los `INSERT` primero y los `UPDATE` después: la reserva nueva se insertaba mientras la
+  original todavía duraba hasta las 11:00. Descartada (a).
+- **Causa raíz.** El orden de escritura. La restricción `EXCLUDE` revisa cada fila en el momento del `INSERT`.
+- **Corrección.** Tabla por tabla, primero los `UPDATE` y luego los `INSERT` (las claves foráneas siguen bien porque las
+  tablas van de padres a hijos). Comprobado al revés: con el orden anterior, el test falla con `RESERVA_SOLAPADA`.
+- **Lección.** Que el dominio esté bien no basta: el orden en que se escriben los cambios también es parte de la regla.
+
+### 16. Pedir un salón reservado para mañana no dejaba mandar la solicitud
+- **Síntoma.** Probándolo con un administrador del campus: un profesor reservó Cosmos para el día siguiente de 9 a 11;
+  otro profesor intentó la misma reserva, le salió "Cosmos ya está reservado en esa franja" y no había forma de pedirle
+  el salón a un admin.
+- **Hipótesis.** (a) El botón "Solicitar este salón" fallaba; (b) la regla no contemplaba ese caso.
+- **Experimento.** El botón solo se dibujaba para reservas **en curso** y el dominio respondía `RESERVA_NO_EN_CURSO` a
+  cualquier otra. Descartada (a): era la regla, escrita solo para "el profesor de las 9:00 no llegó".
+- **Causa raíz.** El caso de uso se definió más angosto que la necesidad real: en el campus se piden salones con
+  anticipación, no solo cuando alguien no llega.
+- **Corrección.** La solicitud sirve también para reservas futuras, con una franja (`inicio`, migración 011), y el aviso
+  de "ya está reservado" trae el botón "Pedirle el salón a un admin". Al aprobar, la reserva original conserva lo que le
+  sobre o se cancela entera. Cancelarla e insertar la nueva en la misma transacción volvía a chocar con `EXCLUDE` (caso
+  15), porque los `DELETE` iban al final: ahora van primero. Comprobado al revés: con el orden anterior, el test de
+  PostgreSQL falla.
+- **Lección.** Probar con quien usa el sistema encuentra lo que los tests no buscan: los tests cubrían bien la regla
+  equivocada.
+
+### 17. n8n seguía con el flujo viejo aunque `npm run n8n:preparar` decía "importado"
+- **Síntoma.** Al activar el flujo nuevo de avisos, n8n respondió `Workflow "pulseAvisoReserva" not found`, aunque el
+  script había dicho "✔ 7 flujos importados".
+- **Hipótesis.** (a) El JSON nuevo tenía un error; (b) n8n no estaba leyendo los archivos.
+- **Experimento.** Importado a mano con `docker compose cp`, el mismo JSON entró bien: descartada (a). `ls /workflows`
+  dentro del contenedor salió **vacío**, y el flujo de incidencias guardado en n8n todavía tenía el Switch por área que se
+  había quitado días antes.
+- **Causa raíz.** En macOS, Docker no tenía permiso sobre la carpeta del proyecto (en Descargas): el volumen
+  `./n8n:/workflows` se montaba vacío, n8n importaba cero flujos sin error y el script contaba los archivos del disco,
+  no los que importó n8n.
+- **Corrección.** El script copia cada JSON con `docker compose cp` y compara cuántos importó n8n con cuántos hay. Se
+  verificó exportando el flujo de incidencias desde n8n: ya no tiene el Switch.
+- **Lección.** Un "✔" que cuenta lo que se quiso hacer, y no lo que pasó, esconde fallas. Verificar el resultado en el
+  sistema de destino.
+
+### 18. Aprobar una solicitud borraba una reserva de otra sala
+- **Síntoma.** En una revisión completa del código, antes de la reunión con dirección: Ana reserva Cosmos de 9 a 11,
+  Luis lo pide, Ana mueve su reserva a Apolo y el admin aprueba lo de Luis. La reserva de Ana en Apolo **desaparecía** y
+  le llegaba un correo diciendo que se canceló.
+- **Hipótesis.** (a) Editar la reserva no actualizaba la solicitud; (b) aprobar no revisaba en qué sala estaba la
+  reserva original.
+- **Experimento.** Un script con el dominio en memoria (sin base ni interfaz) lo reprodujo: antes de aprobar,
+  `r1 apolo Ana`; después, solo `cosmos Luis`. La solicitud seguía bien apuntando a `r1` (descartada a): el problema
+  era qué hacía la aprobación con ella.
+- **Causa raíz.** `aplicarAprobacion` le quitaba la franja a la reserva original comparando solo las horas, no la sala.
+- **Corrección.** Solo se le quita la franja si sigue en el salón pedido; el aviso al dueño, igual. Test nuevo que
+  falla con el código anterior (comprobado quitando el arreglo).
+- **Lección.** Una regla que guarda una referencia (la reserva pedida) debe volver a revisar que lo referido siga siendo
+  lo que era: entre pedir y aprobar, el mundo cambia.
+
 ## Qué se aprendió en general
 1. **Reproducir fuera de la interfaz** (curl, un script) separa los errores del navegador de los del servidor o del modelo.
 2. **Leer el log antes de adivinar:** en los casos 2, 4, 6 y 7 la causa estaba escrita en el log.

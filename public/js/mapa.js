@@ -9,7 +9,7 @@
 //     lectores de pantalla, y para los espacios que no tienen sitio en el plano.
 
 import { el } from './dom.js';
-import { ESTADOS_RECURSO, etiqueta } from './catalogos.js';
+import { ESTADOS_RECURSO, etiqueta, soloReservables } from './catalogos.js';
 import { ahoraBogota, hoyISO } from './estado.js';
 import { construirPlano, SALA_POR_ESPACIO } from './mapa/plano.js';
 import { pintarMundo, BALDOSA } from './mapa/pixel.js';
@@ -89,7 +89,9 @@ export function iniciarMapa() {
 }
 
 /** Se llama con el estado cada vez que llegan datos nuevos de la API. */
-export function dibujarMapa({ espacios, recursos, incidencias, reservas, fecha }) {
+export function dibujarMapa({ espacios: todos, recursos, incidencias, reservas, fecha }) {
+  // Hunters es una zona común: se dibuja como zona del plano, no como sala que se reserva
+  const espacios = soloReservables(todos);
   const ubicados = new Map();
   const sinUbicar = [];
   const ahora = ahoraBogota();
@@ -138,7 +140,7 @@ function salaDe(espacio, yaUbicados) {
 function dibujarLista(espacios, sinUbicar) {
   const lista = contenedor();
   if (!espacios.length) {
-    lista.replaceChildren(el('p', { className: 'vacio' }, 'No hay espacios cargados. Revisa la pestaña Datos o restaura los datos iniciales.'));
+    lista.replaceChildren(el('p', { className: 'vacio' }, 'No hay espacios cargados. Revisa la conexión o restaura los datos iniciales (npm run restaurar).'));
     return;
   }
 
@@ -221,7 +223,7 @@ function dibujarTooltip() {
     const info = persona.clase ? salas.get(persona.clase) : null;
     const clase = info ? nombreVisible(info.espacio) : null;
     contenido = persona.rol === 'diego'
-      ? [el('strong', {}, 'Diego Tarazona'), el('span', {}, 'Fundador de Campuslands · En reunión en la sala de juntas')]
+      ? [el('strong', {}, 'Diego Tarazona'), el('span', {}, 'Fundador de Campuslands · Salón Morado (privado)')]
       : persona.rol === 'trabajador'
       ? [el('strong', {}, 'Trabajador'), el('span', {}, 'Bettermedia · zona privada')]
       : persona.rol === 'trabajadora'

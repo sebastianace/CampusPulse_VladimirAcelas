@@ -42,7 +42,7 @@ async function pedir(ruta, metodo = 'GET', cuerpo) {
 }
 
 test('las rutas GET responden 200 con listas', async () => {
-  for (const ruta of ['/api/espacios', '/api/recursos', '/api/reservas', '/api/prestamos', '/api/incidencias']) {
+  for (const ruta of ['/api/espacios', '/api/recursos', '/api/reservas', '/api/incidencias']) {
     const { status, cuerpo } = await pedir(ruta);
     assert.equal(status, 200, ruta);
     assert.ok(Array.isArray(cuerpo), ruta);
@@ -63,12 +63,28 @@ test('JSON inválido -> 422 y ruta inexistente -> 404', async () => {
   assert.equal(cuerpo.error.codigo, 'RUTA_NO_ENCONTRADA');
 });
 
-test('regla de negocio violada -> 409', async () => {
-  // Un recurso semilla dañado no se puede prestar (si el seed tiene alguno).
-  const recursos = (await pedir('/api/recursos')).cuerpo;
-  const danado = recursos.find((r) => r.estado === 'danado');
-  if (!danado) return; // sin recursos dañados en el seed no hay caso que probar
-  const { status, cuerpo } = await pedir('/api/prestamos', 'POST', { recursoId: danado.id, persona: 'Ana' });
-  assert.equal(status, 409);
-  assert.equal(cuerpo.error.codigo, 'TRANSICION_INVALIDA');
+test('el campus no presta equipos: /api/prestamos ya no existe (404)', async () => {
+  assert.equal((await pedir('/api/prestamos')).status, 404);
+  assert.equal((await pedir('/api/prestamos', 'POST', { recursoId: 'rec-01', persona: 'Ana' })).status, 404);
+});
+
+test('una incidencia del video beam deja fuera de servicio solo el equipo, también guardado en la base', async () => {
+  const videoBeam = (await pedir('/api/recursos')).cuerpo.find((r) => r.tipo === 'video_beam' && r.espacioId && r.estado === 'disponible');
+  const { status, cuerpo: creada } = await pedir('/api/incidencias', 'POST', {
+    descripcion: 'El video beam no prende', categoria: 'tecnologia', prioridad: 'media', area: 'Soporte TI',
+    espacioId: videoBeam.espacioId, recursoId: videoBeam.id, inhabilitar: true, origen: 'manual',
+  });
+  assert.equal(status, 201);
+  const estadoSala = async () => (await pedir('/api/espacios')).cuerpo.find((e) => e.id === videoBeam.espacioId).estado;
+  const estadoEquipo = async () => (await pedir('/api/recursos')).cuerpo.find((r) => r.id === videoBeam.id).estado;
+  assert.equal(await estadoSala(), 'disponible');
+  assert.equal(await estadoEquipo(), 'en_reparacion');
+  // La columna inhabilito_espacio se guarda y se lee de PostgreSQL
+  const guardada = (await pedir('/api/incidencias')).cuerpo.find((i) => i.id === creada.id);
+  assert.equal(guardada.inhabilito, true);
+  assert.equal(guardada.inhabilitoEspacio, false);
+
+  assert.equal((await pedir(`/api/incidencias/${creada.id}`, 'PATCH', { estado: 'resuelta' })).status, 200);
+  assert.equal(await estadoEquipo(), 'disponible');
+  assert.equal(await estadoSala(), 'disponible');
 });

@@ -9,13 +9,17 @@ const estado = {
   espacios: [],
   recursos: [],
   reservas: [],
-  prestamos: [],
   incidencias: [],
+  solicitudes: [],        // solicitudes de salón que le tocan a quien inició sesión
   fecha: hoyISO(),        // día que muestra la línea de tiempo
   actualizado: null,      // hora de la última carga exitosa
 };
 
 const suscriptores = new Set();
+
+// Último "hoy" conocido: si el tablero queda abierto pasada la medianoche y se estaba viendo el día de hoy,
+// la línea de tiempo pasa sola al día nuevo (si se estaba viendo otro día, se respeta)
+let ultimoHoy = estado.fecha;
 
 // Huella de los últimos datos dibujados: si una recarga trae exactamente
 // lo mismo, no se redibuja (así no se cierran selects ni se reinician animaciones)
@@ -42,12 +46,17 @@ export function cambiarFecha(fecha) {
  * no deja la pantalla en blanco.
  */
 export async function cargarTodo() {
+  const hoy = hoyISO();
+  if (hoy !== ultimoHoy) {
+    if (estado.fecha === ultimoHoy) estado.fecha = hoy;
+    ultimoHoy = hoy;
+  }
   const consultas = {
     espacios: '/api/espacios',
     recursos: '/api/recursos',
     reservas: `/api/reservas?fecha=${estado.fecha}`,
-    prestamos: '/api/prestamos',
     incidencias: '/api/incidencias',
+    solicitudes: '/api/solicitudes',
   };
 
   const claves = Object.keys(consultas);
@@ -59,7 +68,7 @@ export async function cargarTodo() {
     else errores.push(resultado.reason);
   });
 
-  // Las salas renombradas en el campus (Sputnik, Salón Morado…) se muestran con su
+  // Las salas renombradas en el campus (Sputnik, Sala de reuniones…) se muestran con su
   // nombre nuevo en todo el tablero; el de la API queda en nombreApi
   estado.espacios = estado.espacios.map((e) => {
     if (e.nombreApi !== undefined) return e; // ya traducido (la ruta falló y se conservó)

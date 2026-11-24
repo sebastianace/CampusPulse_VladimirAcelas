@@ -5,6 +5,7 @@
 
 import { el } from './dom.js';
 import { ahoraBogota, cambiarFecha, hoyISO } from './estado.js';
+import { soloReservables } from './catalogos.js';
 import * as toasts from './toasts.js';
 
 // Rango visible del día. Coincide con el horario del campus que valida
@@ -27,7 +28,8 @@ export function iniciarTimeline() {
   });
 }
 
-export function dibujarTimeline({ espacios, reservas, fecha }) {
+export function dibujarTimeline({ espacios: todos, reservas, fecha }) {
+  const espacios = soloReservables(todos); // las zonas comunes (Hunters) no se reservan
   document.getElementById('fecha-timeline').value = fecha;
   const contenedor = document.getElementById('timeline');
   contenedor.style.setProperty('--horas', HORA_FIN_VISTA - HORA_INICIO_VISTA);

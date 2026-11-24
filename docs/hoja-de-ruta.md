@@ -35,7 +35,7 @@ Ordenado por impacto para el campus frente al esfuerzo. Esfuerzo: **S** días, *
 | 4 | **Reglamento oficial** en la base de conocimiento, con un dueño (Coordinación) y una fecha de revisión | Hoy los documentos son de ejemplo; una respuesta de Pulse debe ser la política real | S (técnico) |
 | 5 | **Avisos donde la gente ya lee** (Google Chat, Telegram o WhatsApp Business) además del correo | Un correo de "incidencia crítica" que nadie abre no sirve | M |
 | 6 | **Panel de ocupación para la dirección:** uso de cada sala por día y hora | Decide con datos si falta un salón grande o si una sala está subutilizada | M |
-| 7 | **Tiempos de respuesta por área** (por ejemplo, crítica en 1 hora) y escalamiento automático en n8n si no se cumple | Convierte los avisos en compromiso | M |
+| 7 | **Compromisos de tiempo por prioridad** (por ejemplo, crítica en 1 hora) y escalamiento automático en n8n si no se cumple. La medición ya existe: el panel Soporte TI muestra el tiempo de respuesta por prioridad | Convierte los avisos en compromiso | S |
 | 8 | **Rol de camper** (consultar, reportar y preguntar, sin reservar) | Los campers son quienes más ven los daños | S |
 | 9 | **Sincronizar reservas con Google Calendar** | El profesor ve su reserva donde ya organiza su día | M |
 

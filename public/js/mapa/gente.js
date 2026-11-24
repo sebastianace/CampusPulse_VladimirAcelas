@@ -20,7 +20,7 @@ const RECONCILIAR_CADA = 0.6;   // s entre revisiones de cuánta gente debería 
 
 // Zonas donde la gente pasa el rato sin reservar nada
 const ZONAS_COMUNES = new Set(['central1', 'central2', 'pasilloEste', 'hunters',
-  'sala113', 'recepcion', 'lobby', 'cabinas', 'clonai', 'houston', 'amarilla1', 'amarilla2', 'amarilla3', 'amarilla4', 'banosN', 'banosSO', 'banosSE']);
+  'sala113', 'recepcion', 'lobby', 'cabinas', 'clonai', 'houston', 'amarilla1', 'amarilla2', 'banosN', 'banosSO', 'banosSE']);
 
 const PIELES = ['#f1c27d', '#e0ac69', '#c68642', '#8d5524', '#ffdbac', '#d4a373'];
 const PELOS = ['#1b1b1b', '#3b2a1a', '#6b4423', '#a0522d', '#d6b370', '#2b2b2b', '#5b3a29'];
@@ -36,9 +36,10 @@ const OCUPACION_PRIVADA = 0.85;        // parte de los puestos con alguien traba
 const COLOR_TRABAJADOR = '#e8458b';    // cinta de Bettermedia
 const CAMISAS_OFICINA = ['#e2e8f0', '#bfdbfe', '#cbd5e1', '#f8fafc', '#1e3a8a', '#334155'];
 
-// Reunión permanente en la sala de juntas, presidida por Diego Tarazona (fundador de Campuslands)
-const ASISTENTES_REUNION = 7;
-const NOTA_REUNION = 'En reunión con Diego Tarazona';
+// Diego Tarazona (fundador de Campuslands) y su equipo trabajan en el Salón Morado, que es privado.
+// (Antes estaban en la sala de juntas; ahora esa es la sala de reuniones que se reserva.)
+const SALA_DIRECCION = 'morado';
+const NOTA_DIRECCION = 'Equipo de dirección · Salón Morado';
 
 const azar = (lista) => lista[Math.floor(Math.random() * lista.length)];
 const entre = (a, b) => a + Math.random() * (b - a);
@@ -244,17 +245,16 @@ export function crearGente(plano, { movimiento = true } = {}) {
         const destino = { ...puesto, tipo: 'asiento' };
         ubicar(nacer('trabajadora', destino, 'houston'), destino);
       }
-      // Diego en la cabecera de la sala de juntas y su equipo alrededor
-      const juntas = plano.areas.find((s) => s.id === 'juntas');
-      if (juntas?.cabecera) {
-        const cabecera = { ...juntas.cabecera, area: 'juntas', tipo: 'asiento' };
-        ubicar(nacer('diego', cabecera, 'juntas'), cabecera);
-        const sillas = asientosDe('juntas').filter((a) => !asientosTomados.has(clave(a)));
-        for (const asiento of sillas.sort(() => Math.random() - 0.5).slice(0, ASISTENTES_REUNION)) {
-          const destino = { ...asiento, tipo: 'asiento' };
-          const persona = nacer('profe', destino, 'juntas');
-          persona.nota = NOTA_REUNION;
-          ubicar(persona, destino);
+      // Diego en el primer puesto del Salón Morado y su equipo en los otros
+      const [puestoDiego, ...puestosEquipo] = asientosDe(SALA_DIRECCION).filter((a) => !asientosTomados.has(clave(a)));
+      if (puestoDiego) {
+        const destino = { ...puestoDiego, tipo: 'asiento' };
+        ubicar(nacer('diego', destino, SALA_DIRECCION), destino);
+        for (const asiento of puestosEquipo) {
+          const lugar = { ...asiento, tipo: 'asiento' };
+          const persona = nacer('profe', lugar, SALA_DIRECCION);
+          persona.nota = NOTA_DIRECCION;
+          ubicar(persona, lugar);
         }
       }
     }

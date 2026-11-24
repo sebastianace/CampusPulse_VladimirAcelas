@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <title>Campus Pulse</title>
   <meta name="description" content="Centro de mando operativo de Campuslands: espacios, equipos e incidencias en un solo plano.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -42,6 +43,7 @@
       </button>
       <span class="sesion" id="sesion" hidden>
         <span class="sesion__nombre" id="sesion-nombre"></span>
+        <button class="btn btn--secundario btn--chico" id="btn-clave" type="button" title="Cambiar mi contraseña">Contraseña</button>
         <button class="btn btn--secundario btn--chico" id="cerrar-sesion" type="button">Salir</button>
       </span>
     </div>
@@ -106,12 +108,17 @@
     <aside class="panel tablero__acciones">
       <nav class="pestanas" role="tablist" aria-label="Acciones">
         <button role="tab" class="pestana" aria-selected="true" aria-controls="tab-reservar" id="p-reservar">Reservar</button>
-        <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-prestar" id="p-prestar">Prestar</button>
         <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-reportar" id="p-reportar">Reportar</button>
         <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-incidencias" id="p-incidencias">
           Incidencias <span class="contador" id="contador-incidencias" hidden></span>
         </button>
-        <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-datos" id="p-datos">Datos</button>
+        <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-soporte" id="p-soporte" hidden>
+          Soporte TI <span class="contador" id="contador-soporte" hidden></span>
+        </button>
+        <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-solicitudes" id="p-solicitudes">
+          Solicitudes <span class="contador" id="contador-solicitudes" hidden></span>
+        </button>
+        <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-inventario" id="p-inventario" hidden>Inventario</button>
         <button role="tab" class="pestana" aria-selected="false" aria-controls="tab-usuarios" id="p-usuarios" hidden>Usuarios</button>
       </nav>
 
@@ -159,26 +166,6 @@
         </ul>
       </section>
 
-      <!-- Prestar y devolver equipos -->
-      <section class="pestana__cuerpo" role="tabpanel" id="tab-prestar" aria-labelledby="p-prestar" hidden>
-        <form class="formulario" id="form-prestamo" novalidate>
-          <label class="campo">
-            <span>Equipo</span>
-            <select name="recursoId" required></select>
-          </label>
-          <label class="campo">
-            <span>Persona</span>
-            <input name="persona" type="text" autocomplete="name" required>
-          </label>
-          <button class="btn btn--primario" type="submit">Prestar equipo</button>
-        </form>
-
-        <h3 class="subtitulo">Préstamos activos</h3>
-        <ul class="lista" id="lista-prestamos">
-          <li class="vacio">Cargando préstamos…</li>
-        </ul>
-      </section>
-
       <!-- Reportar incidencia: flujo vertical con IA -->
       <section class="pestana__cuerpo" role="tabpanel" id="tab-reportar" aria-labelledby="p-reportar" hidden>
         <form class="formulario" id="form-triaje" novalidate>
@@ -207,15 +194,35 @@
         </ul>
       </section>
 
-      <!-- Calidad de los datos oficiales -->
-      <section class="pestana__cuerpo" role="tabpanel" id="tab-datos" aria-labelledby="p-datos" hidden>
-        <div id="calidad-datos">
-          <p class="vacio">Cargando reporte de calidad…</p>
-        </div>
-        <button class="btn btn--peligro" id="btn-restaurar" type="button">Restaurar datos iniciales</button>
+      <!-- Soporte TI (soporte técnico y admin): todas las incidencias abiertas, de la más urgente a la menos -->
+      <section class="pestana__cuerpo" role="tabpanel" id="tab-soporte" aria-labelledby="p-soporte" hidden>
+        <!-- Tiempo de respuesta de TI (GET /api/incidencias/indicadores) -->
+        <section class="indicadores" id="indicadores-ti" aria-labelledby="titulo-indicadores">
+          <h3 class="subtitulo" id="titulo-indicadores">Tiempo de respuesta de TI</h3>
+          <div id="cuerpo-indicadores"><p class="nota">Calculando…</p></div>
+        </section>
+        <div class="soporte__resumen" id="resumen-soporte"></div>
+        <ul class="lista" id="lista-soporte">
+          <li class="vacio">Cargando incidencias…</li>
+        </ul>
       </section>
 
-      <!-- Cuentas (solo admin): crear profesores y soporte técnico -->
+      <!-- Solicitudes de salón: pedir un salón que ya está reservado (en curso o a futuro); un admin decide -->
+      <section class="pestana__cuerpo" role="tabpanel" id="tab-solicitudes" aria-labelledby="p-solicitudes" hidden>
+        <ul class="lista" id="lista-solicitudes">
+          <li class="vacio">Cargando solicitudes…</li>
+        </ul>
+      </section>
+
+      <!-- Inventario (admin y soporte técnico): solo los equipos que necesitan arreglo -->
+      <section class="pestana__cuerpo" role="tabpanel" id="tab-inventario" aria-labelledby="p-inventario" hidden>
+        <p class="nota">Equipos dañados o en reparación. Cuando uno quede arreglado, márcalo disponible y sale de la lista. Lo que una incidencia abierta tiene fuera de servicio se rehabilita resolviendo la incidencia.</p>
+        <ul class="lista" id="lista-inventario-equipos">
+          <li class="vacio">Cargando equipos…</li>
+        </ul>
+      </section>
+
+      <!-- Cuentas (solo admin): crear profesores, soporte técnico y otros admins; contraseñas temporales -->
       <section class="pestana__cuerpo" role="tabpanel" id="tab-usuarios" aria-labelledby="p-usuarios" hidden>
         <form class="formulario" id="form-usuario" novalidate>
           <label class="campo">
@@ -232,15 +239,25 @@
               <select name="rol" required>
                 <option value="profesor">Profesor</option>
                 <option value="soporte_tecnico">Soporte técnico</option>
+                <option value="admin">Administrador</option>
               </select>
             </label>
           </div>
+          <label class="campo">
+            <span>Correo para avisos (opcional)</span>
+            <input name="correo" type="email" autocomplete="off" autocapitalize="none" placeholder="ej. ana.gomez@campuslands.com">
+          </label>
           <label class="campo">
             <span>Contraseña inicial (mínimo 8 caracteres)</span>
             <input name="clave" type="password" autocomplete="new-password" minlength="8" required>
           </label>
           <button class="btn btn--primario" type="submit">Crear cuenta</button>
         </form>
+
+        <!-- Reparto automático: a quién le toca cada categoría de incidencia (PUT /api/responsables/:categoria) -->
+        <h3 class="subtitulo">Quién atiende cada categoría</h3>
+        <p class="nota">Las incidencias nuevas le tocan a la persona de su categoría y le llega un aviso. Si no eliges a nadie, quedan sin asignar.</p>
+        <div class="formulario" id="responsables"></div>
 
         <h3 class="subtitulo">Cuentas</h3>
         <ul class="lista" id="lista-usuarios">
@@ -280,15 +297,32 @@
     </button>
   </div>
 
-  <!-- Personas que reservan salas: se despliegan al escribir el responsable -->
-  <datalist id="lista-responsables">
-    <option value="Dani Mendoza">Director comercial</option>
-    <option value="Karen Celis">Director Formación</option>
-    <option value="Juliana Caceres">Director Admin y Financiera</option>
-    <option value="Maria Fernanda Cala">Líder de Coordinación</option>
-    <option value="Paola Granados">Coordinadora de procesos Comerciales</option>
-    <option value="Alexandra Villamizar">Coordinador IA Academy</option>
-  </datalist>
+  <!-- Personas que reservan salas: los nombres de las cuentas reales (GET /api/usuarios/nombres) -->
+  <datalist id="lista-responsables"></datalist>
+
+  <!-- Cambiar mi contraseña (obligatorio si la contraseña es temporal) -->
+  <dialog class="dialogo" id="dialogo-clave" aria-labelledby="titulo-clave">
+    <form class="formulario" id="form-clave" novalidate>
+      <h2 class="dialogo__titulo" id="titulo-clave">Cambiar mi contraseña</h2>
+      <p class="nota" id="nota-clave" hidden>Tu contraseña es temporal: cámbiala para seguir usando Campus Pulse.</p>
+      <label class="campo">
+        <span>Contraseña actual</span>
+        <input name="claveActual" type="password" autocomplete="current-password" required>
+      </label>
+      <label class="campo">
+        <span>Contraseña nueva (mínimo 8 caracteres)</span>
+        <input name="claveNueva" type="password" autocomplete="new-password" minlength="8" required>
+      </label>
+      <label class="campo">
+        <span>Repite la contraseña nueva</span>
+        <input name="repetir" type="password" autocomplete="new-password" minlength="8" required>
+      </label>
+      <div class="item__acciones">
+        <button class="btn btn--primario" type="submit">Cambiar contraseña</button>
+        <button class="btn btn--secundario" type="button" id="cancelar-clave">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
 
   <div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
 

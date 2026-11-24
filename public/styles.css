@@ -164,9 +164,217 @@ body[data-presion="media"] .barra { box-shadow: inset 0 3px 0 var(--ocupada); }
 .sesion { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; }
 .sesion__nombre { color: var(--tenue); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* ---------- Pantalla de inicio de sesión ---------- */
-.acceso { min-height: 100vh; display: grid; place-items: center; padding: 16px; box-sizing: border-box; }
-.acceso__caja { width: min(400px, 100%); display: grid; gap: 24px; padding: 28px; box-sizing: border-box; }
+/* ---------- Pantalla de inicio de sesión ----------
+   Inspirada en la de Campuslands: cielo oscuro, brillo morado detrás del título, dos tarjetas con borde claro y
+   botones morados. El cielo es un <canvas> (js/acceso/espacio.js): estrellas en movimiento y objetos 3D dibujados
+   sin librerías. No se usan el logo ni las imágenes de Campuslands. */
+.acceso {
+  --a-fondo: #1e1d2b;
+  --a-fondo-bajo: #14131d;
+  --a-morado: #6c63ff;
+  --a-morado-claro: #7f78ff;
+  --a-lavanda: #dcd7ff;
+  --a-oro: #f5c84c;
+  --a-borde: rgb(196 190 255 / 0.32);
+  --a-borde-activo: rgb(196 190 255 / 0.75);
+  --a-tarjeta: rgb(30 29 43 / 0.62);
+  --a-texto: #ececf1;
+  --a-tenue: #b9b9c4;
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+  background:
+    radial-gradient(ellipse 55% 42% at 50% 34%, rgb(108 99 255 / 0.42), transparent 72%),
+    radial-gradient(ellipse 90% 60% at 50% 110%, rgb(108 99 255 / 0.16), transparent 70%),
+    linear-gradient(180deg, var(--a-fondo), var(--a-fondo-bajo));
+  background-attachment: fixed;
+  color: var(--a-texto);
+}
+
+/* Respaldo sin JavaScript: unas estrellas fijas. Cuando el canvas arranca, las dibuja él (acceso__cielo--vivo). */
+.acceso__cielo {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1.2px 1.2px at 12% 18%, rgb(255 255 255 / 0.75), transparent),
+    radial-gradient(1px 1px at 72% 9%, rgb(255 255 255 / 0.6), transparent),
+    radial-gradient(1.4px 1.4px at 38% 66%, rgb(255 255 255 / 0.55), transparent),
+    radial-gradient(1px 1px at 88% 44%, rgb(255 255 255 / 0.7), transparent),
+    radial-gradient(1px 1px at 22% 84%, rgb(255 255 255 / 0.5), transparent),
+    radial-gradient(1.3px 1.3px at 58% 28%, rgb(255 255 255 / 0.45), transparent),
+    radial-gradient(1px 1px at 94% 82%, rgb(255 255 255 / 0.6), transparent),
+    radial-gradient(1px 1px at 4% 52%, rgb(255 255 255 / 0.55), transparent);
+  background-size: 340px 340px;
+}
+.acceso__cielo--vivo { background-image: none; }
+/* Canvas WebGL con las donas y esferas de cristal: justo encima del cielo, debajo de las tarjetas */
+.acceso__objetos {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.acceso__contenido {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 36px;
+  padding: 44px max(16px, env(safe-area-inset-right, 0px)) 32px max(16px, env(safe-area-inset-left, 0px));
+  box-sizing: border-box;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+.acceso__cabeza { text-align: center; display: grid; gap: 6px; }
+.acceso__logo {
+  margin: 0;
+  display: inline-flex; align-items: center; justify-content: center; gap: 14px;
+  font-family: var(--f-display);
+  font-stretch: 78%;
+  font-weight: 800;
+  font-size: clamp(44px, 8vw, 84px);
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: #fff;
+  text-shadow: 0 0 32px rgb(108 99 255 / 0.45);
+}
+.acceso__pulso {
+  width: 0.28em; height: 0.28em; border-radius: 50%; flex: none;
+  background: var(--disponible);
+  box-shadow: 0 0 0 0.09em rgb(63 182 139 / 0.3);
+  animation: latido 2.4s ease-in-out infinite;
+}
+.acceso__titulo {
+  margin: 18px 0 0;
+  font-family: var(--f-texto);
+  font-size: clamp(26px, 4.2vw, 48px);
+  font-weight: 600;
+  line-height: 1.15;
+  text-wrap: balance;
+  color: var(--a-lavanda);
+  text-shadow: 0 0 40px rgb(108 99 255 / 0.55);
+}
+
+.acceso__tarjetas { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; align-items: stretch; }
+.tarjeta-acceso {
+  display: grid;
+  align-content: center;
+  gap: 16px;
+  padding: 40px 44px;
+  border: 1.5px solid var(--a-borde);
+  border-radius: 24px;
+  background: var(--a-tarjeta);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  box-shadow: 0 24px 60px rgb(5 4 20 / 0.45), inset 0 1px 0 rgb(255 255 255 / 0.08);
+  box-sizing: border-box;
+  transition: border-color 0.25s, box-shadow 0.25s;
+  animation: tarjeta-entra 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.tarjeta-acceso--entrar { animation-delay: 0.08s; }
+/* La tarjeta en la que se está escribiendo brilla un poco */
+.tarjeta-acceso:focus-within {
+  border-color: var(--a-borde-activo);
+  box-shadow: 0 24px 60px rgb(5 4 20 / 0.45), 0 0 0 4px rgb(108 99 255 / 0.18), 0 0 48px rgb(108 99 255 / 0.28);
+}
+/* Solo se mueve, no se desvanece: la tarjeta se lee completa desde el primer cuadro */
+@keyframes tarjeta-entra {
+  from { transform: translateY(14px); }
+  to { transform: none; }
+}
+.tarjeta-acceso #bloque-info { display: grid; gap: 16px; }
+.tarjeta-acceso #bloque-info[hidden] { display: none; }
+.tarjeta-acceso__titulo { margin: 0; text-align: center; font-size: clamp(24px, 2.6vw, 32px); font-weight: 700; color: var(--a-texto); text-wrap: balance; }
+.tarjeta-acceso__sub { margin: -6px 0 4px; text-align: center; font-size: clamp(19px, 2vw, 24px); font-weight: 600; color: var(--a-texto); }
+.tarjeta-acceso__texto { margin: 0; text-align: center; font-size: 16px; line-height: 1.55; color: var(--a-texto); }
+.tarjeta-acceso__aviso {
+  margin: 4px 0 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgb(245 200 76 / 0.28);
+  background: rgb(245 200 76 / 0.07);
+  font-size: 15px; line-height: 1.5; color: var(--a-texto);
+}
+.tarjeta-acceso__nota { margin: 0; text-align: center; font-size: 14px; color: var(--a-tenue); }
+.acceso__lista { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; font-size: 15px; line-height: 1.45; }
+.acceso__lista li { display: grid; grid-template-columns: 20px 1fr; gap: 8px; }
+.acceso__lista li::before { content: '✦'; color: var(--a-oro); }
+.acceso .formulario { gap: 14px; }
+.acceso .campo > span,
+.acceso .campo > label { color: var(--a-tenue); font-size: 13px; font-weight: 600; }
+.acceso input {
+  width: 100%;
+  min-height: 50px;
+  padding: 10px 14px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  border: 1px solid #d9d9e3;
+  background: #fff;
+  color: #1d1d24;
+  font-size: 16px;
+  caret-color: var(--a-morado);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.acceso input::placeholder { color: #8a8a96; }
+.acceso input:hover { border-color: #b9b5ff; }
+.acceso input:focus-visible { outline: none; border-color: var(--a-morado); box-shadow: 0 0 0 3px rgb(108 99 255 / 0.45); }
+
+/* Contraseña con botón Mostrar / Ocultar dentro del campo */
+.clave { position: relative; }
+.clave input { padding-right: 92px; }
+.clave__ver {
+  position: absolute;
+  top: 50%; right: 6px;
+  transform: translateY(-50%);
+  min-height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: rgb(108 99 255 / 0.1);
+  color: #4b43d6;
+  font: 600 14px var(--f-texto);
+  cursor: pointer;
+}
+.clave__ver:hover { background: rgb(108 99 255 / 0.18); }
+.clave__ver:focus-visible { outline: 2px solid var(--a-morado); outline-offset: 2px; }
+.clave__mayus { margin: 2px 0 0; font-size: 13px; font-weight: 600; color: var(--a-oro); }
+
+.btn--acceso {
+  width: 100%;
+  min-height: 54px;
+  margin-top: 6px;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(180deg, var(--a-morado-claro), var(--a-morado));
+  box-shadow: 0 10px 28px rgb(108 99 255 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.2);
+  color: #fff;
+  font-size: 19px;
+  font-weight: 600;
+  transition: transform 0.15s, box-shadow 0.2s;
+}
+.btn--acceso:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 14px 34px rgb(108 99 255 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.2); }
+.btn--acceso:focus-visible { outline: 2px solid var(--a-lavanda); outline-offset: 3px; }
+.acceso__pie { margin: 0; text-align: center; font-size: 14px; color: var(--a-tenue); }
+
+@media (max-width: 760px) {
+  .acceso__contenido { gap: 26px; padding-top: 28px; }
+  .acceso__tarjetas { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .tarjeta-acceso { padding: 26px 20px; border-radius: 20px; }
+  .tarjeta-acceso--entrar { order: -1; } /* en el celular, entrar va primero */
+}
+
+/* Reducir movimiento: sin entrada animada ni latido (el cielo ya dibuja un solo cuadro quieto) */
+@media (prefers-reduced-motion: reduce) {
+  .tarjeta-acceso, .acceso__pulso { animation: none; }
+  .tarjeta-acceso, .acceso input, .btn--acceso { transition: none; }
+}
 
 /* ---------- Botones ---------- */
 .btn {
@@ -648,11 +856,19 @@ option { color: var(--texto); background: var(--placa-alta); }
   background: rgb(239 83 80 / 0.12);
   border: 1px solid rgb(239 83 80 / 0.4);
 }
+/* "Pedirle el salón a un admin" dentro del aviso de "ya está reservado" */
+.aviso p { margin: 0; }
+.aviso__accion { display: flex; margin-top: 8px; }
 
 .interruptor { display: flex; align-items: center; gap: 10px; font-size: 14px; }
-.interruptor input { width: 18px; min-height: 18px; accent-color: var(--inhabilitado); }
+.interruptor input { width: 18px; min-height: 18px; accent-color: var(--inhabilitado); flex: none; }
+/* "¿Qué queda fuera de servicio?": tres opciones; cada fila mide al menos 44 px para tocarla con el dedo */
+.opciones-alcance { border: 0; margin: 0; padding: 0; min-width: 0; gap: 2px; }
+.opciones-alcance legend { padding: 0; margin-bottom: 4px; font-size: 12px; font-weight: 600; color: var(--tenue); }
+.opciones-alcance .interruptor { min-height: 44px; }
+.opciones-alcance .interruptor:has(input:disabled) { opacity: 0.45; }
 
-/* ---------- Listas (préstamos, incidencias) ---------- */
+/* ---------- Listas (reservas, incidencias) ---------- */
 .lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 
 .item {
@@ -669,6 +885,24 @@ option { color: var(--texto); background: var(--placa-alta); }
 .item__meta { font-size: 12px; color: var(--tenue); }
 .item__acciones { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
 .item[data-estado="resuelta"] { opacity: 0.6; }
+.item__texto { margin: 0; font-size: 13px; }
+/* Tiempo de respuesta de TI (panel Soporte TI) */
+.indicadores { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--linea); }
+.indicadores .subtitulo { margin-top: 0; }
+.indicadores__cifras { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+.cifra { display: grid; gap: 2px; padding: 10px 12px; border-radius: var(--radio-sm); background: var(--placa-alta); border: 1px solid var(--linea); }
+.cifra__valor { font-size: 22px; font-weight: 600; color: var(--texto); }
+.cifra__etiqueta { font-size: 12.5px; color: var(--tenue); }
+.indicadores__tabla { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 8px; }
+.indicadores__tabla th { text-align: left; font-weight: 600; color: var(--tenue); font-size: 12px; padding: 4px 6px 4px 0; border-bottom: 1px solid var(--linea); }
+.indicadores__tabla td { padding: 6px 6px 6px 0; border-bottom: 1px solid var(--linea); }
+.indicadores__tabla td.dato, .indicadores__tabla th.num { text-align: right; }
+.indicadores__alerta { color: var(--ocupada); }
+.soporte__resumen { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+/* Formulario "Solicitar este salón" (no confundir con .solicitud de Ctrl+K) */
+.solicitud-salon { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--linea); }
+.solicitud__decision { display: grid; gap: 6px; margin-top: 4px; }
+.solicitud__nota { min-height: 40px; }
 .item__alerta { font-size: 13px; font-weight: 600; color: #ff8a87; }
 .etiquetas { display: flex; gap: 6px; flex-wrap: wrap; }
 
@@ -685,33 +919,6 @@ option { color: var(--texto); background: var(--placa-alta); }
 .etiqueta--ia { color: var(--ia); border-color: currentColor; }
 .etiqueta--resuelta { color: var(--disponible); border-color: currentColor; }
 
-/* ---------- Calidad de datos ---------- */
-.metricas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
-.metrica { padding: 10px 12px; background: var(--placa-alta); border-radius: var(--radio-sm); }
-.metrica__valor { font-family: var(--f-dato); font-size: 24px; }
-.metrica__nombre { font-size: 12px; color: var(--tenue); }
-
-.metrica--alerta .metrica__valor { color: var(--ocupada); }
-.calidad__fuente { margin-bottom: 12px; }
-
-.tabla { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 16px; }
-.tabla__titulo { text-align: left; font-size: 12px; font-weight: 600; color: var(--tenue); padding-bottom: 6px; }
-
-#tab-datos > .btn { margin-top: 8px; }
-
-.confirmacion {
-  margin-top: 8px;
-  padding: 14px;
-  border: 1px solid rgb(239 83 80 / 0.45);
-  border-radius: var(--radio-sm);
-  background: rgb(239 83 80 / 0.08);
-  display: grid;
-  gap: 10px;
-  font-size: 14px;
-}
-.tabla th, .tabla td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--linea); }
-.tabla th { color: var(--tenue); font-weight: 600; font-size: 12px; }
-
 /* ---------- Barra de comando (Ctrl+K) ---------- */
 .comando {
   width: min(680px, calc(100vw - 32px));
@@ -724,6 +931,21 @@ option { color: var(--texto); background: var(--placa-alta); }
   color: var(--texto);
   box-shadow: var(--sombra);
 }
+
+.dialogo {
+  width: min(420px, calc(100vw - 32px));
+  padding: 20px;
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+  background: var(--placa);
+  color: var(--texto);
+  box-shadow: var(--sombra);
+}
+.dialogo::backdrop { background: rgb(6 8 12 / 0.7); backdrop-filter: blur(2px); }
+.dialogo__titulo { font-size: 16px; margin: 0 0 4px; }
+.form-correo { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--linea); }
+.clave-temporal { display: grid; gap: 6px; margin-top: 6px; padding: 10px; border: 1px dashed var(--ocupada); border-radius: var(--radio-sm); }
+.clave-temporal code { font-family: var(--f-dato); font-size: 18px; letter-spacing: 0.08em; user-select: all; }
 
 .comando::backdrop { background: rgb(6 8 12 / 0.7); backdrop-filter: blur(2px); }
 
@@ -865,6 +1087,7 @@ option { color: var(--texto); background: var(--placa-alta); }
 }
 
 .toast--error { --senal: var(--inhabilitado); }
+.toast--aviso { --senal: var(--ocupada); }
 .toast__codigo { display: block; font-family: var(--f-dato); font-size: 11px; color: var(--tenue); margin-top: 2px; }
 
 /* ---------- Modo demo ---------- */
@@ -890,10 +1113,10 @@ option { color: var(--texto); background: var(--placa-alta); }
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  opacity: 0.7;
-  transition: opacity 0.15s ease, color 0.15s ease;
+  /* Opaco: con transparencia, el texto de abajo se mezclaba con el del botón */
+  transition: color 0.15s ease, border-color 0.15s ease;
 }
-.btn-demo:hover, .btn-demo[aria-expanded="true"] { opacity: 1; color: var(--texto); }
+.btn-demo:hover, .btn-demo[aria-expanded="true"] { color: var(--texto); border-color: var(--tenue); }
 
 .panel-demo {
   width: min(330px, calc(100vw - 40px));
@@ -967,7 +1190,8 @@ option { color: var(--texto); background: var(--placa-alta); }
 @media (max-width: 640px) {
   .barra { flex-wrap: wrap; gap: 12px; padding: 12px 16px; position: static; }
   .presion { order: 3; flex-basis: 100%; max-width: none; }
-  .barra__acciones { gap: 10px; }
+  .barra__acciones { gap: 10px; flex-wrap: wrap; } /* con "Contraseña" y "Salir" no caben en una línea */
+  .sesion__nombre { max-width: 110px; }
   .btn--ia kbd { display: none; }
   .tablero { padding: 16px; gap: 16px; }
   .panel { padding: 16px; }
@@ -976,5 +1200,11 @@ option { color: var(--texto); background: var(--placa-alta); }
   .mapa-juego { height: 300px; }
   .mapa-juego__ayuda { display: none; }
   .mapa-juego__hud { white-space: normal; right: 10px; }
-  .metricas { grid-template-columns: 1fr 1fr 1fr; }
+  /* El botón "Modo demo" es fijo abajo: espacio al final para que no tape los últimos botones */
+  .tablero { padding-bottom: 76px; }
+  .demo { left: 12px; bottom: 12px; }
 }
+
+/* Reparto de incidencias: configuración por categoría (pestaña Usuarios) y selector de Reasignar */
+#responsables { margin-top: 12px; }
+.form-reasignar { margin-top: 10px; }

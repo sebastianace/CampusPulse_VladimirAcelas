@@ -1,0 +1,612 @@
+{
+  "fecha": "2026-11-22",
+  "modelo": "gemini-3.5-flash-lite",
+  "resumen": {
+    "zeroShot": {
+      "total": 12,
+      "errores": 0,
+      "exactos": 8,
+      "porCampo": {
+        "paraTI": 12,
+        "categoria": 11,
+        "prioridad": 9,
+        "espacioId": 12,
+        "recursoId": 12,
+        "inhabilitar": 12
+      }
+    },
+    "fewShot": {
+      "total": 12,
+      "errores": 0,
+      "exactos": 9,
+      "porCampo": {
+        "paraTI": 12,
+        "categoria": 11,
+        "prioridad": 10,
+        "espacioId": 12,
+        "recursoId": 12,
+        "inhabilitar": 12
+      }
+    }
+  },
+  "zeroShot": [
+    {
+      "reporte": "El proyector de Cosmos no enciende y en una hora hay clase",
+      "obtenido": {
+        "paraTI": true,
+        "categoria": "tecnologia",
+        "prioridad": "alta",
+        "espacioId": "cosmos",
+        "recursoId": "rec-02",
+        "inhabilitar": false,
+        "razon": "El proyector no enciende pero no representa un riesgo fisico para las personas."
+      },
+      "modelo": "gemini-3.5-flash-lite",
+      "comparacion": {
+        "campos": {
+          "paraTI": true,
+          "categoria": true,
+          "prioridad": false,
+          "espacioId": true,
+          "recursoId": true,
+          "inhabilitar": true
+        },
+        "exacto": false
+      }
+    },
+    {
+      "reporte": "Hay una gotera en el techo de Spooki y el agua cae cerca de los tomacorrientes",
+      "obtenido": {
+        "paraTI": true,
+        "categoria": "infraestructura",
+        "prioridad": "critica",
+        "espacioId": "spooki",
+        "recursoId": null,
+        "inhabilitar": true,
+        "razon": "Gotera cerca de tomacorrientes en Sputnik representa riesgo eléctrico."
+      },
+      "modelo": "gemini-3.5-flash-lite",
+      "comparacion": {
+        "campos": {
+          "paraTI": true,
+          "categoria": true,
+          "prioridad": true,
+          "espacioId": true,
+          "recursoId": true,
+          "inhabilitar": true
+        },
+        "exacto": true
+      }
+    },
+    {
+      "reporte": "El micrófono inalámbrico 1 del auditorio tiene la batería muerta",
+      "obtenido": {
+        "paraTI": true,
+        "categoria": "tecnologia",
+        "prioridad": "baja",
+        "espacioId": "auditorio",
+        "recursoId": "rec-04",
+        "inhabilitar": false,
+        "razon": "El micrófono tiene la batería agotada y requiere recarga sin representar riesgo."
+      },
+      "modelo": "gemini-3.5-flash-lite",
+      "comparacion": {
+        "campos": {
+          "paraTI": true,
+          "categoria": true,
+          "prioridad": true,
+          "espacioId": true,
+          "recursoId": true,
+          "inhabilitar": true
+        },
+        "exacto": true
+      }
+    },
+    {
+      "reporte": "Se regó café en el piso del pasillo y alguien puede resbalar",
+      "obtenido": {
+        "paraTI": false,
+        "categoria": null,
+        "prioridad": "critica",
+        "espacioId": null,
+        "recursoId": null,
+        "inhabilitar": false,
+        "razon": "El derrame en el pasillo es un tema de aseo y seguridad que no corresponde resolver a soporte TI."
+      },
+      "modelo": "gemini-3.5-flash-lite",
+      "comparacion": {
+        "campos": {
+          "paraTI": true,
+          "categoria": true,
+          "prioridad": false,
+          "espacioId": true,
+          "recursoId": true,
+          "inhabilitar": true
+        },
+        "exacto": false
+      }
+    },
+    {
+      "reporte": "Varios estudiantes dicen que se sienten muy estresados por la carga de trabajo y piden hablar con alguien",
+      "obtenido": {
+        "paraTI": false,
+        "categoria": null,
+        "prioridad": "media",
+        "espacioId": null,
+        "recursoId": null,
+        "inhabilitar": false,
+        "razon": "El reporte trata sobre bienestar y estrés estudiantil, el cual no es competencia de soporte TI."
+      },
+      "modelo": "gemini-3.5-flash-lite",
+      "comparacion": {
+        "campos": {
+          "paraTI": true,
+          "categoria": true,
+          "prioridad": true,
+          "espacioId": true,
+          "recursoId": true,
+          "inhabilitar": true
+        },
+        "exacto": true
+      }
+    },
+    {
+      "reporte": "Los cables de la consola de sonido del auditorio están pelados y hacen corto",
+      "obtenido": {
+        "paraTI": true,
+        "categoria": "infraestructura",
+        "prioridad": "critica",
+        "espacioId": "auditorio",
+        "recursoId": "rec-03",
+        "inhabilitar": true,
+        "razon": "Cables pelados con riesgo eléctrico en la consola de sonido."
+      },
+      "modelo": "gemini-3.5-flash-lite",
+      "comparacion": {
+        "campos": {
+          "paraTI": true,
+          "categoria": false,
+          "prioridad": true,
+          "espacioId": true,
+          "recursoId": true,
+          "inhabilitar": true
+        },
+        "exacto": false
+      }
+    },
+    {
+      "reporte": "El televisor de Skilab no muestra imagen, solo pantalla negra",
+      "obtenido": {
+        "paraTI": true,
+        "categoria": "tecnologia",
+        "prioridad": "media",
+        "espacioId": "skilab",
+        "recursoId": "rec-06",
+        "inhabilitar": false,
+        "razon": "El televisor no da imagen pero no representa un riesgo para las personas."
+      },
+      "modelo": "gemini-3.5-flash-lite",
+      "comparacion": {
+        "campos": {
+          "paraTI": true,
+          "categoria": true,
+          "prioridad": true,
+          "espacioId": true,
+          "recursoId": true,
+          "inhabilitar": true
+        },
+        "exacto": true
+      }
+    },
+    {
+      "reporte": "El portátil HP 03 tiene la pantalla rota",
+      "obtenido": {
+        "paraTI": true,
+        "categoria": "tecnologia",
+        "prioridad": "media",
+        "espacioId": null,
+        "recursoId": "rec-10",
+        "inhabilitar": false,
+        "razon": "El portatil tiene la pantalla rota pero no representa riesgo para las personas."
+      },
+      "modelo": "gemini-3.5-flash-lite",
+      "comparacion": {
+        "campos": {
+          "paraTI": true,
+          "categoria": true,
+          "prioridad": true,
+          "espacioId": true,
+          "recursoId": true,
+          "inhabilitar": true
+        },
+        "exacto": true
+      }
+    },
+    {
+      "reporte": "Las sillas de la sala Amarillas verdes están rotas, a dos les faltan las patas",
+      "obtenido": {
+        "paraTI": true,
+        "categoria": "infraestructura",
+        "prioridad": "media",
+        "espacioId": "amarillas-verdes",
+        "recursoId": null,
+        "inhabilitar": false,
+        "razon": "Sillas rotas en la sala de reuniones reportadas para reparación sin riesgo inminente."
+      },
+      "modelo": "gemini-3.5-flash-lite",
+      "comparacion": {
+        "campos": {
+          "paraTI": true,
+          "categoria": true,
+          "prioridad": true,
+          "espacioId": true,
+          "recursoId": true,
+          "inhabilitar": true
+        },
+        "exacto": true
+      }
+    },
+    {
+      "reporte": "Se acabó el jabón y el papel en los baños de la entrada",
+      "obtenido": {
+        "paraTI": false,
+        "categoria": null,
+        "prioridad": "baja",
+        "espacioId": null,
+        "recursoId": null,
+        "inhabilitar": false,
+        "razon": "El reporte es sobre suministros de aseo, lo cual no es competencia de soporte TI."
+      },
+      "modelo": "gemini-3.5-flash-lite",
+      "comparacion": {
+        "campos": {
+          "paraTI": true,
+          "categoria": true,
+          "prioridad": true,
+          "espacioId": true,
+          "recursoId": true,
+          "inhabilitar": true
+        },
+        "exacto": true
+      }
+    },
+    {
+      "reporte": "Alguien dejó una mochila abandonada frente a Apolo y nadie sabe de quién es",
+      "obtenido": {
+        "paraTI": false,
+        "categoria": null,
+        "prioridad": "baja",
+        "espacioId": "apolo",
+        "recursoId": null,
+        "inhabilitar": false,
+        "razon": "El reporte trata sobre un objeto olvidado y no sobre un tema de infraestructura o tecnologia."
+      },
+      "modelo": "gemini-3.5-flash-lite",
+      "comparacion": {
+        "campos": {
+          "paraTI": true,
+          "categoria": true,
+          "prioridad": false,
+          "espacioId": true,
+          "recursoId": true,
+          "inhabilitar": true
+        },
+        "exacto": false
+      }
+    },
+    {
+      "reporte": "El parlante JBL no se conecta por bluetooth",
+      "obtenido": {
+        "paraTI": true,
+        "categoria": "tecnologia",
+        "prioridad": "baja",
+        "espacioId": null,
+        "recursoId": "rec-12",
+        "inhabilitar": false,
+        "razon": "El parlante Bluetooth no conecta pero no representa riesgo."
+      },
+      "modelo": "gemini-3.5-flash-lite",
+      "comparacion": {
+        "campos": {
+          "paraTI": true,
+          "categoria": true,
+          "prioridad": true,
+          "espacioId": true,
+          "recursoId": true,
+          "inhabilitar": true
+        },
+        "exacto": true
+      }
+    }
+  ],
+  "fewShot": [
+    {
+      "reporte": "El proyector de Cosmos no enciende y en una hora hay clase",
+      "obtenido": {
+        "paraTI": true,
+        "categoria": "tecnologia",
+        "prioridad": "alta",
+        "espacioId": "cosmos",
+        "recursoId": "rec-02",
+        "inhabilitar": false,
+        "razon": "El equipo no enciende y urge para clase, pero no representa riesgo físico para las personas."
+      },
+      "modelo": "gemini-3.5-flash-lite",
+      "comparacion": {
+        "campos": {
+          "paraTI": true,
+          "categoria": true,
+          "prioridad": false,
+          "espacioId": true,
+          "recursoId": true,
+          "inhabilitar": true
+        },
+        "exacto": false
+      }
+    },
+    {
+      "reporte": "Hay una gotera en el techo de Spooki y el agua cae cerca de los tomacorrientes",
+      "obtenido": {
+        "paraTI": true,
+        "categoria": "infraestructura",
+        "prioridad": "critica",
+        "espacioId": "spooki",
+        "recursoId": null,
+        "inhabilitar": true,
+        "razon": "El agua cerca de los tomacorrientes representa un riesgo inminente para las personas, por lo que la prioridad es crítica y se debe inhabilitar el espacio."
+      },
+      "modelo": "gemini-3.5-flash-lite",
+      "comparacion": {
+        "campos": {
+          "paraTI": true,
+          "categoria": true,
+          "prioridad": true,
+          "espacioId": true,
+          "recursoId": true,
+          "inhabilitar": true
+        },
+        "exacto": true
+      }
+    },
+    {
+      "reporte": "El micrófono inalámbrico 1 del auditorio tiene la batería muerta",
+      "obtenido": {
+        "paraTI": true,
+        "categoria": "tecnologia",
+        "prioridad": "baja",
+        "espacioId": "auditorio",
+        "recursoId": "rec-04",
+        "inhabilitar": false,
+        "razon": "El micrófono no funciona por batería baja pero no representa un riesgo para las personas."
+      },
+      "modelo": "gemini-3.5-flash-lite",
+      "comparacion": {
+        "campos": {
+          "paraTI": true,
+          "categoria": true,
+          "prioridad": true,
+          "espacioId": true,
+          "recursoId": true,
+          "inhabilitar": true
+        },
+        "exacto": true
+      }
+    },
+    {
+      "reporte": "Se regó café en el piso del pasillo y alguien puede resbalar",
+      "obtenido": {
+        "paraTI": false,
+        "categoria": null,
+        "prioridad": "alta",
+        "espacioId": null,
+        "recursoId": null,
+        "inhabilitar": false,
+        "razon": "El derrame en el piso es un riesgo para la seguridad física de las personas, un asunto que no es resuelto por Soporte TI y carece de un espacio catalogado."
+      },
+      "modelo": "gemini-3.5-flash-lite",
+      "comparacion": {
+        "campos": {
+          "paraTI": true,
+          "categoria": true,
+          "prioridad": false,
+          "espacioId": true,
+          "recursoId": true,
+          "inhabilitar": true
+        },
+        "exacto": false
+      }
+    },
+    {
+      "reporte": "Varios estudiantes dicen que se sienten muy estresados por la carga de trabajo y piden hablar con alguien",
+      "obtenido": {
+        "paraTI": false,
+        "categoria": null,
+        "prioridad": "media",
+        "espacioId": null,
+        "recursoId": null,
+        "inhabilitar": false,
+        "razon": "Es un asunto de bienestar y apoyo psicológico, no de infraestructura ni tecnología, por lo que no lo resuelve Soporte TI."
+      },
+      "modelo": "gemini-3.5-flash-lite",
+      "comparacion": {
+        "campos": {
+          "paraTI": true,
+          "categoria": true,
+          "prioridad": true,
+          "espacioId": true,
+          "recursoId": true,
+          "inhabilitar": true
+        },
+        "exacto": true
+      }
+    },
+    {
+      "reporte": "Los cables de la consola de sonido del auditorio están pelados y hacen corto",
+      "obtenido": {
+        "paraTI": true,
+        "categoria": "infraestructura",
+        "prioridad": "critica",
+        "espacioId": "auditorio",
+        "recursoId": "rec-03",
+        "inhabilitar": true,
+        "razon": "Los cables pelados y con corto representan un riesgo eléctrico crítico para las personas, por lo que se debe inhabilitar el recurso."
+      },
+      "modelo": "gemini-3.5-flash-lite",
+      "comparacion": {
+        "campos": {
+          "paraTI": true,
+          "categoria": false,
+          "prioridad": true,
+          "espacioId": true,
+          "recursoId": true,
+          "inhabilitar": true
+        },
+        "exacto": false
+      }
+    },
+    {
+      "reporte": "El televisor de Skilab no muestra imagen, solo pantalla negra",
+      "obtenido": {
+        "paraTI": true,
+        "categoria": "tecnologia",
+        "prioridad": "media",
+        "espacioId": "skilab",
+        "recursoId": "rec-06",
+        "inhabilitar": false,
+        "razon": "El televisor no funciona correctamente pero no representa riesgo para las personas, por lo que no se inhabilita."
+      },
+      "modelo": "gemini-3.5-flash-lite",
+      "comparacion": {
+        "campos": {
+          "paraTI": true,
+          "categoria": true,
+          "prioridad": true,
+          "espacioId": true,
+          "recursoId": true,
+          "inhabilitar": true
+        },
+        "exacto": true
+      }
+    },
+    {
+      "reporte": "El portátil HP 03 tiene la pantalla rota",
+      "obtenido": {
+        "paraTI": true,
+        "categoria": "tecnologia",
+        "prioridad": "media",
+        "espacioId": null,
+        "recursoId": "rec-10",
+        "inhabilitar": false,
+        "razon": "El equipo está dañado pero no representa un riesgo para las personas, por lo que no se inhabilita."
+      },
+      "modelo": "gemini-3.5-flash-lite",
+      "comparacion": {
+        "campos": {
+          "paraTI": true,
+          "categoria": true,
+          "prioridad": true,
+          "espacioId": true,
+          "recursoId": true,
+          "inhabilitar": true
+        },
+        "exacto": true
+      }
+    },
+    {
+      "reporte": "Las sillas de la sala Amarillas verdes están rotas, a dos les faltan las patas",
+      "obtenido": {
+        "paraTI": true,
+        "categoria": "infraestructura",
+        "prioridad": "media",
+        "espacioId": "amarillas-verdes",
+        "recursoId": null,
+        "inhabilitar": false,
+        "razon": "Las sillas rotas son un problema de infraestructura que atiende Soporte TI, pero sin riesgo inminente para las personas."
+      },
+      "modelo": "gemini-3.5-flash-lite",
+      "comparacion": {
+        "campos": {
+          "paraTI": true,
+          "categoria": true,
+          "prioridad": true,
+          "espacioId": true,
+          "recursoId": true,
+          "inhabilitar": true
+        },
+        "exacto": true
+      }
+    },
+    {
+      "reporte": "Se acabó el jabón y el papel en los baños de la entrada",
+      "obtenido": {
+        "paraTI": false,
+        "categoria": null,
+        "prioridad": "baja",
+        "espacioId": null,
+        "recursoId": null,
+        "inhabilitar": false,
+        "razon": "Es un tema de suministros y aseo, por lo que no es competencia de Soporte TI."
+      },
+      "modelo": "gemini-3.5-flash-lite",
+      "comparacion": {
+        "campos": {
+          "paraTI": true,
+          "categoria": true,
+          "prioridad": true,
+          "espacioId": true,
+          "recursoId": true,
+          "inhabilitar": true
+        },
+        "exacto": true
+      }
+    },
+    {
+      "reporte": "Alguien dejó una mochila abandonada frente a Apolo y nadie sabe de quién es",
+      "obtenido": {
+        "paraTI": false,
+        "categoria": null,
+        "prioridad": "alta",
+        "espacioId": "apolo",
+        "recursoId": null,
+        "inhabilitar": false,
+        "razon": "Una mochila abandonada es un asunto de seguridad, no de Soporte TI."
+      },
+      "modelo": "gemini-3.5-flash-lite",
+      "comparacion": {
+        "campos": {
+          "paraTI": true,
+          "categoria": true,
+          "prioridad": true,
+          "espacioId": true,
+          "recursoId": true,
+          "inhabilitar": true
+        },
+        "exacto": true
+      }
+    },
+    {
+      "reporte": "El parlante JBL no se conecta por bluetooth",
+      "obtenido": {
+        "paraTI": true,
+        "categoria": "tecnologia",
+        "prioridad": "baja",
+        "espacioId": null,
+        "recursoId": "rec-12",
+        "inhabilitar": false,
+        "razon": "El parlante no conecta pero no representa riesgo para las personas, por lo que no requiere inhabilitación."
+      },
+      "modelo": "gemini-3.5-flash-lite",
+      "comparacion": {
+        "campos": {
+          "paraTI": true,
+          "categoria": true,
+          "prioridad": true,
+          "espacioId": true,
+          "recursoId": true,
+          "inhabilitar": true
+        },
+        "exacto": true
+      }
+    }
+  ]
+}

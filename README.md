@@ -1,7 +1,7 @@
 # Campus Pulse
 
 **Un solo tablero para los espacios, los equipos y las incidencias del campus de Campuslands, con una IA que ayuda pero no
-decide.** Reservas sin cruces, préstamos con reglas, reportes que llegan al área correcta y un asistente que responde
+decide.** Reservas sin cruces, salones ocupados que se piden a un admin, reportes que llegan a Soporte TI y un asistente que responde
 preguntas citando el reglamento.
 
 > Principio del proyecto: **la IA sugiere, las reglas deciden y la persona confirma.**
@@ -26,16 +26,18 @@ tiene que arreglar el problema.
 |---|---|
 | Saber qué está libre | **Mapa del campus** en vivo: cada sala con su aforo y estado (libre, ocupada, inhabilitada). |
 | Reservar sin cruces | **Reservas** con reglas de horario, aforo, duración y límite por persona; la base de datos impide reservas cruzadas aunque lleguen a la vez. |
-| Prestar equipos | **Préstamos** con límite por persona y estados del equipo (disponible, prestado, dañado, en reparación). |
-| Reportar sin saber a quién | **Incidencias en lenguaje natural**: la IA sugiere categoría, prioridad, área y lugar; la persona confirma. Lo crítico inhabilita la sala o el equipo al instante. |
+| Saber qué equipo falla | **Inventario** para Soporte TI: solo los equipos dañados o en reparación, que salen de la lista al quedar disponibles. (El campus no presta equipos: no hay préstamos.) |
+| Reportar sin saber a quién | **Incidencias en lenguaje natural**: la IA sugiere categoría, prioridad y lugar; la persona confirma y la incidencia va a Soporte TI. Lo crítico deja fuera de servicio el equipo (o la sala) al instante. |
 | Evitar reportes repetidos | **"¿Es la misma incidencia?"** con embeddings: si ya la reportaron, el reporte se suma en vez de duplicarse. |
-| Que el área se entere | **Automatización con n8n**: aviso por correo al área responsable de lo crítico y resumen diario con IA. |
+| Que TI se entere | **Automatización con n8n**: aviso por correo a Soporte TI de lo crítico y resumen diario con IA. |
+| Que nadie se lleve una sorpresa | **Avisos por correo** cuando cambia algo que le toca a una persona: le pidieron su salón, le aprobaron o rechazaron una solicitud, o un admin le cambió o canceló una reserva. La app decide a quién y qué; n8n lo entrega. |
 | Pedir sala o resolver dudas rápido | **Barra Ctrl+K** ("Pregúntale a Pulse"): pide una sala en lenguaje natural o pregunta por el reglamento y recibe la respuesta **con sus fuentes**, o un "no lo sé" honesto. También **por voz**. |
 | Que todo funcione aunque la IA falle | Cada función de IA tiene su **formulario manual**; si Gemini, `pulse-ai` o n8n caen, el resto sigue funcionando. |
 
 Más capturas: [mapa](docs/capturas/02-mapa.png) · [reserva rechazada por aforo](docs/capturas/03-reserva-rechazada.png) ·
 ["no lo sé"](docs/capturas/09-no-se.png) · [aviso de n8n](docs/capturas/11-aviso-n8n.png) ·
-[en el celular](docs/capturas/12-movil.png) · [sin IA](docs/capturas/07-sin-ia.png).
+[en el celular](docs/capturas/12-movil.png) · [sin IA](docs/capturas/07-sin-ia.png) ·
+[inicio de sesión](docs/capturas/13-login.png).
 
 ## Arquitectura
 
@@ -54,7 +56,7 @@ flowchart LR
         K["knowledge/*.md"] -->|ingesta| P
     end
 
-    E -->|webhook firmado HMAC| N["n8n<br/>6 flujos"]
+    E -->|webhook firmado HMAC| N["n8n<br/>7 flujos"]
     N -->|"/api/integraciones (secreto)"| E
     N -->|correo| M["Mailpit / correo"]
     N -->|resumen diario| G
@@ -72,7 +74,7 @@ public/            Frontend: login, mapa, formularios, incidencias, Ctrl+K, voz
 src/server.js      Express: sirve public/ y monta /api/*; exige sesión; manejador global de errores
 src/routes/        Rutas HTTP (una por recurso). ia.js -> /api/ia/*, integraciones.js -> lo que llama n8n
 src/auth/          Cuentas (scrypt), sesiones y límite de intentos de login
-src/domain/        Reglas de negocio: reservas, préstamos, incidencias, similares, fechas, errores
+src/domain/        Reglas de negocio: reservas, solicitudes de salón, inventario, incidencias, similares, fechas, errores
 src/config/        reglas.js: TODAS las constantes de negocio y valores cerrados
 src/data/          PostgreSQL: almacen.js (foto + diferencias), repos/, migraciones, semilla
 src/ai/            Cliente de Gemini, triaje, asistente, intención, cuota, caché, embeddings, cliente de pulse-ai
@@ -80,7 +82,7 @@ src/ai/prompts/    Un archivo por prompt del sistema, con la plantilla de la cla
 src/integraciones/ Webhook firmado hacia n8n
 pulse-ai/          Servicio Python (FastAPI + LangChain): RAG sobre knowledge/ con pgvector
 knowledge/         Documentos de ejemplo que Pulse usa para responder preguntas
-n8n/               Los 6 flujos de n8n exportados (JSON)
+n8n/               Los 7 flujos de n8n exportados (JSON)
 db/migrations/     Esquema SQL
 evaluacion/        Conjuntos de prueba de la IA y sus resultados
 docs/              Documentación (ver "Documentación" más abajo)
@@ -128,7 +130,7 @@ tarea. Lo que agregó la v2:
 | 3C | RAG con LangChain: preguntas con fuentes y "no lo sé" |
 | 3D | Voz: dictado y lectura en voz alta |
 | 3E | Decisiones documentadas (RAG frente a fine-tuning, pgvector frente a Qdrant y Chroma) |
-| 3F | n8n: webhook firmado, avisos por área, resumen diario con IA, ingesta y agente |
+| 3F | n8n: webhook firmado, avisos a Soporte TI, resumen diario con IA, ingesta y agente |
 | 4 | Rendimiento y cuota de la IA, revisión de seguridad, README, evidencias y `v2.0.0` |
 
 El detalle de cada cambio está en [CHANGELOG.md](CHANGELOG.md).
@@ -146,14 +148,23 @@ El detalle de cada cambio está en [CHANGELOG.md](CHANGELOG.md).
 
 - Toda la API (salvo `/api/auth/*`) exige una sesión. Sin sesión, la interfaz lleva a
   `login.html` y, al entrar, vuelve a la página que se estaba usando (también `movil.html`).
-- **No hay usuarios ni contraseñas en el repositorio.** La primera vez se crea una cuenta desde
-  "Crear una cuenta" (usuario de 3 a 30 caracteres y contraseña de al menos 8): esa cuenta es
-  `admin`. Después el registro se cierra (el login oculta "Crear una cuenta") y el admin crea las
-  demás desde la pestaña **Usuarios** (`POST /api/usuarios`).
-- La interfaz oculta lo que el rol no puede hacer (el botón "Restaurar", "Marcar como resuelta" y
-  la pestaña Usuarios); aun así, quien impide las acciones es el servidor, con 403.
-- **Tres roles:** `admin` (crea cuentas y restaura datos), `profesor` (reserva, presta y reporta)
-  y `soporte_tecnico` (además resuelve incidencias, lo que rehabilita espacios y equipos). La
+- **No hay usuarios ni contraseñas en el repositorio.** La primera vez, la pantalla de inicio muestra
+  "Crea la primera cuenta" (usuario de 3 a 30 caracteres y contraseña de al menos 8): esa cuenta es
+  `admin`. Después el registro se cierra (esa tarjeta pasa a explicar qué es Campus Pulse) y un admin crea las
+  demás desde la pestaña **Usuarios** (`POST /api/usuarios`), también otros admins, para que el campus
+  no dependa de una sola persona. La lista muestra **quién creó cada cuenta** y cuándo.
+- **Si alguien olvida su contraseña,** un admin le da una **contraseña temporal** desde Usuarios: se
+  muestra una sola vez, cierra sus sesiones y, al entrar, la app obliga a cambiarla (el servidor
+  bloquea lo demás con `403 CAMBIO_DE_CLAVE_REQUERIDO`). Si quien la olvidó es el único admin:
+  `npm run restablecer-admin -- <usuario>` en la terminal del servidor. Cualquiera cambia la suya con
+  el botón **Contraseña** de la barra superior.
+- La interfaz oculta lo que el rol no puede hacer ("Atender", "Marcar como resuelta" y las pestañas
+  Soporte TI, Inventario y Usuarios); aun así, quien impide las acciones es el servidor, con 403.
+- **Tres roles:** `admin` (crea cuentas), `profesor` (reserva, pide salones ocupados y reporta)
+  y `soporte_tecnico` (además trabaja desde el panel **Soporte TI**: todas las incidencias abiertas,
+  de la más urgente a la menos, con aviso de las nuevas; las toma "en atención", las resuelve (lo que
+  rehabilita espacios y equipos), ve el **tiempo de respuesta de TI** de los últimos 7 días (cuánto
+  tarda normalmente en tomar y en resolver una incidencia, por prioridad) y trabaja el **Inventario**: los equipos dañados o en reparación, que marca disponibles cuando quedan arreglados). La
   tabla de permisos está en [docs/contrato-api.md](docs/contrato-api.md).
 - Las contraseñas se guardan con hash `scrypt` y sal aleatoria, y las sesiones con el hash de su
   token, en PostgreSQL (tablas `usuarios` y `sesiones`). La sesión dura 8 horas y viaja en una cookie
@@ -161,10 +172,21 @@ El detalle de cada cambio está en [CHANGELOG.md](CHANGELOG.md).
 - Tras **5 intentos fallidos** del mismo usuario desde la misma IP en 15 minutos, el login
   responde `429` hasta que pase la ventana (`src/auth/intentos.js`). Los contadores viven en
   memoria y se borran al reiniciar el servidor.
-- **Restaurar datos** no borra las cuentas, y las sesiones sobreviven a los reinicios de
-  `npm run dev` (útil en el reto en vivo).
+- `npm run restaurar` (en la terminal) vuelve a los datos iniciales sin borrar las cuentas, y las
+  sesiones sobreviven a los reinicios de `npm run dev` (útil en el reto en vivo). Ya no hay botón
+  "Restaurar" en la app: borrar todo con un clic era un riesgo sin beneficio para el campus.
 - Si venías de la versión con `data/auth.json`, copia tus cuentas con `npm run importar-cuentas`
   (los hashes se copian tal cual; las sesiones no, así que vuelve a iniciar sesión).
+
+## Reparto de incidencias por categoría
+
+- En el campus hay 2 técnicos de TI y cada uno atiende una categoría (infraestructura o tecnología). Un admin define quién
+  en **Usuarios → Quién atiende cada categoría**; desde ese momento, cada incidencia nueva **nace asignada** al responsable
+  de su categoría (`asignadaA`) y le llega un correo. Las abiertas que nadie tenía pasan a él (un solo correo de resumen).
+- **Asignar no es atender:** `asignadaA` es a quién le toca; `atendidaPor`, quién la toma de verdad (con "Atender"). Si el
+  responsable no está, otro técnico puede tomarla, y un admin puede **reasignarla** (botón "Reasignar").
+- El técnico ve "Te tocó a ti" y cuántas son "para ti"; lo que le tocó sale primero entre lo no atendido. Sin responsable
+  configurado, la incidencia queda sin asignar (no se pierde). Guarda la tabla `responsables_categoria` (migración 015).
 
 ## Rol de la IA y cómo se controla
 
@@ -173,7 +195,7 @@ permitido. Resumen:
 
 | Función | Qué hace la IA | Qué deciden las reglas o la persona | Si la IA falla |
 |---|---|---|---|
-| Triaje de incidencias | Sugiere categoría, prioridad, área y lugar | La persona confirma; la salida se valida contra el catálogo | Formulario manual |
+| Triaje de incidencias | Sugiere categoría, prioridad y lugar (el área siempre es Soporte TI) | La persona confirma; la salida se valida contra el catálogo | Formulario manual |
 | Asistente de reservas | Entiende el pedido y explica las opciones | Las reglas eligen las salas; reservar vuelve a validar todo | Formulario de reserva |
 | Incidencias parecidas | Convierte el texto en un vector | Umbral + filtro de lugar; la persona decide si es la misma | Se crea la incidencia igual |
 | Preguntas (RAG) | Responde con los fragmentos recuperados | Sin una cita válida, la respuesta es "no lo sé" | Mensaje claro; el resto sigue |
@@ -228,7 +250,7 @@ servicio `pulse-ai` con **RAG**:
 Con la capa gratis hay un **presupuesto global de llamadas**, **modo ahorro** y respuestas en caché para que alcance para varias
 personas a la vez: ver [docs/capacidad-ia.md](docs/capacidad-ia.md).
 
-Si `pulse-ai` o Gemini fallan, solo falla esta función: reservas, préstamos e incidencias siguen igual.
+Si `pulse-ai` o Gemini fallan, solo falla esta función: reservas e incidencias siguen igual.
 Los documentos son **de ejemplo**, no un reglamento oficial. Diseño, decisiones y problemas encontrados en
 [docs/rag.md](docs/rag.md); medición de las 15 preguntas de prueba en [docs/evaluacion-rag.md](docs/evaluacion-rag.md).
 Por qué RAG y no fine-tuning, y por qué pgvector y no Qdrant o Chroma: [docs/decisiones.md](docs/decisiones.md).
@@ -247,7 +269,7 @@ Por qué RAG y no fine-tuning, y por qué pgvector y no Qdrant o Chroma: [docs/d
 ### 6. Automatización con n8n y webhooks
 
 Al crear una incidencia, Express envía un **webhook firmado** (HMAC-SHA256, con protección contra repetición) a **n8n**, que
-valida la firma, enruta por área (**Switch**), avisa por correo con un **subworkflow**, une los resultados (**Merge**) y llama
+valida la firma, avisa por correo a Soporte TI con un **subworkflow**, une los resultados (**Merge**) y llama
 de vuelta a Campus Pulse para dejar constancia (*"Avisada: Soporte TI"* en la lista). Las críticas avisan al instante; el resto
 va a un **resumen diario con IA** (Gemini devuelve JSON y un Code node lo valida contra los datos reales antes de enviarlo).
 Hay además un flujo de **ingesta de documentos** por formulario (Document Loader, Embeddings, PGVector), un **agente de
@@ -323,11 +345,12 @@ editar un valor y guardar (`npm run dev` reinicia el servidor solo).
 | Reservas por persona y día | `MAX_RESERVAS_POR_PERSONA_DIA` | 3 |
 | Préstamos activos por persona | `MAX_PRESTAMOS_POR_PERSONA` | 2 |
 | Estados de espacio que no se pueden reservar | `ESTADOS_NO_ASIGNABLES` | inhabilitado, inconsistente |
+| Área que atiende todas las incidencias | `AREA_RESPONSABLE` | Soporte TI |
 | Prioridades que inhabilitan automáticamente | `PRIORIDADES_QUE_INHABILITAN` | critica |
 | Estado al que pasa un equipo cuando una incidencia lo inhabilita | `ESTADO_RECURSO_INHABILITADO` | en_reparacion |
-| Cambios de estado de un equipo | `TRANSICIONES_RECURSO` | disponible → prestado / en reparación; prestado → disponible / dañado; dañado → en reparación; en reparación → disponible |
+| Cambios de estado de un equipo | `TRANSICIONES_RECURSO` | disponible → prestado / en reparación / dañado; prestado → disponible / dañado; dañado → en reparación / disponible; en reparación → disponible |
 | Salas con computadores (si el pedido los necesita, solo se recomiendan estas) | `ESPACIOS_CON_COMPUTADORES` | apolo, spooki, artemis, skilab |
-| Tipos de espacio que la IA nunca recomienda | `TIPOS_FUERA_DE_RECOMENDACION` | mesa_juego |
+| Tipos de espacio que no se reservan (zonas comunes) | `TIPOS_NO_RESERVABLES` | zona_comun |
 | Consultas a la IA por usuario en la ventana | `LIMITE_IA_PETICIONES` / `LIMITE_IA_VENTANA_MINUTOS` | 5 por minuto |
 | Minutos que se guarda la respuesta del triaje | `CACHE_IA_MINUTOS` | 10 |
 | Similitud mínima para sugerir una incidencia parecida (provisional) | `UMBRAL_SIMILITUD_INCIDENCIA` | 0.93 |
@@ -340,9 +363,21 @@ Además:
 - **Editar** una reserva (`PATCH /api/reservas/:id`) vuelve a pasar por todas las reglas de arriba;
   la reserva no choca consigo misma. **Cancelar** (`DELETE /api/reservas/:id`) la elimina.
 - Una reserva que **ya empezó** no se puede editar ni cancelar.
+- Solo **quien creó la reserva o un admin** la edita o la cancela (las reservas anteriores a la
+  migración 007 no tienen dueño registrado: solo las toca un admin).
+- **Solicitudes de salón:** si el salón que alguien necesita ya está reservado, lo solicita desde la
+  reserva ("Solicitar este salón") o desde el aviso "ya está reservado" al reservar ("Pedirle el salón
+  a un admin"). Sirve para una reserva en curso (el profesor de las 9:00 no llegó) y para una futura.
+  Un **admin** aprueba o rechaza en la pestaña **Solicitudes**; al aprobar, en una sola transacción,
+  se le quita la franja a la reserva original y se crea la nueva: en curso, la original termina en ese
+  momento; futura, conserva lo que le sobre antes o después (o se cancela si la franja la cubría entera). La solicitud se "ensaya" al pedirla, así que no
+  se puede pedir algo que violaría una regla (aforo, horario, cruce con otra reserva). Los
+  avisos son en la app: contador y toast para el admin, y toast para quien pidió y para quien tenía
+  la reserva.
 - Una incidencia con `inhabilitar: true` o con una prioridad de `PRIORIDADES_QUE_INHABILITAN`
-  inhabilita el espacio o equipo afectado. Al resolverla se rehabilita, salvo que otra incidencia
-  abierta lo siga inhabilitando.
+  deja fuera de servicio **lo más específico**: el equipo afectado si lo hay (la sala se sigue
+  reservando); la sala completa solo con `inhabilitarEspacio: true` o si no hay equipo. Al resolverla
+  se rehabilita exactamente lo que se apagó, salvo que otra incidencia abierta lo siga inhabilitando.
 
 ## Instalación y ejecución
 
@@ -407,21 +442,23 @@ error claro y el formulario manual, nunca con una respuesta inventada.
 | `npm run migrar` | Aplica las migraciones de `db/migrations/` a PostgreSQL (necesita `docker compose up -d db`) |
 | `npm run embeddings` | Genera el embedding de las incidencias que no lo tienen (usa la clave de Gemini) |
 | `npm run importar-cuentas` | Copia las cuentas del viejo `data/auth.json` a PostgreSQL (se corre una vez) |
+| `npm run importar-inventario -- <archivo.csv>` | Carga el inventario real desde un CSV de Excel. Ensayo por defecto; `--aplicar` guarda y `--quitar-ficticios` quita los equipos de demostración. Ver [docs/inventario-importar.md](docs/inventario-importar.md) |
 | `npm run n8n:preparar` | Crea las credenciales en n8n, importa y activa los flujos de `n8n/` y reinicia n8n |
 | `npm run conocimiento` | Recarga `knowledge/` en la base vectorial (necesita `pulse-ai` levantado) |
 | `npm run evaluar-rag` | Hace las 15 preguntas de prueba del RAG, con y sin reranking (gasta cuota de Gemini, ~8 min) |
-| `npm run semilla` | Carga espacios, recursos y calidad de datos en PostgreSQL |
+| `npm run restablecer-admin -- <usuario>` | Contraseña temporal para un admin que olvidó la suya (sin argumento, lista los admins). Se muestra una sola vez |
+| `npm run restaurar` (o `npm run semilla`) | Vuelve a los datos iniciales: carga espacios, recursos y calidad de datos en PostgreSQL y borra reservas, solicitudes, préstamos antiguos e incidencias. No toca las cuentas |
 | `npm run medir-triaje` | Mide el triaje sin ejemplos y con ellos (24 llamadas a Gemini, ~5 min; gasta cuota) |
 
-Abre `http://localhost:3000` y crea una cuenta con **Crear una cuenta** (solo la primera vez).
+Abre `http://localhost:3000` y crea la cuenta del administrador en **Crea la primera cuenta** (solo la primera vez).
 
 Sin la clave de Gemini la aplicación funciona igual: las funciones de IA muestran un error claro y
 se usa el formulario manual. **Sin PostgreSQL no arranca**: si ves "No hay conexión con PostgreSQL",
 abre Docker Desktop y corre `docker compose up -d db`.
 
 La primera vez que arranca, la app carga en PostgreSQL los datos de `data/raw/espacios.csv`,
-`data/seed/espacios-extra.json` y `data/seed/recursos.json`. El botón **Restaurar**
-(`POST /api/restaurar`) vuelve a ese estado inicial.
+`data/seed/espacios-extra.json` y `data/seed/recursos.json`. `npm run restaurar` vuelve a ese
+estado inicial.
 
 ## Suposiciones sobre los datos
 
@@ -430,19 +467,25 @@ La primera vez que arranca, la app carga en PostgreSQL los datos de `data/raw/es
   Amarillas verdes 6, Artemis 32) y **nunca se modifica**. Un test verifica que se carga completo.
 - Los nombres se normalizan (espacios sobrantes, mayúsculas) y el ID se genera del nombre:
   `Amarillas verdes` → `amarillas-verdes`.
+- **Nombres en el campus:** tres salas hoy se llaman distinto que en el CSV: Spooki es **Sputnik**, Skilab es
+  **Skylabs** y Amarillas verdes es la **Sala de reuniones**. La traducción vive solo en `src/config/nombres.js`: la
+  base guarda el nombre oficial y la app (tablero, IA, correos, documentos del RAG) usa el del campus.
 - Un registro con aforo vacío, no numérico, decimal o menor o igual a 0 se carga como
   **inconsistente**: se ve en gris y no se puede reservar.
 - Las filas sin nombre y los nombres duplicados solo aparecen en el reporte de calidad (se
   conserva la primera fila válida).
 - Un registro inválido nunca detiene la carga.
 - Los recursos tecnológicos son **ficticios** (`"ficticio": true` en `data/seed/recursos.json`),
-  porque no se entregó un inventario oficial.
-- **Salas con computadores:** Apolo, Spooki, Artemis y Skilab tienen computadores; Cosmos, Blanca,
-  Azul, Amarillas verdes y el Auditorio no. El CSV oficial no trae este dato: lo aportó el equipo
+  porque aún no se entregó el inventario oficial. Cuando llegue se carga con `npm run importar-inventario`
+  (guía en [docs/inventario-importar.md](docs/inventario-importar.md)).
+- **Salas con computadores:** Apolo, Sputnik, Artemis y Skylabs tienen computadores; Cosmos, Blanca,
+  Azul, la Sala de reuniones y el Auditorio no. El CSV oficial no trae este dato: lo aportó el equipo
   a partir de su conocimiento de las salas del campus. Vive en `ESPACIOS_CON_COMPUTADORES` de
   `src/config/reglas.js` y se puede cambiar en vivo.
-- **Mesas de ping-pong:** `Ping-pong 1` y `Ping-pong 2` (aforo 4) no están en el CSV oficial; se
-  agregan desde `data/seed/espacios-extra.json`, que no altera `data/raw/` ni el reporte de calidad.
+- **Zona Hunters:** la zona común donde están las mesas de ping-pong. No está en el CSV oficial; se agrega desde
+  `data/seed/espacios-extra.json` (sin tocar `data/raw/` ni el reporte de calidad) para poder **reportar** daños ahí,
+  pero es de tipo `zona_comun` y **no se reserva**. Las mesas de ping-pong ya no son espacios reservables
+  (migración `014_zona_hunters.sql`).
 - Todas las fechas usan el formato `YYYY-MM-DDTHH:mm` en hora local de Bogotá, sin zona horaria.
 
 ## Demo y reto en vivo
@@ -494,8 +537,9 @@ En la hackatón (v1) cada integrante trabajó en su rama (`feature/backend`, `fe
 | [docs/matriz-modelos.md](docs/matriz-modelos.md) | Comparación de modelos de Gemini: aciertos, tiempo, tokens y costo |
 | [docs/incidencias-parecidas.md](docs/incidencias-parecidas.md) | Embeddings, similitud coseno y el umbral |
 | [docs/biblioteca-prompts.md](docs/biblioteca-prompts.md) · [docs/personalidad.md](docs/personalidad.md) | Los prompts, sus versiones y la personalidad Big Five de Pulse |
-| [docs/workflows.md](docs/workflows.md) | Los 6 flujos de n8n, lo verificado y sus límites |
+| [docs/workflows.md](docs/workflows.md) | Los 7 flujos de n8n, lo verificado y sus límites |
 | [docs/base-de-datos.md](docs/base-de-datos.md) · [docs/contrato-api.md](docs/contrato-api.md) | Esquema y API |
+| [docs/inventario-importar.md](docs/inventario-importar.md) | Cargar el inventario real desde un CSV de Excel: plantilla, reglas y cuidados |
 | [docs/registro-depuracion.md](docs/registro-depuracion.md) | Fallos reales, cómo se encontró la causa y qué los evita |
 | [docs/sustentacion.md](docs/sustentacion.md) | Guion de la demo, plan B y plan de estudio |
 | [docs/hoja-de-ruta.md](docs/hoja-de-ruta.md) | Trabajo futuro: qué haría falta para usarlo en todo el campus |

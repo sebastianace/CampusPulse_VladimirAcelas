@@ -12,7 +12,7 @@ import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 
 const { crearEstadoInicial } = await import('../src/data/estado-inicial.js');
-const { AREAS, CATEGORIAS, PRIORIDADES, REGLAS } = await import('../src/config/reglas.js');
+const { CATEGORIAS, PRIORIDADES, REGLAS } = await import('../src/config/reglas.js');
 const { EJEMPLOS_TRIAJE } = await import('../src/ai/prompts/ejemplos-triaje.js');
 const { USAR_EJEMPLOS_TRIAJE, promptTriaje } = await import('../src/ai/prompts/triaje.js');
 const { construirPrompt } = await import('../src/ai/prompts/estructura.js');
@@ -24,9 +24,12 @@ const CATALOGO = { espacios, recursos };
 
 // Revisa que una clasificación sea válida: enums, IDs del catálogo y la regla de inhabilitar.
 function assertClasificacionValida(c, nombre) {
-  assert.ok(CATEGORIAS.includes(c.categoria), `${nombre}: categoría`);
+  assert.equal(typeof c.paraTI, 'boolean', `${nombre}: paraTI`);
+  // Lo que no es para TI no tiene categoría: las dos que hay son las de los técnicos de TI
+  if (c.paraTI) assert.ok(CATEGORIAS.includes(c.categoria), `${nombre}: categoría`);
+  else assert.equal(c.categoria, null, `${nombre}: sin categoría si no es para TI`);
   assert.ok(PRIORIDADES.includes(c.prioridad), `${nombre}: prioridad`);
-  assert.ok(AREAS.includes(c.area), `${nombre}: área`);
+  assert.ok(!('area' in c), `${nombre}: el área ya no la decide la IA (toda incidencia va a TI)`);
   assert.ok(c.espacioId === null || espacios.some((e) => e.id === c.espacioId), `${nombre}: espacioId ${c.espacioId} no existe`);
   assert.ok(c.recursoId === null || recursos.some((r) => r.id === c.recursoId), `${nombre}: recursoId ${c.recursoId} no existe`);
   assert.equal(typeof c.inhabilitar, 'boolean', `${nombre}: inhabilitar`);
@@ -98,7 +101,7 @@ describe('Prompt con y sin ejemplos', () => {
 });
 
 describe('Medición', () => {
-  const esperado = { categoria: 'tecnologia', prioridad: 'media', area: 'Soporte TI', espacioId: 'apolo', recursoId: 'rec-01', inhabilitar: false };
+  const esperado = { categoria: 'tecnologia', prioridad: 'media', espacioId: 'apolo', recursoId: 'rec-01', inhabilitar: false };
 
   test('compararTriaje marca acierto o fallo por campo', () => {
     const parcial = compararTriaje(esperado, { ...esperado, prioridad: 'alta', inhabilitar: true });
@@ -125,7 +128,7 @@ describe('Medición', () => {
   test('resumir cuenta aciertos por campo, casos exactos y errores', () => {
     const resultados = [
       { comparacion: compararTriaje(esperado, { ...esperado }) },
-      { comparacion: compararTriaje(esperado, { ...esperado, area: 'Seguridad' }) },
+      { comparacion: compararTriaje(esperado, { ...esperado, prioridad: 'alta' }) },
       { error: 'IA caída', comparacion: compararTriaje(esperado, null) },
     ];
     const resumen = resumir(resultados);
@@ -133,7 +136,7 @@ describe('Medición', () => {
     assert.equal(resumen.exactos, 1);
     assert.equal(resumen.errores, 1);
     assert.equal(resumen.porCampo.categoria, 2);
-    assert.equal(resumen.porCampo.area, 1);
+    assert.equal(resumen.porCampo.prioridad, 1);
   });
 
   test('el script se detiene con un mensaje claro si no hay clave, sin llamar a Gemini', () => {

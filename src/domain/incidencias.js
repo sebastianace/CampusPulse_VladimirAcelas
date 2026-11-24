@@ -1,17 +1,29 @@
 // =====================================================================
 // DOMINIO: INCIDENCIAS
 // ---------------------------------------------------------------------
-// Al crear una incidencia, el espacio o recurso afectado se inhabilita si:
-//   - el reporte trae inhabilitar: true, o
+// Toda incidencia va a REGLAS.AREA_RESPONSABLE (TI): el área no se elige.
+// Al crear una incidencia, algo queda fuera de servicio si:
+//   - el reporte trae inhabilitar: true (o inhabilitarEspacio: true), o
 //   - su prioridad está en REGLAS.PRIORIDADES_QUE_INHABILITAN.
+// Qué queda fuera de servicio: LO MÁS ESPECÍFICO.
+//   - Si hay equipo afectado, solo el equipo: un video beam dañado no
+//     impide dar clase en la sala.
+//   - La sala completa solo si se pide (inhabilitarEspacio: true, por
+//     ejemplo agua cerca de los enchufes) o si no hay equipo afectado.
+// Reparto: al crearla, la incidencia queda asignada al responsable de su categoría (asignadaA), si hay uno.
+// Asignar no es atender: asignadaA es quien le toca; atendidaPor, quien de verdad la toma (puede ser otro si
+// el responsable no está). Un admin puede reasignarla.
 // Espacio inhabilitado -> estado "inhabilitado" (no se puede reservar).
 // Recurso inhabilitado -> REGLAS.ESTADO_RECURSO_INHABILITADO.
-// Al resolverla se rehabilita, salvo que otra incidencia abierta lo
-// siga inhabilitando.
+// Al resolverla se rehabilita exactamente lo que se apagó, salvo que otra
+// incidencia abierta lo siga inhabilitando.
+// Si la sala ya estaba cerrada A MANO desde Inventario (por ejemplo, en obra),
+// la incidencia no se queda con ese cierre: al resolverla, la sala sigue
+// cerrada hasta que Inventario la rehabilite.
 // =====================================================================
 
 import { randomUUID } from 'node:crypto';
-import { AREAS, CATEGORIAS, ORIGENES_INCIDENCIA, PRIORIDADES, REGLAS } from '../config/reglas.js';
+import { CATEGORIAS, ORIGENES_INCIDENCIA, PRIORIDADES, REGLAS } from '../config/reglas.js';
 import { DatosInvalidosError, NoEncontradoError, ReglaNegocioError } from './errors.js';
 import { ahoraBogota } from './fechas.js';
 
@@ -39,14 +51,13 @@ function validarDatosIncidencia(db, datos) {
   if (descripcion === '') throw new DatosInvalidosError('Falta la descripción de la incidencia');
   exigirValor(CATEGORIAS, datos.categoria, 'La categoría');
   exigirValor(PRIORIDADES, datos.prioridad, 'La prioridad');
-  exigirValor(AREAS, datos.area, 'El área');
   const origen = datos.origen ?? 'manual';
   exigirValor(ORIGENES_INCIDENCIA, origen, 'El origen');
   return {
     descripcion,
     categoria: datos.categoria,
     prioridad: datos.prioridad,
-    area: datos.area,
+    area: REGLAS.AREA_RESPONSABLE, // TI atiende todo: el área no se elige (si llega otra, se ignora)
     espacioId: idOpcional(db.espacios, datos.espacioId, 'espacio'),
     recursoId: idOpcional(db.recursos, datos.recursoId, 'recurso'),
     origen,
@@ -61,7 +72,20 @@ export function debeInhabilitar(inhabilitar, prioridad) {
   return inhabilitar === true || REGLAS.PRIORIDADES_QUE_INHABILITAN.includes(prioridad);
 }
 
-// Cambia el estado del espacio y del recurso afectados.
+/**
+ * Qué queda fuera de servicio: {espacio, recurso} (true o false cada uno).
+ * Lo más específico: el equipo si lo hay; la sala solo si se pide o si no hay equipo.
+ */
+export function queInhabilitar({ inhabilitar, inhabilitarEspacio, prioridad, espacioId, recursoId }) {
+  const pideSala = inhabilitarEspacio === true;
+  if (!debeInhabilitar(inhabilitar === true || pideSala, prioridad)) return { espacio: false, recurso: false };
+  return {
+    recurso: Boolean(recursoId),
+    espacio: Boolean(espacioId) && (pideSala || !recursoId),
+  };
+}
+
+// Cambia el estado del espacio y del recurso indicados (null = no tocarlo).
 // Un espacio "inconsistente" no se toca: su problema es de datos, no de una incidencia.
 function aplicarEstado(db, { espacioId, recursoId }, estadoEspacio, estadoRecurso) {
   const espacio = db.espacios.find((e) => e.id === espacioId);
@@ -70,22 +94,61 @@ function aplicarEstado(db, { espacioId, recursoId }, estadoEspacio, estadoRecurs
   if (recurso) recurso.estado = estadoRecurso;
 }
 
-// true si otra incidencia abierta mantiene inhabilitado el mismo espacio o recurso.
-function sigueInhabilitado(db, incidencia, campo) {
-  return incidencia[campo] !== null && db.incidencias.some((otra) =>
-    otra.id !== incidencia.id && otra.estado === 'abierta' && otra.inhabilito && otra[campo] === incidencia[campo]);
+// ¿Esta incidencia dejó fuera de servicio la sala? ¿Y el equipo?
+const apagoEspacio = (i) => i.inhabilitoEspacio === true && i.espacioId !== null;
+const apagoRecurso = (i) => i.inhabilito === true && i.recursoId !== null;
+
+// true si otra incidencia abierta mantiene fuera de servicio la misma sala (o el mismo equipo).
+function sigueInhabilitado(db, incidencia, apago, campo) {
+  return db.incidencias.some((otra) =>
+    otra.id !== incidencia.id && otra.estado === 'abierta' && apago(otra) && otra[campo] === incidencia[campo]);
 }
 
 // ---------- funciones públicas ----------
 
-/** Crea la incidencia y, si corresponde, inhabilita el espacio o recurso. */
-export function crearIncidencia(db, datos) {
-  const limpia = validarDatosIncidencia(db, datos);
-  const inhabilito = debeInhabilitar(datos.inhabilitar, limpia.prioridad) && Boolean(limpia.espacioId || limpia.recursoId);
-  const incidencia = { id: `inc-${randomUUID().slice(0, 8)}`, ...limpia, estado: 'abierta', inhabilito, fecha: ahoraBogota() };
+// true si la sala está inhabilitada sin que ninguna incidencia abierta la tenga así: la cerró Inventario a mano.
+function cerradaAMano(db, espacioId) {
+  const espacio = db.espacios.find((e) => e.id === espacioId);
+  return espacio?.estado === 'inhabilitado'
+    && !db.incidencias.some((i) => i.estado === 'abierta' && apagoEspacio(i) && i.espacioId === espacioId);
+}
 
-  if (inhabilito) aplicarEstado(db, incidencia, 'inhabilitado', REGLAS.ESTADO_RECURSO_INHABILITADO);
+/**
+ * Crea la incidencia y, si corresponde, deja fuera de servicio el equipo o la sala (ver queInhabilitar).
+ * responsables: Map categoría -> usuario (src/data/responsables.js). Con responsable, la incidencia nace asignada.
+ */
+export function crearIncidencia(db, datos, { responsables = new Map() } = {}) {
+  const limpia = validarDatosIncidencia(db, datos);
+  const pedido = queInhabilitar({ ...limpia, inhabilitar: datos.inhabilitar, inhabilitarEspacio: datos.inhabilitarEspacio });
+  // Una sala cerrada a mano ya está fuera de servicio: la incidencia no la "apaga" (y al resolverla no la reabre)
+  const apagar = { ...pedido, espacio: pedido.espacio && !cerradaAMano(db, limpia.espacioId) };
+  const incidencia = {
+    id: `inc-${randomUUID().slice(0, 8)}`, ...limpia, estado: 'abierta',
+    inhabilito: apagar.espacio || apagar.recurso, inhabilitoEspacio: apagar.espacio, fecha: ahoraBogota(),
+    ...(responsables.get(limpia.categoria) && { asignadaA: responsables.get(limpia.categoria) }),
+  };
+
+  aplicarEstado(db, {
+    espacioId: apagar.espacio ? limpia.espacioId : null,
+    recursoId: apagar.recurso ? limpia.recursoId : null,
+  }, 'inhabilitado', REGLAS.ESTADO_RECURSO_INHABILITADO);
   db.incidencias.push(incidencia);
+  return incidencia;
+}
+
+/**
+ * Soporte técnico toma la incidencia ("en atención"): queda a su nombre para que el resto del equipo
+ * sepa que alguien ya va en camino. usuario = {usuario, rol}. No cambia el estado: sigue abierta.
+ * nombres (Map usuario -> nombre) es opcional: con él, el 409 dice el nombre de quien la atiende.
+ */
+export function atenderIncidencia(db, incidenciaId, usuario, ahora = ahoraBogota(), nombres = new Map()) {
+  const incidencia = db.incidencias.find((i) => i.id === incidenciaId);
+  if (!incidencia) throw new NoEncontradoError(`No existe la incidencia "${incidenciaId}"`);
+  if (incidencia.estado === 'resuelta') throw new ReglaNegocioError('INCIDENCIA_YA_RESUELTA', 'Esta incidencia ya estaba resuelta');
+  if (incidencia.atendidaPor && incidencia.atendidaPor !== usuario.usuario) {
+    throw new ReglaNegocioError('INCIDENCIA_EN_ATENCION', `Esta incidencia ya la está atendiendo ${nombres.get(incidencia.atendidaPor) ?? incidencia.atendidaPor}`);
+  }
+  if (!incidencia.atendidaPor) Object.assign(incidencia, { atendidaPor: usuario.usuario, fechaAtencion: ahora });
   return incidencia;
 }
 
@@ -98,11 +161,33 @@ export function resolverIncidencia(db, incidenciaId, datos) {
 
   incidencia.estado = 'resuelta';
   incidencia.fechaResolucion = ahoraBogota();
-  if (incidencia.inhabilito) {
-    aplicarEstado(db, {
-      espacioId: sigueInhabilitado(db, incidencia, 'espacioId') ? null : incidencia.espacioId,
-      recursoId: sigueInhabilitado(db, incidencia, 'recursoId') ? null : incidencia.recursoId,
-    }, 'disponible', 'disponible');
-  }
+  // Solo se rehabilita lo que esta incidencia apagó y que ninguna otra abierta mantiene apagado.
+  aplicarEstado(db, {
+    espacioId: apagoEspacio(incidencia) && !sigueInhabilitado(db, incidencia, apagoEspacio, 'espacioId') ? incidencia.espacioId : null,
+    recursoId: apagoRecurso(incidencia) && !sigueInhabilitado(db, incidencia, apagoRecurso, 'recursoId') ? incidencia.recursoId : null,
+  }, 'disponible', 'disponible');
   return incidencia;
+}
+
+/**
+ * Un admin le pasa la incidencia a otra persona de soporte (por ejemplo, si el responsable está incapacitado).
+ * usuario: la cuenta destino (el que llama verifica que exista y pueda atender). Solo cambia asignadaA: si ya
+ * alguien la está atendiendo, sigue siendo quien la atiende.
+ */
+export function reasignarIncidencia(db, incidenciaId, usuario) {
+  const incidencia = db.incidencias.find((i) => i.id === incidenciaId);
+  if (!incidencia) throw new NoEncontradoError(`No existe la incidencia "${incidenciaId}"`);
+  if (incidencia.estado === 'resuelta') throw new ReglaNegocioError('INCIDENCIA_YA_RESUELTA', 'Esta incidencia ya estaba resuelta');
+  incidencia.asignadaA = usuario;
+  return incidencia;
+}
+
+/**
+ * Cuando un admin define quién atiende una categoría, las incidencias ABIERTAS de esa categoría que nadie tenía
+ * asignada pasan a esa persona (las que ya tienen responsable no se tocan). Devuelve las incidencias asignadas.
+ */
+export function asignarPendientes(db, categoria, usuario) {
+  const pendientes = db.incidencias.filter((i) => i.estado === 'abierta' && i.categoria === categoria && !i.asignadaA);
+  pendientes.forEach((i) => { i.asignadaA = usuario; });
+  return pendientes;
 }

@@ -3,7 +3,9 @@
 // ---------------------------------------------------------------------
 // Campus Pulse y n8n se hablan en los dos sentidos:
 //
-//   Campus Pulse -> n8n   Al crear una incidencia se envía un webhook FIRMADO (notificarIncidenciaNueva).
+//   Campus Pulse -> n8n   Webhooks FIRMADOS: al crear una incidencia (notificarIncidenciaNueva) y cuando cambia algo
+//                         que le toca a una persona, para avisarle por correo (enviarAvisoReserva). El webhook de
+//                         avisos es el de incidencias con la ruta "aviso-reserva" (no hace falta otra variable).
 //   n8n -> Campus Pulse   n8n llama a /api/integraciones/* con el secreto compartido en la cabecera x-pulse-token
 //                         (ver src/routes/integraciones.js).
 //
@@ -60,8 +62,27 @@ function datosPublicos(i) {
  * (que lee las incidencias desde la API) igual la incluye.
  */
 export async function notificarIncidenciaNueva(incidencia, { url = process.env.N8N_WEBHOOK_URL, secreto = process.env.N8N_SECRETO } = {}) {
+  return enviarFirmado(url, secreto, { evento: 'incidencia.creada', incidencia: datosPublicos(incidencia) }, `la incidencia ${incidencia.id}`);
+}
+
+/** URL del webhook de avisos: la de incidencias con la ruta "aviso-reserva" (…/webhook/aviso-reserva). */
+export function urlDeAvisos(urlIncidencias = process.env.N8N_WEBHOOK_URL) {
+  return urlIncidencias ? new URL('aviso-reserva', urlIncidencias).href : undefined;
+}
+
+/**
+ * Le pide a n8n que entregue un aviso a una persona: {correo, nombre, asunto, mensaje}.
+ * Igual que con las incidencias: un solo intento y NUNCA lanza (lo que cambió ya se guardó; el aviso en la app sigue).
+ */
+export async function enviarAvisoReserva(aviso, { url = urlDeAvisos(), secreto = process.env.N8N_SECRETO } = {}) {
+  const { correo, nombre, asunto, mensaje } = aviso;
+  return enviarFirmado(url, secreto, { evento: 'aviso.reserva', aviso: { correo, nombre, asunto, mensaje } }, `el aviso "${asunto}"`);
+}
+
+// POST firmado a n8n. Devuelve {enviado, motivo?}; nunca lanza. "que" describe el envío para el log.
+async function enviarFirmado(url, secreto, datos, que) {
   if (!url || !secreto) return { enviado: false, motivo: 'n8n no está configurado' };
-  const cuerpo = JSON.stringify({ evento: 'incidencia.creada', incidencia: datosPublicos(incidencia) });
+  const cuerpo = JSON.stringify(datos);
   const timestamp = String(Math.floor(Date.now() / 1000));
   try {
     const respuesta = await fetch(url, {
@@ -75,12 +96,12 @@ export async function notificarIncidenciaNueva(incidencia, { url = process.env.N
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!respuesta.ok) {
-      console.warn(`[n8n] El webhook respondió ${respuesta.status}; la incidencia ${incidencia.id} no se notificó.`);
+      console.warn(`[n8n] El webhook respondió ${respuesta.status}; ${que} no se envió.`);
       return { enviado: false, motivo: `n8n respondió ${respuesta.status}` };
     }
     return { enviado: true };
   } catch (error) {
-    console.warn(`[n8n] No se pudo avisar a n8n de ${incidencia.id} (${error.cause?.code ?? error.name}).`);
+    console.warn(`[n8n] No se pudo enviar a n8n ${que} (${error.cause?.code ?? error.name}).`);
     return { enviado: false, motivo: 'n8n no respondió' };
   }
 }

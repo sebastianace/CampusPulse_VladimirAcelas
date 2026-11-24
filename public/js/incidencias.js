@@ -10,9 +10,9 @@
 
 import { pedir } from './api.js';
 import { el, conCarga } from './dom.js';
-import { AREAS, CATEGORIAS, PRIORIDADES, etiqueta } from './catalogos.js';
+import { CATEGORIAS, ETIQUETAS_CATEGORIA, PRIORIDADES, etiqueta } from './catalogos.js';
 import { obtenerEstado } from './estado.js';
-import { puede } from './sesion.js';
+import { puede, sesionActual } from './sesion.js';
 import * as toasts from './toasts.js';
 import { agregarDictado } from './voz.js';
 
@@ -79,18 +79,18 @@ function abrirFormulario({ modo, descripcion, sugerencia = {}, motivoFallo }) {
         el('span', { className: 'sello-ia__modelo' }, sugerencia.modelo ? ` · ${sugerencia.modelo}` : ''))
       : el('p', { className: 'tarjeta-manual__titulo' }, 'Registrar incidencia a mano'),
     motivoFallo ? el('p', { className: 'aviso', role: 'alert' }, motivoFallo) : null,
+    // La IA detectó que no es para TI (aseo, seguridad, bienestar...): se dice a quién avisar
+    esIA && sugerencia.aviso ? el('p', { className: 'aviso', role: 'alert' }, sugerencia.aviso) : null,
     esIA && sugerencia.razon ? el('p', { className: 'razon-ia' }, sugerencia.razon) : null,
     campoTexto('descripcion', 'Descripción', descripcion),
     el('div', { className: 'fila' },
       campoSelect('categoria', 'Categoría', opcionesDe(CATEGORIAS), sugerencia.categoria, esIA),
       campoSelect('prioridad', 'Prioridad', opcionesDe(PRIORIDADES), sugerencia.prioridad, esIA)),
-    campoSelect('area', 'Área responsable', AREAS.map((a) => [a, a]), sugerencia.area, esIA),
     campoSelect('espacioId', 'Espacio afectado', espacios.map((e) => [e.id, e.nombre]), sugerencia.espacioId, false, 'Ninguno'),
     campoSelect('recursoId', 'Equipo afectado', recursos.map((r) => [r.id, r.nombre]), sugerencia.recursoId, false, 'Ninguno'),
-    el('label', { className: 'interruptor' },
-      el('input', { type: 'checkbox', name: 'inhabilitar', checked: Boolean(sugerencia.inhabilitar) }),
-      'Dejar fuera de servicio el espacio o equipo afectado'),
-    el('p', { className: 'nota' }, 'Según las reglas del campus, algunas prioridades lo dejan fuera de servicio aunque no marques la casilla.'),
+    campoFueraDeServicio(sugerencia),
+    el('p', { className: 'nota' }, 'La atiende Soporte TI: es el equipo que resuelve los problemas técnicos y de infraestructura del campus.'),
+    el('p', { className: 'nota' }, 'Según las reglas del campus, algunas prioridades dejan fuera de servicio el equipo afectado (o la sala, si no hay equipo) aunque elijas "Nada".'),
     el('div', { className: 'item__acciones' },
       el('button', { type: 'submit', className: 'btn btn--primario' }, esIA ? 'Confirmar y registrar' : 'Registrar incidencia'),
       el('button', { type: 'button', className: 'btn btn--secundario', onClick: cerrarFormularios }, 'Descartar')),
@@ -100,7 +100,11 @@ function abrirFormulario({ modo, descripcion, sugerencia = {}, motivoFallo }) {
     e.preventDefault();
     registrar(form, esIA ? sugerencia : null);
   });
-  form.addEventListener('change', (e) => e.target.closest('.campo')?.classList.remove('campo--pendiente'));
+  form.addEventListener('change', (e) => {
+    e.target.closest('.campo')?.classList.remove('campo--pendiente');
+    if (e.target.name === 'espacioId' || e.target.name === 'recursoId') ajustarFueraDeServicio(form);
+  });
+  ajustarFueraDeServicio(form);
 
   const destino = esIA ? contenedorSugerencia() : contenedorManual();
   destino.replaceChildren(form);
@@ -119,11 +123,11 @@ function cerrarFormularios() {
 
 async function registrar(form, sugerencia, { omitirParecidas = false } = {}) {
   const datos = Object.fromEntries(new FormData(form));
-  const faltantes = ['descripcion', 'categoria', 'prioridad', 'area'].filter((campo) => !String(datos[campo] ?? '').trim());
+  const faltantes = ['descripcion', 'categoria', 'prioridad'].filter((campo) => !String(datos[campo] ?? '').trim());
   if (faltantes.length) {
     faltantes.forEach((campo) => form[campo].setAttribute('aria-invalid', 'true'));
     form[faltantes[0]].focus();
-    toasts.error('Completa descripción, categoría, prioridad y área antes de registrar.');
+    toasts.error('Completa descripción, categoría y prioridad antes de registrar.');
     return;
   }
 
@@ -131,20 +135,21 @@ async function registrar(form, sugerencia, { omitirParecidas = false } = {}) {
     descripcion: datos.descripcion.trim(),
     categoria: datos.categoria,
     prioridad: datos.prioridad,
-    area: datos.area,
     espacioId: datos.espacioId || null,
     recursoId: datos.recursoId || null,
-    inhabilitar: form.inhabilitar.checked,
+    // "Solo el equipo" -> inhabilitar; "Toda la sala" -> inhabilitar y inhabilitarEspacio (ver src/domain/incidencias.js)
+    inhabilitar: form.alcance.value !== 'ninguno',
+    inhabilitarEspacio: form.alcance.value === 'espacio',
     origen: sugerencia ? 'ia' : 'manual',
     // Trazabilidad: qué propuso la IA y si la persona lo cambió
     ia: sugerencia ? {
       razon: sugerencia.razon ?? null,
       modelo: sugerencia.modelo ?? null,
       sugerencia: {
-        categoria: sugerencia.categoria, prioridad: sugerencia.prioridad, area: sugerencia.area,
+        categoria: sugerencia.categoria, prioridad: sugerencia.prioridad,
         espacioId: sugerencia.espacioId, recursoId: sugerencia.recursoId, inhabilitar: sugerencia.inhabilitar,
       },
-      editadaPorPersona: ['categoria', 'prioridad', 'area', 'espacioId', 'recursoId']
+      editadaPorPersona: ['categoria', 'prioridad', 'espacioId', 'recursoId']
         .some((c) => (sugerencia[c] ?? null) !== (c.endsWith('Id') ? datos[c] || null : datos[c])),
     } : null,
   };
@@ -221,7 +226,7 @@ function itemParecido(parecida, cuerpo) {
     el('div', { className: 'item__cabeza' },
       el('span', { className: 'item__titulo' }, parecida.descripcion),
       el('span', { className: 'etiqueta', title: 'Qué tan parecido es el significado del texto (similitud coseno)' }, `Parecido ${Math.round(parecida.similitud * 100)} %`)),
-    el('span', { className: 'item__meta' }, [parecida.area, lugar, otros ? `${otros} reporte${otros > 1 ? 's' : ''} más` : null].filter(Boolean).join(' · ')),
+    el('span', { className: 'item__meta' }, [lugar, otros ? `${otros} reporte${otros > 1 ? 's' : ''} más` : null].filter(Boolean).join(' · ')),
     el('div', { className: 'item__acciones' },
       el('button', {
         type: 'button', className: 'btn btn--primario btn--chico',
@@ -244,12 +249,24 @@ async function sumarAExistente(parecida, cuerpo, boton) {
 }
 
 function mensajeRegistro(incidencia) {
-  if (!incidencia.inhabilito) return 'Incidencia registrada.';
-  const afectados = [nombreEspacio(incidencia.espacioId), nombreRecurso(incidencia.recursoId)].filter(Boolean);
+  const afectados = fueraDeServicio(incidencia);
+  if (!afectados.length) return 'Incidencia registrada.';
   return `Incidencia registrada. Fuera de servicio: ${afectados.join(' y ')}.`;
 }
 
+// Nombres de lo que la incidencia dejó fuera de servicio: el equipo, la sala o los dos.
+function fueraDeServicio(incidencia) {
+  if (!incidencia.inhabilito) return [];
+  return [
+    incidencia.inhabilitoEspacio ? nombreEspacio(incidencia.espacioId) : '',
+    nombreRecurso(incidencia.recursoId),
+  ].filter(Boolean);
+}
+
 // ---------- Lista de incidencias ----------
+
+/** ¿Hay un selector de "Reasignar" abierto? Mientras sí, las listas no se redibujan: cada 5 s se recargan y lo borrarían. */
+export const hayReasignacionAbierta = () => Boolean(document.querySelector('.form-reasignar'));
 
 export function dibujarIncidencias({ incidencias }) {
   const lista = document.getElementById('lista-incidencias');
@@ -264,6 +281,7 @@ export function dibujarIncidencias({ incidencias }) {
     return;
   }
 
+  if (hayReasignacionAbierta()) return; // no borrar el selector que alguien está usando
   // Abiertas primero; dentro de cada grupo, las más recientes arriba
   const ordenadas = [...incidencias].sort((a, b) =>
     (a.estado === 'resuelta') - (b.estado === 'resuelta') || String(b.fecha ?? '').localeCompare(String(a.fecha ?? '')));
@@ -271,7 +289,8 @@ export function dibujarIncidencias({ incidencias }) {
   lista.replaceChildren(...ordenadas.map(crearItemIncidencia));
 }
 
-function crearItemIncidencia(incidencia) {
+/** Tarjeta de una incidencia. La usan esta lista y el panel de Soporte TI (extra: más líneas, como la antigüedad). */
+export function crearItemIncidencia(incidencia, extra = null) {
   const resuelta = incidencia.estado === 'resuelta';
   const lugar = [nombreEspacio(incidencia.espacioId), nombreRecurso(incidencia.recursoId)].filter(Boolean).join(' · ');
 
@@ -281,31 +300,95 @@ function crearItemIncidencia(incidencia) {
       el('span', { className: 'item__meta dato' }, horaCorta(incidencia.fecha))),
     el('div', { className: 'etiquetas' },
       el('span', { className: `etiqueta etiqueta--${incidencia.prioridad}` }, etiqueta(PRIORIDADES, incidencia.prioridad)),
-      el('span', { className: 'etiqueta' }, etiqueta(CATEGORIAS, incidencia.categoria)),
+      el('span', { className: 'etiqueta' }, etiqueta(ETIQUETAS_CATEGORIA, incidencia.categoria)),
       incidencia.origen === 'ia' ? el('span', { className: 'etiqueta etiqueta--ia', title: incidencia.ia?.razon ?? '' }, 'Clasificada por IA') : null,
       incidencia.reportesAdicionales > 0
         ? el('span', { className: 'etiqueta', title: 'Personas que confirmaron que era la misma incidencia' },
           `${incidencia.reportesAdicionales} reporte${incidencia.reportesAdicionales > 1 ? 's' : ''} más`)
         : null,
       ...(incidencia.notificaciones ?? []).map((n) => el('span', { className: 'etiqueta', title: `Aviso enviado por ${n.canal}` }, `Avisada: ${n.area}`)),
+      !resuelta && incidencia.asignadaA
+        ? el('span', { className: 'etiqueta', title: 'Responsable de esta categoría: le tocó al reportarse (o la reasignó un admin)' },
+          incidencia.asignadaA === sesionActual()?.usuario ? 'Te tocó a ti' : `Asignada a: ${incidencia.asignadaANombre ?? incidencia.asignadaA}`)
+        : null,
+      !resuelta && incidencia.atendidaPor
+        ? el('span', { className: 'etiqueta etiqueta--ia', title: `Desde las ${horaCorta(incidencia.fechaAtencion)}` }, `En atención: ${incidencia.atendidaPorNombre ?? incidencia.atendidaPor}`)
+        : null,
       resuelta ? el('span', { className: 'etiqueta etiqueta--resuelta' }, 'Resuelta') : null),
-    el('span', { className: 'item__meta' }, [incidencia.area, lugar].filter(Boolean).join(' · ')),
-    incidencia.inhabilito && !resuelta ? el('span', { className: 'item__alerta' }, `Fuera de servicio: ${lugar}`) : null,
+    lugar ? el('span', { className: 'item__meta' }, lugar) : null,
+    extra,
+    !resuelta && fueraDeServicio(incidencia).length
+      ? el('span', { className: 'item__alerta' }, `Fuera de servicio: ${fueraDeServicio(incidencia).join(' · ')}`)
+      : null,
     resuelta || !puede('resolverIncidencias') ? null : el('div', { className: 'item__acciones' },
+      incidencia.atendidaPor ? null : el('button', {
+        type: 'button', className: 'btn btn--primario btn--chico',
+        onClick: (e) => atender(incidencia, e.currentTarget),
+      }, 'Atender'),
       el('button', {
         type: 'button', className: 'btn btn--secundario btn--chico',
         onClick: (e) => resolver(incidencia, e.currentTarget),
-      }, 'Marcar como resuelta')),
+      }, 'Marcar como resuelta'),
+      puede('gestionarUsuarios') ? el('button', {
+        type: 'button', className: 'btn btn--secundario btn--chico',
+        onClick: (e) => abrirReasignar(incidencia, e.currentTarget),
+      }, 'Reasignar') : null),
   );
+}
+
+// Un admin le pasa la incidencia a otra persona de soporte (por ejemplo, si el responsable no está).
+async function abrirReasignar(incidencia, boton) {
+  const item = boton.closest('.item');
+  if (item.querySelector('.form-reasignar')) return;
+  let cuentas;
+  try {
+    cuentas = (await pedir('/api/usuarios')).filter((u) => ['soporte_tecnico', 'admin'].includes(u.rol));
+  } catch (error) {
+    toasts.error(error);
+    return;
+  }
+  const selector = el('select', { name: 'usuario', 'aria-label': 'Reasignar a' },
+    cuentas.map((u) => el('option', { value: u.usuario, selected: u.usuario === incidencia.asignadaA }, u.nombre)));
+  const form = el('form', { className: 'formulario form-reasignar' },
+    el('label', { className: 'campo' }, el('span', {}, 'Reasignar a'), selector),
+    el('div', { className: 'item__acciones' },
+      el('button', { type: 'submit', className: 'btn btn--primario btn--chico' }, 'Reasignar'),
+      el('button', { type: 'button', className: 'btn btn--secundario btn--chico', onClick: () => form.remove() }, 'Cancelar')));
+  form.addEventListener('submit', async (evento) => {
+    evento.preventDefault();
+    try {
+      const { asignadaANombre } = await conCarga(form.querySelector('button[type="submit"]'), 'Reasignando…', () =>
+        pedir(`/api/incidencias/${encodeURIComponent(incidencia.id)}/asignar`, { metodo: 'POST', cuerpo: { usuario: selector.value } }));
+      toasts.exito(`La incidencia quedó asignada a ${asignadaANombre}.`);
+      form.remove(); // si no, la lista no se redibuja (ver hayReasignacionAbierta)
+      await refrescar();
+    } catch (error) {
+      toasts.error(error);
+    }
+  });
+  item.append(form);
+  selector.focus();
+}
+
+// Soporte toma la incidencia: el resto del equipo ve que ya alguien va en camino.
+async function atender(incidencia, boton) {
+  try {
+    await conCarga(boton, 'Tomando…', () =>
+      pedir(`/api/incidencias/${encodeURIComponent(incidencia.id)}/atender`, { metodo: 'POST' }));
+    toasts.exito('La incidencia quedó a tu nombre: el equipo ve que ya la estás atendiendo.');
+    await refrescar();
+  } catch (error) {
+    toasts.error(error);
+  }
 }
 
 async function resolver(incidencia, boton) {
   try {
     await conCarga(boton, 'Resolviendo…', () =>
       pedir(`/api/incidencias/${encodeURIComponent(incidencia.id)}`, { metodo: 'PATCH', cuerpo: { estado: 'resuelta' } }));
-    const afectados = [nombreEspacio(incidencia.espacioId), nombreRecurso(incidencia.recursoId)].filter(Boolean);
+    const afectados = fueraDeServicio(incidencia);
     const verbo = afectados.length > 1 ? 'vuelven' : 'vuelve';
-    toasts.exito(incidencia.inhabilito && afectados.length
+    toasts.exito(afectados.length
       ? `Incidencia resuelta. ${afectados.join(' y ')} ${verbo} a estar en servicio.`
       : 'Incidencia resuelta.');
     await refrescar();
@@ -340,6 +423,31 @@ function campoSelect(nombre, rotulo, opciones, valor, marcarSiFalta, textoNingun
     el('span', {}, rotulo),
     select,
     pendiente ? el('small', { className: 'campo__ayuda' }, 'La IA no pudo determinarlo. Elígelo tú.') : null);
+}
+
+/**
+ * "¿Qué queda fuera de servicio?": Nada / Solo el equipo / Toda la sala.
+ * Si la IA sugiere inhabilitar, se preselecciona lo más específico: el equipo si lo hay; si no, la sala.
+ */
+function campoFueraDeServicio(sugerencia) {
+  const inicial = !sugerencia.inhabilitar ? 'ninguno' : sugerencia.recursoId ? 'equipo' : 'espacio';
+  const opcion = (valor, texto) => el('label', { className: 'interruptor' },
+    el('input', { type: 'radio', name: 'alcance', value: valor, checked: valor === inicial }),
+    el('span', {}, texto));
+  return el('fieldset', { className: 'campo opciones-alcance' },
+    el('legend', {}, '¿Qué queda fuera de servicio?'),
+    opcion('ninguno', 'Nada: se sigue usando mientras lo reparan'),
+    opcion('equipo', 'Solo el equipo afectado'),
+    opcion('espacio', 'Toda la sala (por ejemplo, si hay riesgo para las personas)'));
+}
+
+// "Solo el equipo" necesita un equipo y "Toda la sala" una sala: si falta, la opción se deshabilita.
+function ajustarFueraDeServicio(form) {
+  const disponibles = { ninguno: true, equipo: Boolean(form.recursoId.value), espacio: Boolean(form.espacioId.value) };
+  for (const radio of form.querySelectorAll('input[name="alcance"]')) {
+    radio.disabled = !disponibles[radio.value];
+    if (radio.disabled && radio.checked) form.querySelector('input[name="alcance"][value="ninguno"]').checked = true;
+  }
 }
 
 function nombreEspacio(id) {
