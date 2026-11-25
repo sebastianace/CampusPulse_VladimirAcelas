@@ -22,6 +22,11 @@
   --inhabilitado: #ef5350;
   --inconsistente: #6c7482;
 
+  /* Tipos de clase (horarios): azul, rosa y oliva, lejos del ámbar, rojo y verde de los estados */
+  --clase-software: #5aa9e6;
+  --clase-ingles: #e58fb8;
+  --clase-ser: #b9c46a;
+
   /* IA */
   --ia: #9a8cff;
   --ia-fondo: #231f3d;
@@ -490,6 +495,9 @@ body[data-presion="media"] .barra { box-shadow: inset 0 3px 0 var(--ocupada); }
 .muestra--ocupada { border-color: var(--ocupada); background: rgb(232 163 61 / 0.35); }
 .muestra--inhabilitado { border-color: var(--inhabilitado); background: rgb(239 83 80 / 0.35); }
 .muestra--inconsistente { border-color: var(--inconsistente); border-style: dashed; }
+.muestra--software { border-color: var(--clase-software); background: color-mix(in srgb, var(--clase-software) 35%, transparent); }
+.muestra--ingles { border-color: var(--clase-ingles); background: color-mix(in srgb, var(--clase-ingles) 35%, transparent); }
+.muestra--ser { border-color: var(--clase-ser); background: color-mix(in srgb, var(--clase-ser) 35%, transparent); }
 
 /* ---------- Mapa del campus (firma visual) ----------
    Lienzo en pixel art del Nivel 6 (mapa.js). Encima flotan el HUD,
@@ -726,6 +734,75 @@ body[data-presion="media"] .barra { box-shadow: inset 0 3px 0 var(--ocupada); }
   background: var(--texto);
   z-index: 1;
 }
+
+/* ---------- Horario de clases ----------
+   Reutiliza la grilla de la línea de tiempo. El color de cada bloque sale de su tipo de clase;
+   en la línea de tiempo de reservas las clases van rayadas para distinguirlas de una reserva. */
+.bloque--clase { --c: var(--tenue); background: color-mix(in srgb, var(--c) 30%, var(--placa-alta)); border-color: var(--c); }
+.bloque--clase[data-tipo="software"], .etiqueta[data-tipo="software"] { --c: var(--clase-software); }
+.bloque--clase[data-tipo="ingles"], .etiqueta[data-tipo="ingles"] { --c: var(--clase-ingles); }
+.bloque--clase[data-tipo="ser"], .etiqueta[data-tipo="ser"] { --c: var(--clase-ser); }
+.etiqueta[data-tipo] { border-color: var(--c); color: var(--c); }
+
+.bloque--fija {
+  background:
+    repeating-linear-gradient(135deg, color-mix(in srgb, var(--c) 38%, transparent) 0 5px, transparent 5px 10px),
+    var(--placa-alta);
+  cursor: not-allowed;
+}
+
+.horarios .timeline__fila { grid-template-columns: 110px minmax(720px, 1fr); }
+.timeline__pista--clases { cursor: default; }
+.horarios .bloque--clase { font: inherit; font-size: 11.5px; color: var(--texto); text-align: left; cursor: pointer; }
+.horarios .bloque--clase:hover, .bloque--clase[aria-pressed="true"] { background: color-mix(in srgb, var(--c) 55%, var(--placa-alta)); }
+.bloque--clase[aria-pressed="true"] { outline: 2px solid var(--c); outline-offset: 1px; z-index: 1; }
+
+/* Editar y subir los horarios (solo admin) */
+.horarios__acciones { display: flex; gap: 6px; flex-wrap: wrap; }
+.dialogo.dialogo--ancho { width: min(640px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; }
+.fila--envuelve { flex-wrap: wrap; }
+.fila--envuelve > .campo { flex: 1 1 200px; }
+.fila--envuelve > .campo--corto { flex: 0 0 120px; }
+.dias-campo { border: 0; margin: 0; padding: 0; min-width: 0; }
+.dias-campo legend { padding: 0; margin-bottom: 6px; font-size: 12px; font-weight: 600; color: var(--tenue); }
+.dias-casillas { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.dias-campo > .btn { justify-self: start; }
+.dia-casilla { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border: 1px solid var(--linea); border-radius: var(--radio-sm); background: var(--placa-alta); font-size: 13px; cursor: pointer; }
+.dia-casilla input { width: 18px; min-height: 18px; accent-color: var(--clase-software); flex: none; }
+.dia-casilla:has(input:checked) { border-color: var(--clase-software); background: color-mix(in srgb, var(--clase-software) 18%, var(--placa-alta)); }
+.subir__informe { display: grid; gap: 10px; min-height: 60px; }
+.subir__resumen { margin: 0; font-size: 14px; }
+.subir__aviso { font-size: 13px; padding: 10px 12px; border-radius: var(--radio-sm); border: 1px solid; }
+.subir__aviso ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 2px; }
+.subir__aviso--error { background: rgb(239 83 80 / 0.12); border-color: rgb(239 83 80 / 0.4); }
+.subir__aviso--aviso { background: rgb(232 163 61 / 0.12); border-color: rgb(232 163 61 / 0.45); }
+.subir__sala { padding: 10px 12px; border: 1px dashed var(--ocupada); border-radius: var(--radio-sm); }
+.enlace { background: none; border: 0; padding: 0; font: inherit; color: var(--clase-software); text-decoration: underline; cursor: pointer; }
+
+.leyenda--clases { margin-bottom: 12px; }
+.horarios__detalle { margin-top: 12px; }
+
+.dias { display: inline-flex; border: 1px solid var(--linea); border-radius: var(--radio-sm); overflow: hidden; }
+.dias__btn {
+  min-height: 32px;
+  padding: 4px 10px;
+  background: transparent;
+  border: 0;
+  border-right: 1px solid var(--linea);
+  color: var(--tenue);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.dias__btn:last-child { border-right: 0; }
+.dias__btn:hover { color: var(--texto); }
+.dias__btn[aria-pressed="true"] { background: var(--placa-alta); color: var(--texto); font-weight: 600; }
+
+.hallazgos { margin-top: 14px; border-top: 1px solid var(--linea); padding-top: 12px; }
+.hallazgos summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+.hallazgos__grupo { margin-top: 10px; }
+.hallazgos__grupo .subtitulo { margin: 0 0 4px; }
+.hallazgos__lista { margin: 0; padding-left: 18px; font-size: 13px; display: grid; gap: 3px; }
 
 /* ---------- Pestañas ---------- */
 .pestanas {
@@ -1155,6 +1232,16 @@ option { color: var(--texto); background: var(--placa-alta); }
 .movil__estado { font-size: 15px; color: var(--disponible); }
 .movil__estado[data-alerta="si"] { color: #ff8a87; font-weight: 600; }
 .movil__volver { justify-self: center; padding: 12px; }
+/* Sala que viene del QR: lo primero que se ve, para confirmar que se escaneó la sala correcta */
+.movil__sala {
+  padding: 12px 14px;
+  border-radius: var(--radio);
+  background: var(--placa-alta);
+  border: 1px solid var(--linea);
+  border-left: 4px solid var(--disponible);
+  font-size: 15px;
+}
+.movil__sala strong { font-weight: 700; }
 /* 16px evita que iOS haga zoom al escribir */
 .movil textarea, .movil input, .movil select { font-size: 16px; }
 .movil .btn { min-height: 48px; flex: 1; }
@@ -1208,3 +1295,63 @@ option { color: var(--texto); background: var(--placa-alta); }
 /* Reparto de incidencias: configuración por categoría (pestaña Usuarios) y selector de Reasignar */
 #responsables { margin-top: 12px; }
 .form-reasignar { margin-top: 10px; }
+
+/* ---------- Hoja de QR de las salas (qr.html) ---------- */
+.qr .barra { position: static; }
+.qr__contenido { display: grid; gap: 16px; padding: 16px; max-width: 1000px; margin: 0 auto; }
+.qr__controles { display: grid; gap: 14px; }
+.qr__controles .fila { align-items: end; }
+.qr__acciones { justify-content: flex-end; flex-wrap: wrap; }
+.qr__estado { font-size: 13px; padding: 10px 12px; border-radius: var(--radio-sm); border: 1px solid var(--linea); background: var(--placa-alta); }
+.qr__estado[data-nivel="ok"] { border-color: rgb(63 182 139 / 0.5); }
+.qr__estado[data-nivel="aviso"] { border-color: rgb(232 163 61 / 0.6); background: rgb(232 163 61 / 0.1); }
+.qr__estado[data-nivel="error"] { border-color: rgb(239 83 80 / 0.5); background: rgb(239 83 80 / 0.12); }
+
+.qr__hoja { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+/* El cartel es una hoja blanca con tinta negra: el QR necesita fondo claro para leerse, también en pantalla */
+.qr-cartel {
+  background: #fff;
+  color: #111;
+  border-radius: var(--radio);
+  padding: 18px 16px 14px;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  text-align: center;
+  min-width: 0;
+}
+.qr-cartel__sala { font-family: var(--f-display); font-variation-settings: "wdth" 112; font-weight: 800; font-size: 24px; line-height: 1.1; text-wrap: balance; }
+.qr-cartel__codigo { width: min(100%, 220px); }
+.qr-cartel__codigo svg { display: block; width: 100%; height: auto; }
+.qr-cartel__titulo { font-weight: 700; font-size: 16px; }
+.qr-cartel__pasos { font-size: 13px; color: #444; max-width: 30ch; text-wrap: balance; }
+/* La dirección escrita, por si alguien no puede escanear (y para saber de dónde salió el cartel) */
+.qr-cartel__enlace { font-family: var(--f-dato); font-size: 10.5px; color: #555; overflow-wrap: anywhere; }
+
+@media print {
+  @page { size: A4; margin: 10mm; }
+  /* El fondo oscuro del sitio no se imprime: ni en el cuerpo ni en el margen de la hoja (el del <html>) */
+  :root { color-scheme: light; background: #fff; }
+  body.qr { background: #fff; min-height: 0; }
+  .qr__barra, .qr__controles, #qr-sin-permiso, .toasts { display: none !important; }
+  .qr__contenido { padding: 0; max-width: none; }
+  /* 2 columnas x 3 filas por hoja, con borde punteado para recortar */
+  .qr__hoja { grid-template-columns: repeat(2, 1fr); gap: 0; }
+  .qr-cartel {
+    height: 90mm;
+    padding: 5mm 4mm 4mm;
+    gap: 2mm;
+    border: 1px dashed #888;
+    border-radius: 0;
+    align-content: space-between;
+    overflow: hidden;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .qr-cartel__sala { font-size: 18pt; }
+  .qr-cartel__codigo { width: 46mm; }
+  .qr-cartel__titulo { font-size: 11pt; }
+  .qr-cartel__pasos { font-size: 8.5pt; max-width: 46ch; }
+  .qr-cartel__enlace { font-size: 6.5pt; }
+}
+}

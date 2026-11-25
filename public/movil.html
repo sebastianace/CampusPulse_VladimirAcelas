@@ -24,6 +24,9 @@
   </header>
 
   <main class="movil__contenido">
+    <!-- Solo si se llegó por el QR de una sala (movil.html?sala=...): js/movil.js lo llena -->
+    <p class="movil__sala" id="sala-qr" role="status" hidden></p>
+
     <!-- Salas fuera de servicio en este momento -->
     <section class="panel" aria-labelledby="titulo-estado">
       <h2 class="panel__titulo" id="titulo-estado">Estado del campus</h2>
@@ -35,7 +38,7 @@
       <!-- Mismos IDs que el tablero: reutiliza js/incidencias.js -->
       <form class="formulario" id="form-triaje" novalidate>
         <label class="campo">
-          <span>Describe el problema y dónde ocurre</span>
+          <span id="rotulo-descripcion">Describe el problema y dónde ocurre</span>
           <textarea name="descripcion" rows="4" required
             placeholder="Ej.: cortocircuito en el aire acondicionado de Apolo"></textarea>
         </label>

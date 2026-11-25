@@ -37,6 +37,11 @@ export const PRIORIDADES = {
   critica: 'Crítica',
 };
 
+// Clases fijas del campus (horarios) y días de la semana (1 = lunes, igual que los días de un bloque en la API)
+export const ETIQUETAS_CLASE = { software: 'Software', ingles: 'Inglés', ser: 'SER' };
+export const NOMBRES_DIA = ['', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+export const DIAS_CORTOS = ['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
 // Solo los espacios que se reservan: deja fuera las zonas comunes como Hunters (reservable: false en la API),
 // que existen para reportar daños pero no van en el mapa de reservas, la línea de tiempo ni el formulario.
 export const soloReservables = (espacios) => espacios.filter((e) => e.reservable !== false);

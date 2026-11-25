@@ -9,6 +9,7 @@ const estado = {
   espacios: [],
   recursos: [],
   reservas: [],
+  horarios: [],           // clases fijas (Software, Inglés, SER); solo las que tienen días confirmados bloquean reservas
   incidencias: [],
   solicitudes: [],        // solicitudes de salón que le tocan a quien inició sesión
   fecha: hoyISO(),        // día que muestra la línea de tiempo
@@ -55,6 +56,7 @@ export async function cargarTodo() {
     espacios: '/api/espacios',
     recursos: '/api/recursos',
     reservas: `/api/reservas?fecha=${estado.fecha}`,
+    horarios: '/api/horarios',
     incidencias: '/api/incidencias',
     solicitudes: '/api/solicitudes',
   };

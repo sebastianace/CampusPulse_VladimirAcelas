@@ -10,7 +10,7 @@ preguntas citando el reglamento.
 |---|---|---|
 | ![Detección de incidencias duplicadas](docs/capturas/10-es-la-misma.png) | ![Respuesta con fuentes](docs/capturas/08-rag-fuentes.png) | ![Triaje de una incidencia](docs/capturas/04-triaje-ia.png) |
 
-**v2.0.0** · Node 24 + Express 5 · PostgreSQL 16 + pgvector · Gemini · LangChain (Python) · n8n · Docker ·
+**v2.1.0** · Node 24 + Express 5 · PostgreSQL 16 + pgvector · Gemini · LangChain (Python) · n8n · Docker ·
 [CHANGELOG](CHANGELOG.md) · [Guion de la demo](docs/sustentacion.md)
 
 ## Problema
@@ -37,7 +37,7 @@ tiene que arreglar el problema.
 Más capturas: [mapa](docs/capturas/02-mapa.png) · [reserva rechazada por aforo](docs/capturas/03-reserva-rechazada.png) ·
 ["no lo sé"](docs/capturas/09-no-se.png) · [aviso de n8n](docs/capturas/11-aviso-n8n.png) ·
 [en el celular](docs/capturas/12-movil.png) · [sin IA](docs/capturas/07-sin-ia.png) ·
-[inicio de sesión](docs/capturas/13-login.png).
+[inicio de sesión](docs/capturas/13-login.png) · [hoja de QR](docs/capturas/14-qr-salas.png).
 
 ## Arquitectura
 
@@ -178,6 +178,24 @@ El detalle de cada cambio está en [CHANGELOG.md](CHANGELOG.md).
 - Si venías de la versión con `data/auth.json`, copia tus cuentas con `npm run importar-cuentas`
   (los hashes se copian tal cual; las sesiones no, así que vuelve a iniciar sesión).
 
+## Horarios de las clases
+
+- Software, Inglés y SER tienen horarios fijos. Se cargan desde el Excel (`.xlsx`) o un CSV, con el botón **Subir Excel** (admin)
+  o por terminal con `npm run importar-horarios -- archivo.xlsx` (ensayo por defecto; `--aplicar` guarda): reemplaza la hoja de
+  Coordinación y la app EnglishFlow.
+- El informe encuentra los problemas de planeación que hoy se descubren a mano: cruces de sala, de docente y de cohorte,
+  aforo excedido, cohortes que están en una clase y no en la otra, módulos intercambiados y datos incompletos.
+- Una sala con clase **no se puede reservar** a esa hora (`409 SALA_CON_CLASE`) y aparece ocupada en el tablero, pero
+  **solo si el bloque tiene los días confirmados**: no se cierra una sala con un dato que no se sabe.
+- **Pantalla "Horario de clases"** (en el tablero): las salas en filas y las horas en columnas, un día de la semana a la vez
+  y con filtro por clase. Clic en una clase para ver docente, estudiantes y módulo. La línea de tiempo de "Reservas del día"
+  muestra también las clases (rayadas) para que se vea por qué una franja no se puede reservar.
+- **Solo el admin (Coordinación) las edita desde la pantalla:** **+ Nueva clase**, **Editar** y **Quitar**, y **Subir Excel**:
+  acepta el `.xlsx` de Coordinación tal cual (lector propio, sin librerías), hace primero un ensayo con el informe y los
+  hallazgos, pide la sala y los días que falten, y solo guarda al confirmar. Si una clase queda encima de una reserva futura
+  se avisa; la reserva no se cancela sola. Los demás ven la grilla pero no la tocan (el servidor responde `403`).
+- Guía, reglas y lo que mostró el archivo real: [docs/horarios.md](docs/horarios.md).
+
 ## Reparto de incidencias por categoría
 
 - En el campus hay 2 técnicos de TI y cada uno atiende una categoría (infraestructura o tecnología). Un admin define quién
@@ -187,6 +205,19 @@ El detalle de cada cambio está en [CHANGELOG.md](CHANGELOG.md).
   responsable no está, otro técnico puede tomarla, y un admin puede **reasignarla** (botón "Reasignar").
 - El técnico ve "Te tocó a ti" y cuántas son "para ti"; lo que le tocó sale primero entre lo no atendido. Sin responsable
   configurado, la incidencia queda sin asignar (no se pierde). Guarda la tabla `responsables_categoria` (migración 015).
+
+## Códigos QR en las salas
+
+- Cada sala puede tener un QR pegado en la pared que abre `movil.html?sala=<id>`: el reporte de incidencias con la
+  sala ya elegida y un aviso "Estás reportando en Apolo". El QR solo lleva esa dirección (sin claves ni datos): **para
+  reportar hay que tener cuenta**. Sin sesión, la persona llega al inicio de sesión y, al entrar, vuelve a su sala.
+- Un admin los imprime desde **Usuarios → Abrir hoja para imprimir** (`qr.html`): un cartel por sala, 6 por hoja A4
+  con borde para recortar. Se dibujan en el navegador con una librería de QR copiada en `public/js/vendor/` (MIT), sin
+  dependencias nuevas ni rutas nuevas en el servidor.
+- **El hosting aún no está definido,** así que la dirección base no va fija en el código: la hoja usa la del sitio donde
+  se abre y se puede cambiar (queda recordada). Avisa si es `localhost` (el celular no la ve) o una IP de red interna
+  (solo con el Wi-Fi del campus). Cuando haya dominio se abre la hoja desde ahí y se vuelven a imprimir.
+- Detalles, decisiones y cómo se comprobó que se leen: [docs/qr-salas.md](docs/qr-salas.md).
 
 ## Rol de la IA y cómo se controla
 
@@ -442,6 +473,7 @@ error claro y el formulario manual, nunca con una respuesta inventada.
 | `npm run migrar` | Aplica las migraciones de `db/migrations/` a PostgreSQL (necesita `docker compose up -d db`) |
 | `npm run embeddings` | Genera el embedding de las incidencias que no lo tienen (usa la clave de Gemini) |
 | `npm run importar-cuentas` | Copia las cuentas del viejo `data/auth.json` a PostgreSQL (se corre una vez) |
+| `npm run importar-horarios -- <archivo.csv>` | Carga los horarios de las clases desde un CSV de Excel y los analiza. Ensayo por defecto; `--aplicar` guarda; `--alias "Sala Nueva=blanca"` para nombres de sala distintos. Ver [docs/horarios.md](docs/horarios.md) |
 | `npm run importar-inventario -- <archivo.csv>` | Carga el inventario real desde un CSV de Excel. Ensayo por defecto; `--aplicar` guarda y `--quitar-ficticios` quita los equipos de demostración. Ver [docs/inventario-importar.md](docs/inventario-importar.md) |
 | `npm run n8n:preparar` | Crea las credenciales en n8n, importa y activa los flujos de `n8n/` y reinicia n8n |
 | `npm run conocimiento` | Recarga `knowledge/` en la base vectorial (necesita `pulse-ai` levantado) |
@@ -540,6 +572,7 @@ En la hackatón (v1) cada integrante trabajó en su rama (`feature/backend`, `fe
 | [docs/workflows.md](docs/workflows.md) | Los 7 flujos de n8n, lo verificado y sus límites |
 | [docs/base-de-datos.md](docs/base-de-datos.md) · [docs/contrato-api.md](docs/contrato-api.md) | Esquema y API |
 | [docs/inventario-importar.md](docs/inventario-importar.md) | Cargar el inventario real desde un CSV de Excel: plantilla, reglas y cuidados |
+| [docs/horarios.md](docs/horarios.md) | Horarios de Software, Inglés y SER: carga desde Excel, hallazgos de planeación y bloqueo de reservas |
 | [docs/registro-depuracion.md](docs/registro-depuracion.md) | Fallos reales, cómo se encontró la causa y qué los evita |
 | [docs/sustentacion.md](docs/sustentacion.md) | Guion de la demo, plan B y plan de estudio |
 | [docs/hoja-de-ruta.md](docs/hoja-de-ruta.md) | Trabajo futuro: qué haría falta para usarlo en todo el campus |

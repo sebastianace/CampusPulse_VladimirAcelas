@@ -1,0 +1,4 @@
+﻿Tipo;Sala;Hora inicio;Hora fin;Días;Grupo / Cohorte;Estudiantes;Nivel / Programa;Docente;Módulo;Observación
+Software;Apolo;06:00;09:30;L-V;EJ1 Ene-27;20;Java;Docente Ejemplo;Apolo 1;
+SER;Auditorio;10:00;11:00;L-V;EJ1 Ene-27;20;;;;
+Inglés;Azul;08:00;09:00;L-V;Grupo EJ;8;B1.1;Docente Ejemplo;;

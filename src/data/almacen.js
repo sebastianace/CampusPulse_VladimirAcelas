@@ -24,6 +24,7 @@
 import { obtenerPool } from './pg.js';
 import { sembrar } from './semilla.js';
 import { espacios } from './repos/espacios.js';
+import { horarios } from './repos/horarios.js';
 import { incidencias } from './repos/incidencias.js';
 import { prestamos } from './repos/prestamos.js';
 import { recursos } from './repos/recursos.js';
@@ -33,7 +34,7 @@ import { solicitudes } from './repos/solicitudes.js';
 // Orden de los padres a los hijos: los UPDATE e INSERT van en este orden y los DELETE en el inverso,
 // para no romper las claves foráneas. Si las reglas borran un padre, deben quitar antes las referencias
 // de los hijos que también cambian (ver quitarReserva en src/domain/solicitudes.js).
-const REPOS = { espacios, recursos, reservas, solicitudes, prestamos, incidencias };
+const REPOS = { espacios, horarios, recursos, reservas, solicitudes, prestamos, incidencias };
 const NOMBRES = Object.keys(REPOS);
 const BLOQUEO_ESCRITURA = 727275; // número cualquiera; distinto al de las migraciones
 

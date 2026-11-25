@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <title>Códigos QR de las salas · Campus Pulse</title>
+  <meta name="description" content="Hoja para imprimir los códigos QR de las salas: cada uno abre el reporte de incidencias con la sala ya elegida.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<!-- Hoja para imprimir los QR (solo administradores). Un QR por sala; cada uno guarda
+     <sitio>/movil.html?sala=<id>. Se dibujan en el navegador (js/qr/svg.js): el servidor no guarda nada. -->
+<body class="qr">
+  <header class="barra qr__barra">
+    <div class="marca">
+      <span class="marca__pulso" aria-hidden="true"></span>
+      <div>
+        <h1 class="marca__nombre">Campus Pulse</h1>
+        <p class="marca__sub">Códigos QR de las salas</p>
+      </div>
+    </div>
+    <a class="enlace" href="./">Volver al tablero</a>
+  </header>
+
+  <main class="qr__contenido">
+    <!-- Se muestra solo si la cuenta no es de administrador -->
+    <section class="panel" id="qr-sin-permiso" hidden>
+      <h2 class="panel__titulo">Solo para administradores</h2>
+      <p class="nota">Los códigos QR los imprime un administrador. Si necesitas uno, pídeselo a Coordinación.</p>
+    </section>
+
+    <section class="panel qr__controles" id="qr-controles" aria-labelledby="titulo-qr" hidden>
+      <h2 class="panel__titulo" id="titulo-qr">Imprimir códigos QR</h2>
+      <p class="nota">
+        Cada código abre el reporte de incidencias con la sala ya elegida. Solo funciona con una cuenta de
+        Campus Pulse (profesores, soporte técnico y administradores): quien no haya iniciado sesión llega al
+        inicio de sesión y, al entrar, vuelve a su sala.
+      </p>
+
+      <label class="campo">
+        <span>Dirección del sitio (la que abre el celular)</span>
+        <input id="qr-base" type="text" inputmode="url" autocomplete="off" autocapitalize="none" spellcheck="false"
+          aria-describedby="qr-estado">
+      </label>
+      <p class="qr__estado" id="qr-estado" role="status"></p>
+
+      <div class="fila">
+        <label class="campo">
+          <span>Salas</span>
+          <select id="qr-filtro"></select>
+        </label>
+        <div class="item__acciones qr__acciones">
+          <button class="btn btn--secundario" type="button" id="qr-restablecer">Usar la dirección de esta página</button>
+          <button class="btn btn--primario" type="button" id="qr-imprimir">Imprimir</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Un cartel por sala; para imprimir queda solo esto (ver @media print en styles.css) -->
+    <section class="qr__hoja" id="qr-hoja" aria-label="Carteles con código QR" hidden></section>
+  </main>
+
+  <div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
+
+  <script type="module" src="js/qr.js"></script>
+</body>
+</html>

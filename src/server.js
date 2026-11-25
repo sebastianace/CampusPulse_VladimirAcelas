@@ -17,6 +17,7 @@ import reservasRouter from './routes/reservas.js';
 import incidenciasRouter from './routes/incidencias.js';
 import calidadRouter from './routes/calidad.js';
 import responsablesRouter from './routes/responsables.js';
+import horariosRouter from './routes/horarios.js';
 import usuariosRouter from './routes/usuarios.js';
 import solicitudesRouter from './routes/solicitudes.js';
 import iaRouter from './routes/ia.js';
@@ -45,6 +46,7 @@ app.use('/api/solicitudes', solicitudesRouter); // pedir un salón ocupado; apro
 app.use('/api/incidencias', incidenciasRouter);
 app.use('/api/calidad-datos', calidadRouter);
 app.use('/api/responsables', responsablesRouter); // quién atiende cada categoría: configurarlo es solo admin
+app.use('/api/horarios', horariosRouter); // horarios fijos de las clases: verlos, cualquiera; cargarlos o editarlos, solo admin (lo exige el router)
 app.use('/api/usuarios', usuariosRouter); // crear cuentas y contraseñas temporales: solo admin (lo exige el router)
 app.use('/api/ia', iaRouter); // dueño: P2
 
@@ -65,6 +67,10 @@ function traducirError(error) {
   // JSON mal escrito en el cuerpo de la petición.
   if (error.type === 'entity.parse.failed') {
     return { status: 422, codigo: 'JSON_INVALIDO', mensaje: 'El cuerpo de la petición no es un JSON válido' };
+  }
+  // Un archivo más grande de lo permitido (p. ej. al subir el Excel de horarios)
+  if (error.type === 'entity.too.large') {
+    return { status: 413, codigo: 'ARCHIVO_MUY_GRANDE', mensaje: 'El archivo es demasiado grande. Un horario pesa unos pocos KB: ¿es el archivo correcto?' };
   }
   // Cualquier otro error es un fallo nuestro: se registra y se responde genérico.
   console.error('[server] Error inesperado:', error);

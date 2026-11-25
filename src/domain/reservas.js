@@ -18,7 +18,9 @@
 //      Las reservas sin dueño conocido (anteriores a la migración 007) solo
 //      las toca un admin. Para quedarse con un salón ocupado se usa una
 //      solicitud de salón (src/domain/solicitudes.js).
-// Editar una reserva vuelve a pasar por las reglas 1 a 8.
+//  12. No se reserva una sala a la hora de una clase de horario fijo (Software, Inglés o SER), solo con
+//      los días confirmados (src/domain/horarios.js).
+// Editar una reserva vuelve a pasar por las reglas 1 a 8 y 12.
 // Datos mal formados -> 422, espacio inexistente -> 404,
 // regla violada -> ReglaNegocioError (409).
 // =====================================================================
@@ -27,6 +29,7 @@ import { randomUUID } from 'node:crypto';
 import { REGLAS } from '../config/reglas.js';
 import { DatosInvalidosError, NoEncontradoError, ProhibidoError, ReglaNegocioError } from './errors.js';
 import { ahoraBogota, diaDeLaSemana, esFechaHoraValida, minutosDelDia, minutosEntre, seSolapan } from './fechas.js';
+import { claseQueOcupa, describirBloque } from './horarios.js';
 
 // Nombres de los días en plural para los mensajes de error (0 = domingo).
 const NOMBRES_DIAS = ['domingos', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábados'];
@@ -150,6 +153,11 @@ function validarEspacio(db, espacio, { asistentes, inicio, fin }, ignorarId = nu
     throw new ReglaNegocioError('AFORO_EXCEDIDO',
       `${espacio.nombre} admite máximo ${capacidadMaxima(espacio)} personas y pediste ${asistentes}`);
   }
+  // Regla 12: una sala con clase (horario fijo con días confirmados) no se reserva a esa hora
+  const clase = claseQueOcupa(db, espacio.id, inicio, fin);
+  if (clase) {
+    throw new ReglaNegocioError('SALA_CON_CLASE', `${espacio.nombre} tiene ${describirBloque(clase)} en esa franja y no se puede reservar`);
+  }
   if (estaReservado(db, espacio.id, inicio, fin, ignorarId)) {
     throw new ReglaNegocioError('RESERVA_SOLAPADA', `${espacio.nombre} ya está reservado en esa franja`);
   }
@@ -260,7 +268,7 @@ export function buscarEspaciosDisponibles(datos, db) {
   validarFranja(inicio, fin);
   const conComputadores = datos.necesitaComputadores === true;
   return db.espacios
-    .filter((e) => esReservable(e) && esAsignable(e) && cabenAsistentes(e, asistentes) && !estaReservado(db, e.id, inicio, fin))
+    .filter((e) => esReservable(e) && esAsignable(e) && cabenAsistentes(e, asistentes) && !estaReservado(db, e.id, inicio, fin) && !claseQueOcupa(db, e.id, inicio, fin))
     .filter((e) => !conComputadores || tieneComputadores(e))
     .sort((a, b) => capacidadMaxima(a) - capacidadMaxima(b));
 }

@@ -102,6 +102,43 @@
           <p class="vacio">Cargando reservas…</p>
         </div>
       </section>
+
+      <!-- Clases fijas (Software, Inglés, SER): solo lectura, se cargan con npm run importar-horarios -->
+      <section class="panel" aria-labelledby="titulo-horarios">
+        <div class="panel__cabeza">
+          <div>
+            <h2 class="panel__titulo" id="titulo-horarios">Horario de clases</h2>
+            <p class="panel__nota" id="horarios-nota">Software, Inglés y SER.</p>
+          </div>
+          <div class="timeline__controles">
+            <!-- Solo el admin (Coordinación): agregar una clase y subir el Excel -->
+            <div class="horarios__acciones" id="horarios-acciones" hidden>
+              <button class="btn btn--secundario btn--chico" id="horarios-nueva" type="button">+ Nueva clase</button>
+              <button class="btn btn--secundario btn--chico" id="horarios-subir" type="button">Subir Excel</button>
+            </div>
+            <div class="dias" id="horarios-dias" role="group" aria-label="Día de la semana"></div>
+            <label class="campo campo--linea">
+              <span>Clase</span>
+              <select id="horarios-tipo">
+                <option value="todos">Todas</option>
+                <option value="software">Software</option>
+                <option value="ingles">Inglés</option>
+                <option value="ser">SER</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <ul class="leyenda leyenda--clases" aria-label="Tipos de clase">
+          <li><span class="muestra muestra--software"></span>Software</li>
+          <li><span class="muestra muestra--ingles"></span>Inglés</li>
+          <li><span class="muestra muestra--ser"></span>SER</li>
+        </ul>
+        <div class="timeline horarios" id="horarios-grilla">
+          <p class="vacio">Cargando horarios…</p>
+        </div>
+        <div class="item horarios__detalle" id="horarios-detalle" aria-live="polite" hidden></div>
+        <details class="hallazgos" id="horarios-hallazgos" hidden></details>
+      </section>
     </div>
 
     <!-- Columna derecha: acciones -->
@@ -263,6 +300,10 @@
         <ul class="lista" id="lista-usuarios">
           <li class="vacio">Cargando cuentas…</li>
         </ul>
+
+        <h3 class="subtitulo">Códigos QR de las salas</h3>
+        <p class="nota">Un cartel por sala para pegar en la pared: quien lo escanea reporta un daño con la sala ya elegida (necesita su cuenta).</p>
+        <p><a class="btn btn--secundario" href="qr.html" target="_blank" rel="noopener">Abrir hoja para imprimir</a></p>
       </section>
     </aside>
   </main>
@@ -320,6 +361,99 @@
       <div class="item__acciones">
         <button class="btn btn--primario" type="submit">Cambiar contraseña</button>
         <button class="btn btn--secundario" type="button" id="cancelar-clave">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Horarios (solo admin): nueva clase / editar clase -->
+  <dialog class="dialogo dialogo--ancho" id="dialogo-horario" aria-labelledby="titulo-horario">
+    <form class="formulario" id="form-horario" novalidate>
+      <h2 class="dialogo__titulo" id="titulo-horario">Nueva clase</h2>
+      <div class="fila fila--envuelve">
+        <label class="campo">
+          <span>Clase</span>
+          <select name="tipo" required>
+            <option value="">Elige la clase</option>
+            <option value="software">Software</option>
+            <option value="ingles">Inglés</option>
+            <option value="ser">SER</option>
+          </select>
+        </label>
+        <label class="campo">
+          <span>Sala</span>
+          <select name="espacioId" required></select>
+        </label>
+      </div>
+      <div class="fila">
+        <label class="campo">
+          <span>Hora de inicio</span>
+          <input name="horaInicio" type="time" required>
+        </label>
+        <label class="campo">
+          <span>Hora de fin</span>
+          <input name="horaFin" type="time" required>
+        </label>
+      </div>
+      <fieldset class="campo dias-campo">
+        <legend>Días de la semana</legend>
+        <div class="dias-casillas" id="horario-dias"></div>
+        <span class="nota">Sin días marcados, la clase se guarda pero NO bloquea reservas.</span>
+      </fieldset>
+      <div class="fila fila--envuelve">
+        <label class="campo">
+          <span>Grupo o cohorte</span>
+          <input name="grupo" type="text" maxlength="60" placeholder="J1 Dic-25 o Grupo 4" required>
+        </label>
+        <label class="campo campo--corto">
+          <span>Estudiantes</span>
+          <input name="estudiantes" type="number" min="0" max="1000" inputmode="numeric">
+        </label>
+      </div>
+      <div class="fila fila--envuelve">
+        <label class="campo">
+          <span>Docente</span>
+          <input name="docente" type="text" maxlength="80" autocomplete="off">
+        </label>
+        <label class="campo">
+          <span>Nivel o programa</span>
+          <input name="nivel" type="text" maxlength="60" autocomplete="off">
+        </label>
+      </div>
+      <div class="fila fila--envuelve">
+        <label class="campo">
+          <span>Módulo</span>
+          <input name="modulo" type="text" maxlength="60" autocomplete="off">
+        </label>
+        <label class="campo">
+          <span>Observación</span>
+          <input name="observacion" type="text" maxlength="200" autocomplete="off">
+        </label>
+      </div>
+      <p class="aviso" id="horario-error" role="alert" hidden></p>
+      <div class="item__acciones">
+        <button class="btn btn--primario" type="submit">Guardar</button>
+        <button class="btn btn--secundario" type="button" id="cancelar-horario">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Horarios (solo admin): subir el Excel. Primero un ensayo que muestra qué se guardaría; "Guardar" lo aplica -->
+  <dialog class="dialogo dialogo--ancho" id="dialogo-subir" aria-labelledby="titulo-subir">
+    <form class="formulario" id="form-subir" novalidate>
+      <h2 class="dialogo__titulo" id="titulo-subir">Subir el horario de las clases</h2>
+      <label class="campo">
+        <span>Archivo de Excel (.xlsx) o CSV</span>
+        <input type="file" id="subir-archivo" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+      </label>
+      <fieldset class="campo dias-campo">
+        <legend>Días de las filas que no traen días</legend>
+        <div class="dias-casillas" id="subir-dias"></div>
+        <button class="btn btn--secundario btn--chico" type="button" id="subir-lunes-viernes">Lunes a viernes</button>
+      </fieldset>
+      <div class="subir__informe" id="subir-informe" aria-live="polite"></div>
+      <div class="item__acciones">
+        <button class="btn btn--primario" type="button" id="subir-guardar" disabled>Guardar</button>
+        <button class="btn btn--secundario" type="button" id="cancelar-subir">Cancelar</button>
       </div>
     </form>
   </dialog>
