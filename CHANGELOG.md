@@ -23,6 +23,14 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
   Lee el CSV como lo guarda Excel en español (`;`, Windows-1252, BOM) y reconoce columnas como "Código", "Equipo" o
   "Ubicación". Plantilla en `data/plantillas/inventario.csv`; los datos reales van en `data/privado/` (ignorada por git).
   Guía y riesgos (el catálogo completo entra en cada prompt del triaje) en `docs/inventario-importar.md`.
+- **Editar los horarios desde la pantalla y subir el Excel (solo admin).** Botones **+ Nueva clase**, **Editar** y **Quitar**
+  en el panel de horarios, y **Subir Excel**: acepta el `.xlsx` de Coordinación directo (lector propio sin librerías,
+  `src/data/xlsx.js`: ZIP con `node:zlib`, textos compartidos y horas como fracción del día) o un CSV. Primero un ensayo con el
+  informe (errores con su fila, hallazgos, qué se reemplaza); si una sala tiene otro nombre ("Sala Nueva") se elige cuál es,
+  y a las filas sin días se les marcan los días. Solo guarda al confirmar y es todo o nada. Si una clase queda encima de una
+  reserva futura se avisa y la reserva no se cancela. Rutas nuevas `POST/PATCH/DELETE /api/horarios` y
+  `POST /api/horarios/importar` (solo admin, `403` para los demás, `413` por encima de 5 MB). La terminal también lee `.xlsx`
+  y tiene `--dias`.
 - **Pantalla "Horario de clases" (solo lectura).** Panel nuevo en el tablero: una grilla de salas por horas (6:00 a 22:00),
   un día de la semana a la vez (abre en el día de hoy) y filtro por clase; clic en una clase para ver el detalle. Solo se
   dibujan los bloques con días confirmados, los mismos que bloquean reservas en el servidor. La línea de tiempo de "Reservas

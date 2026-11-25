@@ -9,6 +9,7 @@ const PERMISOS = {
   gestionarInventario: ['admin', 'soporte_tecnico'],
   decidirSolicitudes: ['admin'],
   verHallazgosHorarios: ['admin'],
+  editarHorarios: ['admin'],
 };
 
 const NOMBRES_ROL = {

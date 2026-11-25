@@ -180,16 +180,20 @@ El detalle de cada cambio está en [CHANGELOG.md](CHANGELOG.md).
 
 ## Horarios de las clases
 
-- Software, Inglés y SER tienen horarios fijos. Se cargan desde un CSV de Excel con `npm run importar-horarios -- archivo.csv`
-  (ensayo por defecto; `--aplicar` guarda): reemplaza la hoja de Coordinación y la app EnglishFlow.
+- Software, Inglés y SER tienen horarios fijos. Se cargan desde el Excel (`.xlsx`) o un CSV, con el botón **Subir Excel** (admin)
+  o por terminal con `npm run importar-horarios -- archivo.xlsx` (ensayo por defecto; `--aplicar` guarda): reemplaza la hoja de
+  Coordinación y la app EnglishFlow.
 - El informe encuentra los problemas de planeación que hoy se descubren a mano: cruces de sala, de docente y de cohorte,
   aforo excedido, cohortes que están en una clase y no en la otra, módulos intercambiados y datos incompletos.
 - Una sala con clase **no se puede reservar** a esa hora (`409 SALA_CON_CLASE`) y aparece ocupada en el tablero, pero
   **solo si el bloque tiene los días confirmados**: no se cierra una sala con un dato que no se sabe.
-- **Pantalla "Horario de clases"** (en el tablero, solo lectura): las salas en filas y las horas en columnas, un día de la
-  semana a la vez y con filtro por clase. Clic en una clase para ver docente, estudiantes y módulo. El admin ve debajo los
-  hallazgos de planeación. La línea de tiempo de "Reservas del día" muestra también las clases (rayadas) para que se vea por
-  qué una franja no se puede reservar.
+- **Pantalla "Horario de clases"** (en el tablero): las salas en filas y las horas en columnas, un día de la semana a la vez
+  y con filtro por clase. Clic en una clase para ver docente, estudiantes y módulo. La línea de tiempo de "Reservas del día"
+  muestra también las clases (rayadas) para que se vea por qué una franja no se puede reservar.
+- **Solo el admin (Coordinación) las edita desde la pantalla:** **+ Nueva clase**, **Editar** y **Quitar**, y **Subir Excel**:
+  acepta el `.xlsx` de Coordinación tal cual (lector propio, sin librerías), hace primero un ensayo con el informe y los
+  hallazgos, pide la sala y los días que falten, y solo guarda al confirmar. Si una clase queda encima de una reserva futura
+  se avisa; la reserva no se cancela sola. Los demás ven la grilla pero no la tocan (el servidor responde `403`).
 - Guía, reglas y lo que mostró el archivo real: [docs/horarios.md](docs/horarios.md).
 
 ## Reparto de incidencias por categoría

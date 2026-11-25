@@ -16,7 +16,7 @@
 // =====================================================================
 
 import { REGLAS } from '../config/reglas.js';
-import { diaDeLaSemana, minutosDelDia, minutosEntre } from './fechas.js';
+import { ahoraBogota, diaDeLaSemana, minutosDelDia, minutosEntre } from './fechas.js';
 import { buscarSala, plano } from './salas.js';
 
 export const TIPOS_CLASE = ['software', 'ingles', 'ser'];
@@ -117,6 +117,18 @@ export function claseEnCurso(db, espacioId, ahora) {
   const minuto = minutosDelDia(ahora);
   return bloquesDe(db).find((b) => b.espacioId === espacioId && b.dias?.includes(dia)
     && minutosDeHora(b.horaInicio) <= minuto && minuto < minutosDeHora(b.horaFin));
+}
+
+/**
+ * Las reservas futuras (todavía no terminan) que quedarían encima de este bloque: misma sala, un día en que hay clase y
+ * horas que se cruzan. Un bloque sin días no cuenta (no bloquea). Sirve para AVISAR al agregar o cambiar una clase: las
+ * reservas no se borran solas, porque decidir quién cede es de Coordinación.
+ */
+export function reservasQueChocan(db, bloque, ahora = ahoraBogota()) {
+  if (!bloque.dias) return [];
+  return (db.reservas ?? []).filter((r) => r.espacioId === bloque.espacioId && r.fin > ahora && bloque.dias.includes(diaIso(r.inicio))
+    && minutosDelDia(r.inicio) < minutosDeHora(bloque.horaFin)
+    && minutosDeHora(bloque.horaInicio) < minutosDelDia(r.inicio) + minutosEntre(r.inicio, r.fin));
 }
 
 // ---------- análisis de planeación (para Coordinación) ----------

@@ -18,7 +18,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { DatosInvalidosError } from './errors.js';
-import { TIPOS_CLASE, analizarHorarios, describirDias, normalizarHora, minutosDeHora, parsearDias } from './horarios.js';
+import { TIPOS_CLASE, analizarHorarios, describirDias, normalizarHora, minutosDeHora, parsearDias, reservasQueChocan } from './horarios.js';
 import { buscarSala, plano } from './salas.js';
 
 export const MAX_FILAS = 1000;
@@ -73,18 +73,23 @@ export function leerTablaHorarios(registros) {
 
 // ---------- 2. validar cada fila ----------
 
-/** Valida una fila. Devuelve {bloque} (sin id) o {errores: [texto]}. */
-function validarFila(fila, espacios, alias) {
+/**
+ * Valida una fila. Devuelve {bloque, conDiasPorDefecto} (el bloque sin id) o {errores: [texto], salaDesconocida?}.
+ * diasPorDefecto: los días que se le ponen a una fila que no trae ninguno (el Excel de Coordinación no tiene esa columna).
+ */
+function validarFila(fila, espacios, alias, diasPorDefecto) {
   const errores = [];
   const tipo = TIPOS[plano(fila.tipo)];
   if (!tipo) errores.push(`el tipo "${fila.tipo}" no se entiende. Usa: Software, Inglés o SER`);
 
   let espacioId = null;
+  let salaDesconocida = null;
   if (!fila.sala) errores.push('falta la sala');
   else {
     const { espacio, sugerencia } = buscarSala(fila.sala, espacios, alias);
     if (espacio) espacioId = espacio.id;
-    else errores.push(`la sala "${fila.sala}" no existe en el campus${sugerencia ? `. ¿Quisiste decir "${sugerencia.nombre}"?` : ''} (si es otro nombre de una sala que sí existe, usa --alias)`);
+    else salaDesconocida = { nombre: fila.sala, sugerencia: sugerencia?.id ?? null };
+    if (!espacio) errores.push(`la sala "${fila.sala}" no existe en el campus${sugerencia ? `. ¿Quisiste decir "${sugerencia.nombre}"?` : ''} (si es otro nombre de una sala que sí existe, indica cuál es)`);
   }
 
   const horaInicio = normalizarHora(fila.inicio);
@@ -93,8 +98,10 @@ function validarFila(fila, espacios, alias) {
   if (!horaFin) errores.push(`la hora de fin "${fila.fin}" no sirve (usa HH:MM, por ejemplo 08:00)`);
   if (horaInicio && horaFin && minutosDeHora(horaFin) <= minutosDeHora(horaInicio)) errores.push(`la clase termina (${horaFin}) antes o a la misma hora en que empieza (${horaInicio})`);
 
-  const { dias, error: errorDias } = parsearDias(fila.dias);
+  const { dias: diasDelArchivo, error: errorDias } = parsearDias(fila.dias);
   if (errorDias) errores.push(errorDias);
+  const conDiasPorDefecto = !errorDias && !diasDelArchivo && Boolean(diasPorDefecto);
+  const dias = conDiasPorDefecto ? diasPorDefecto : diasDelArchivo;
 
   if (!fila.grupo) errores.push('falta el grupo o cohorte');
 
@@ -103,7 +110,7 @@ function validarFila(fila, espacios, alias) {
     estudiantes = Number(fila.estudiantes);
     if (!Number.isInteger(estudiantes) || estudiantes < 0) errores.push(`los estudiantes "${fila.estudiantes}" no son un número entero`);
   }
-  if (errores.length) return { errores };
+  if (errores.length) return { errores, salaDesconocida };
   const limpio = (t) => t.replace(/\s+/g, ' ').trim() || undefined;
   return {
     bloque: {
@@ -114,6 +121,7 @@ function validarFila(fila, espacios, alias) {
       ...(limpio(fila.modulo) && { modulo: limpio(fila.modulo) }),
       ...(limpio(fila.observacion) && { observacion: limpio(fila.observacion) }),
     },
+    conDiasPorDefecto,
   };
 }
 
@@ -121,17 +129,25 @@ function validarFila(fila, espacios, alias) {
 
 /**
  * Importa los horarios. `tabla` es lo que devuelve leerTablaHorarios().
- * Opciones: {aplicar = false, alias = {}} (alias: nombre de sala del archivo -> id de espacio).
+ * Opciones: {aplicar = false, alias = {}, diasPorDefecto = null}: alias = nombre de sala del archivo -> id de espacio;
+ * diasPorDefecto = [1..7] para las filas que no traen días.
  * Sin `aplicar` no modifica `db`; con `aplicar`, solo si no hay errores de formato.
- * Devuelve {aplicado, total, errores, hallazgos, reemplaza, bloques, sinDias, porTipo}.
+ * Devuelve {aplicado, total, errores, hallazgos, reemplaza, bloques, sinDias, porTipo, dias, salasSinReconocer, diasPorDefecto,
+ * reservasEnConflicto}.
  */
-export function importarHorarios(db, tabla, { aplicar = false, alias = {} } = {}) {
+export function importarHorarios(db, tabla, { aplicar = false, alias = {}, diasPorDefecto = null } = {}) {
   const errores = [];
   const nuevos = [];
+  const desconocidas = new Map(); // nombre de sala que no se reconoció -> {nombre, sugerencia}
+  let rellenadas = 0;
   for (const fila of tabla.filas) {
-    const { bloque, errores: malos } = validarFila(fila, db.espacios, alias);
+    const { bloque, conDiasPorDefecto, errores: malos, salaDesconocida } = validarFila(fila, db.espacios, alias, diasPorDefecto);
+    if (salaDesconocida) desconocidas.set(salaDesconocida.nombre, salaDesconocida);
     if (malos) malos.forEach((mensaje) => errores.push({ linea: fila.linea, mensaje }));
-    else nuevos.push({ ...bloque, linea: fila.linea });
+    else {
+      nuevos.push({ ...bloque, linea: fila.linea });
+      if (conDiasPorDefecto) rellenadas++;
+    }
   }
 
   const tipos = TIPOS_CLASE.filter((t) => nuevos.some((b) => b.tipo === t));
@@ -149,6 +165,10 @@ export function importarHorarios(db, tabla, { aplicar = false, alias = {} } = {}
     sinDias: nuevos.filter((b) => !b.dias).length,
     porTipo: Object.fromEntries(tipos.map((t) => [t, nuevos.filter((b) => b.tipo === t).length])),
     dias: [...new Set(nuevos.filter((b) => b.dias).map((b) => describirDias(b.dias)))],
+    salasSinReconocer: [...desconocidas.values()],
+    diasPorDefecto: rellenadas,
+    // Reservas futuras que quedarían encima de una clase nueva: se avisa, no se borran (decide Coordinación)
+    reservasEnConflicto: [...new Map(nuevos.flatMap((b) => reservasQueChocan(db, b)).map((r) => [r.id, r])).values()],
   };
   if (aplicar && !errores.length) {
     // Se modifica el arreglo en su sitio (como el resto de reglas): actualizarDB compara contra la foto por id

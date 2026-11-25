@@ -17,9 +17,10 @@ export class ErrorApi extends Error {
 /**
  * Llama a la API y devuelve el JSON de la respuesta.
  * @param {string} ruta   ej. '/api/reservas?fecha=2026-10-16'
- * @param {object} opciones  { metodo: 'GET'|'POST'|'PATCH', cuerpo: objeto, tiempoMs: espera máxima }
+ * @param {object} opciones  { metodo: 'GET'|'POST'|'PATCH'|'DELETE', cuerpo: objeto, archivo: File (se envía tal cual, p. ej. el Excel
+ *                      de horarios), tiempoMs: espera máxima }
  */
-export async function pedir(ruta, { metodo = 'GET', cuerpo, tiempoMs = TIEMPO_LIMITE_MS } = {}) {
+export async function pedir(ruta, { metodo = 'GET', cuerpo, archivo, tiempoMs = TIEMPO_LIMITE_MS } = {}) {
   const control = new AbortController();
   const temporizador = setTimeout(() => control.abort(), tiempoMs);
 
@@ -27,8 +28,8 @@ export async function pedir(ruta, { metodo = 'GET', cuerpo, tiempoMs = TIEMPO_LI
   try {
     respuesta = await fetch(ruta, {
       method: metodo,
-      headers: cuerpo ? { 'Content-Type': 'application/json' } : undefined,
-      body: cuerpo ? JSON.stringify(cuerpo) : undefined,
+      headers: cuerpo ? { 'Content-Type': 'application/json' } : archivo ? { 'Content-Type': 'application/octet-stream' } : undefined,
+      body: archivo ?? (cuerpo ? JSON.stringify(cuerpo) : undefined),
       signal: control.signal,
     });
   } catch (error) {
