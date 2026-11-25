@@ -55,9 +55,12 @@ export async function pedir(ruta, { metodo = 'GET', cuerpo, archivo, tiempoMs = 
   return datos;
 }
 
-/** Lleva a la pantalla de inicio de sesión recordando la página actual. */
+/**
+ * Lleva a la pantalla de inicio de sesión recordando la página actual, con su query: así quien escanea el QR
+ * de una sala (movil.html?sala=apolo) y todavía no tiene sesión vuelve a esa misma sala al entrar.
+ */
 export function irALogin() {
-  location.href = `/login.html?volver=${encodeURIComponent(location.pathname)}`;
+  location.href = `/login.html?volver=${encodeURIComponent(location.pathname + location.search)}`;
 }
 
 /** Cierra la sesión en el servidor y vuelve a la pantalla de inicio. */

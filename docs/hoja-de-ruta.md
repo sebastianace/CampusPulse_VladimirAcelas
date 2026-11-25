@@ -30,7 +30,7 @@ Ordenado por impacto para el campus frente al esfuerzo. Esfuerzo: **S** días, *
 | # | Qué | Por qué | Esfuerzo |
 |---|---|---|---|
 | 1 | **Inicio de sesión con las cuentas de Campuslands** (Google Workspace) | Nadie quiere otra contraseña, y las altas y bajas de personal se manejan solas | M |
-| 2 | **Códigos QR en cada sala** que abren el reporte de incidencias con la sala ya elegida, o su agenda del día | Reportar en 10 segundos desde el celular es lo que hace que la gente reporte | S |
+| 2 | **Códigos QR en cada sala** que abren el reporte de incidencias con la sala ya elegida (hecho el 22 nov 2026, ver [qr-salas.md](qr-salas.md)); falta la variante "su agenda del día" | Reportar en 10 segundos desde el celular es lo que hace que la gente reporte | S |
 | 3 | **Check-in de reservas:** si nadie confirma en 15 minutos, la sala se libera | Recupera salas que se reservan "por si acaso" y no se usan | M |
 | 4 | **Reglamento oficial** en la base de conocimiento, con un dueño (Coordinación) y una fecha de revisión | Hoy los documentos son de ejemplo; una respuesta de Pulse debe ser la política real | S (técnico) |
 | 5 | **Avisos donde la gente ya lee** (Google Chat, Telegram o WhatsApp Business) además del correo | Un correo de "incidencia crítica" que nadie abre no sirve | M |

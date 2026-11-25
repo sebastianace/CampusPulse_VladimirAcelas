@@ -10,6 +10,8 @@ const PERMISOS = {
   decidirSolicitudes: ['admin'],
   verHallazgosHorarios: ['admin'],
   editarHorarios: ['admin'],
+  // Solo interfaz: la hoja de QR (qr.html) no usa ninguna ruta nueva ni guarda nada en el servidor
+  imprimirQR: ['admin'],
 };
 
 const NOMBRES_ROL = {

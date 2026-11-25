@@ -50,6 +50,14 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
   Asignar no es atender: otro técnico puede tomarla y un admin puede reasignarla (`POST /api/incidencias/:id/asignar`).
   Sin responsable configurado, queda sin asignar. El panel de Soporte TI muestra "Te tocó a ti" y "N para ti". Las listas
   ya no se redibujan mientras está abierto el selector de reasignar.
+
+- **Códigos QR en las salas para reportar.** Cada sala tiene un QR que abre `movil.html?sala=<id>` con la sala ya
+  elegida y el aviso "Estás reportando en…". Solo con cuenta: sin sesión se pasa por el login y se vuelve a la sala
+  (antes el login perdía el `?sala=`: `irALogin` ahora conserva el query). Un admin los imprime desde Usuarios, en
+  `qr.html` (6 carteles por hoja A4, QR vectorial con corrección de errores nivel Q). La dirección base no va fija
+  porque el hosting no está definido: se toma del sitio donde se abre la hoja y avisa si es `localhost` o una IP de red
+  interna. Un QR de una sala que no existe avisa y sigue con el formulario normal. QR por `qrcode-generator` 2.0.4 (MIT)
+  copiado en `public/js/vendor/`, sin dependencias nuevas.
 - **Solo dos categorías de incidencia: Infraestructura y Tecnología.** En el campus hay 2 técnicos de TI y cada uno
   atiende una. Aseo, seguridad, bienestar y "otro" ya no se pueden elegir (`POST /api/incidencias` responde 422), pero
   las incidencias anteriores conservan su categoría (`CATEGORIAS_ANTERIORES`; la base las sigue aceptando).

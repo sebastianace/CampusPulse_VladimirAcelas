@@ -18,6 +18,14 @@ import { agregarDictado } from './voz.js';
 
 let refrescar = async () => {};
 let mostrarPestana = () => {};
+// Sala del QR que se escaneó (movil.html?sala=...): queda elegida en "Espacio afectado" cuando la IA no
+// nombra otra. Quien escanea está en esa sala, y aun así puede cambiarla en el formulario.
+let salaDelQR = null;
+
+/** Fija (o quita, con null) la sala que viene del QR. */
+export function fijarSalaDelQR(espacioId) {
+  salaDelQR = espacioId ?? null;
+}
 
 const contenedorSugerencia = () => document.getElementById('sugerencia-ia');
 const contenedorManual = () => document.getElementById('incidencia-manual');
@@ -86,7 +94,7 @@ function abrirFormulario({ modo, descripcion, sugerencia = {}, motivoFallo }) {
     el('div', { className: 'fila' },
       campoSelect('categoria', 'Categoría', opcionesDe(CATEGORIAS), sugerencia.categoria, esIA),
       campoSelect('prioridad', 'Prioridad', opcionesDe(PRIORIDADES), sugerencia.prioridad, esIA)),
-    campoSelect('espacioId', 'Espacio afectado', espacios.map((e) => [e.id, e.nombre]), sugerencia.espacioId, false, 'Ninguno'),
+    campoSelect('espacioId', 'Espacio afectado', espacios.map((e) => [e.id, e.nombre]), sugerencia.espacioId ?? salaDelQR, false, 'Ninguno'),
     campoSelect('recursoId', 'Equipo afectado', recursos.map((r) => [r.id, r.nombre]), sugerencia.recursoId, false, 'Ninguno'),
     campoFueraDeServicio(sugerencia),
     el('p', { className: 'nota' }, 'La atiende Soporte TI: es el equipo que resuelve los problemas técnicos y de infraestructura del campus.'),

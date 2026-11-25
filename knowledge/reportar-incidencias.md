@@ -13,6 +13,14 @@ En la pestaña de reportes se escribe qué pasó y dónde. También se puede dic
 si el navegador lo permite. El botón "Clasificar con IA" sugiere la categoría, la prioridad y el espacio o
 equipo afectado. La persona revisa la sugerencia y confirma; la IA nunca registra nada sola.
 
+## Con el código QR de la sala
+
+Cada sala tiene pegado un código QR. Al escanearlo con la cámara del celular se abre el reporte de incidencias con
+esa sala ya elegida, y la pantalla dice "Estás reportando en" seguido del nombre de la sala. Hace falta una cuenta de
+Campus Pulse (profesores, soporte técnico y administradores): quien no ha iniciado sesión llega al inicio de sesión y,
+al entrar, vuelve a su sala. Si el reporte es de otra sala, se cambia en "Espacio afectado". Los códigos los imprime un
+administrador desde la pestaña Usuarios.
+
 ## Categorías, prioridades y quién la atiende
 
 Hay dos categorías: infraestructura (instalaciones, muebles, electricidad, agua, puertas) y tecnología (equipos,
