@@ -6,6 +6,8 @@ siguen [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+## [v2.1.0] — 2026-11-24
+
 ### Cambiado (pedidos de Campuslands, 21 nov 2026)
 - **Nuevo diseño del inicio de sesión.** Sigue la estética de Campuslands (cielo oscuro, brillo morado, dos tarjetas)
   con un cielo vivo: estrellas en tres capas que se desplazan a distinta velocidad y titilan (canvas 2D), estrellas

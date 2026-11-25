@@ -1,6 +1,6 @@
 {
   "name": "campus-pulse",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "MVP que unifica espacios, recursos tecnológicos e incidencias con IA",
   "main": "index.js",
   "scripts": {

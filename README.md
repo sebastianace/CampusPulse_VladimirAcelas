@@ -10,7 +10,7 @@ preguntas citando el reglamento.
 |---|---|---|
 | ![Detección de incidencias duplicadas](docs/capturas/10-es-la-misma.png) | ![Respuesta con fuentes](docs/capturas/08-rag-fuentes.png) | ![Triaje de una incidencia](docs/capturas/04-triaje-ia.png) |
 
-**v2.0.0** · Node 24 + Express 5 · PostgreSQL 16 + pgvector · Gemini · LangChain (Python) · n8n · Docker ·
+**v2.1.0** · Node 24 + Express 5 · PostgreSQL 16 + pgvector · Gemini · LangChain (Python) · n8n · Docker ·
 [CHANGELOG](CHANGELOG.md) · [Guion de la demo](docs/sustentacion.md)
 
 ## Problema
